@@ -2,6 +2,9 @@ package blockdag
 
 import (
 	"fmt"
+	"github.com/kaspanet/kaspad/util"
+	"github.com/kaspanet/kaspad/util/daghash"
+	"github.com/kaspanet/kaspad/wire"
 	"path"
 	"testing"
 
@@ -31,8 +34,43 @@ func loadDAG() (*BlockDAG, error) {
 
 type nodeSelector func(dag *BlockDAG) *blockNode
 
+func generateBlocks(dag *BlockDAG) {
+	for i := 0; i < 10e3; i++ {
+		collection := dag.UTXOSet().collection()
+		tx := wire.NewNativeMsgTx(wire.TxVersion, nil, nil)
+	}
+}
+
 func benchmarkRestoreUTXO(b *testing.B, selector nodeSelector) {
 	log.SetLevel(logs.LevelOff)
+
+	params := &dagconfig.SimnetParams
+	params.BlockCoinbaseMaturity = 0
+
+	// Create a new database and dag instance to run tests against.
+	dag, teardownFunc, err := DAGSetup("benchmarkRestoreUTXO", Config{
+		DAGParams: params,
+	})
+	if err != nil {
+		b.Fatalf("Failed to setup dag instance: %v", err)
+	}
+	defer teardownFunc()
+
+	block, err := PrepareBlockForTest(dag, []*daghash.Hash{dag.dagParams.GenesisHash}, nil)
+	if err != nil {
+		b.Fatalf("PrepareBlockForTest: %s", err)
+	}
+	isOrphan, isDelayed, err := dag.ProcessBlock(util.NewBlock(block), BFNoPoWCheck)
+	if err != nil {
+		b.Fatalf("ProcessBlock: %v", err)
+	}
+	if isDelayed {
+		b.Fatalf("ProcessBlock: block1 " +
+			"is too far in the future")
+	}
+	if isOrphan {
+		b.Fatalf("ProcessBlock: block1 got unexpectedly orphaned")
+	}
 
 	dag, err := loadDAG()
 	if err != nil {
