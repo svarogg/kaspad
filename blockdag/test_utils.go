@@ -5,7 +5,13 @@ package blockdag
 import (
 	"compress/bzip2"
 	"encoding/binary"
+	"github.com/kaspanet/kaspad/database"
+	_ "github.com/kaspanet/kaspad/database/ffldb" // blank import ffldb so that its init() function runs before tests
+	"github.com/kaspanet/kaspad/txscript"
 	"github.com/kaspanet/kaspad/util"
+	"github.com/kaspanet/kaspad/util/daghash"
+	"github.com/kaspanet/kaspad/util/subnetworkid"
+	"github.com/kaspanet/kaspad/wire"
 	"github.com/pkg/errors"
 	"io"
 	"os"
@@ -13,14 +19,6 @@ import (
 	"sort"
 	"strings"
 	"sync"
-
-	"github.com/kaspanet/kaspad/util/subnetworkid"
-
-	"github.com/kaspanet/kaspad/database"
-	_ "github.com/kaspanet/kaspad/database/ffldb" // blank import ffldb so that its init() function runs before tests
-	"github.com/kaspanet/kaspad/txscript"
-	"github.com/kaspanet/kaspad/util/daghash"
-	"github.com/kaspanet/kaspad/wire"
 )
 
 const (
@@ -249,12 +247,12 @@ func opTrueAddress(prefix util.Bech32Prefix) (util.Address, error) {
 
 // PrepareBlockForTest generates a block with the proper merkle roots, coinbase transaction etc. This function is used for test purposes only
 func PrepareBlockForTest(dag *BlockDAG, parentHashes []*daghash.Hash, transactions []*wire.MsgTx) (*wire.MsgBlock, error) {
-	newVirtual, err := GetVirtualFromParentsForTest(dag, parentHashes)
-	if err != nil {
-		return nil, err
-	}
-	oldVirtual := SetVirtualForTest(dag, newVirtual)
-	defer SetVirtualForTest(dag, oldVirtual)
+	//newVirtual, err := GetVirtualFromParentsForTest(dag, parentHashes)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//oldVirtual := SetVirtualForTest(dag, newVirtual)
+	//defer SetVirtualForTest(dag, oldVirtual)
 
 	OpTrueAddr, err := opTrueAddress(dag.dagParams.Prefix)
 	if err != nil {

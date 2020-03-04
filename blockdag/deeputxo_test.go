@@ -2,15 +2,14 @@ package blockdag
 
 import (
 	"fmt"
+	"github.com/kaspanet/kaspad/database"
+	"github.com/kaspanet/kaspad/logs"
+	"github.com/kaspanet/kaspad/txscript"
 	"github.com/kaspanet/kaspad/util"
 	"github.com/kaspanet/kaspad/util/daghash"
 	"github.com/kaspanet/kaspad/wire"
 	"path"
 	"testing"
-
-	"github.com/kaspanet/kaspad/logs"
-
-	"github.com/kaspanet/kaspad/database"
 
 	"github.com/kaspanet/kaspad/dagconfig"
 )
@@ -34,10 +33,60 @@ func loadDAG() (*BlockDAG, error) {
 
 type nodeSelector func(dag *BlockDAG) *blockNode
 
-func generateBlocks(dag *BlockDAG) {
-	for i := 0; i < 10e3; i++ {
+func generateBlocks(dag *BlockDAG, b *testing.B) {
+	const numOutputs = 1000
+	signatureScript, err := txscript.PayToScriptHashSignatureScript(OpTrueScript, nil)
+	if err != nil {
+		b.Fatalf("Failed to build signature script: %s", err)
+	}
+
+	opTrueAddr, err := opTrueAddress(dag.dagParams.Prefix)
+	if err != nil {
+		b.Fatalf("%s", err)
+	}
+
+	scriptPubKey, err := txscript.PayToAddrScript(opTrueAddr)
+	if err != nil {
+		b.Fatalf("%s", err)
+	}
+	parentHash := dag.TipHashes()[0]
+	for i := 0; i < 1001; i++ {
 		collection := dag.UTXOSet().collection()
 		tx := wire.NewNativeMsgTx(wire.TxVersion, nil, nil)
+		funds := uint64(0)
+		for outpoint, entry := range collection {
+			if funds >= numOutputs {
+				break
+			}
+			tx.AddTxIn(wire.NewTxIn(&outpoint, signatureScript))
+			funds += entry.amount
+		}
+		if funds < numOutputs {
+			b.Fatalf("pffff")
+		}
+		for i := 0; i < numOutputs; i++ {
+			tx.AddTxOut(&wire.TxOut{
+				Value:        funds / numOutputs,
+				ScriptPubKey: scriptPubKey,
+			})
+		}
+
+		block, err := PrepareBlockForTest(dag, []*daghash.Hash{parentHash}, []*wire.MsgTx{tx})
+		if err != nil {
+			b.Fatalf("%s", err)
+		}
+		isOrphan, isDelayed, err := dag.ProcessBlock(util.NewBlock(block), BFNoPoWCheck)
+		if err != nil {
+			b.Fatalf("ProcessBlock: %v", err)
+		}
+		if isDelayed {
+			b.Fatalf("ProcessBlock: block1 " +
+				"is too far in the future")
+		} //566186336
+		if isOrphan {
+			b.Fatalf("ProcessBlock: block1 got unexpectedly orphaned")
+		}
+		parentHash = block.BlockHash()
 	}
 }
 
@@ -72,11 +121,7 @@ func benchmarkRestoreUTXO(b *testing.B, selector nodeSelector) {
 		b.Fatalf("ProcessBlock: block1 got unexpectedly orphaned")
 	}
 
-	dag, err := loadDAG()
-	if err != nil {
-		b.Fatalf("Error loading dag: %+s", err)
-	}
-	defer dag.db.Close()
+	generateBlocks(dag, b)
 
 	node := selector(dag)
 	//	profileFile, err := os.Create("/tmp/profile")
@@ -85,6 +130,9 @@ func benchmarkRestoreUTXO(b *testing.B, selector nodeSelector) {
 	//  if err != nil {
 	//  	b.Fatalf("Error creating profile file: %s", err)
 	//  }
+	for hash := range dag.utxoDiffStore.loaded {
+		delete(dag.utxoDiffStore.loaded, hash)
+	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := dag.restoreUTXO(node)
@@ -111,26 +159,27 @@ func BenchmarkDeepRestoreUTXO(b *testing.B) {
 
 func BenchmarkRestoreUTXO(b *testing.B) {
 	ns := []int{
-		0,
-		1,
-		2,
-		3,
-		4,
-		5,
-		10,
-		20,
-		50,
-		100,
-		150,
-		200,
-		300,
-		400,
-		500,
-		600,
-		700,
-		800,
-		900,
 		1000,
+		//0,
+		//1,
+		//2,
+		//3,
+		//4,
+		//5,
+		//10,
+		//20,
+		//50,
+		//100,
+		//150,
+		//200,
+		//300,
+		//400,
+		//500,
+		//600,
+		//700,
+		//800,
+		//900,
+		//1000,
 	}
 	for _, n := range ns {
 		b.Run(fmt.Sprintf("Benchmark%dRestoreUtxo", n),
