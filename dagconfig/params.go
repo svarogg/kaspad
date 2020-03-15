@@ -53,7 +53,7 @@ const (
 	difficultyAdjustmentWindowSize = 2640
 	timestampDeviationTolerance    = 132
 	finalityDuration               = 24 * time.Hour
-	targetTimePerBlock             = 1 * time.Second
+	targetTimePerBlock             = 10 * time.Second
 	finalityInterval               = uint64(finalityDuration / targetTimePerBlock)
 )
 
