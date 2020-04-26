@@ -6,6 +6,7 @@ package blockdag
 
 import (
 	"fmt"
+	"github.com/kaspanet/kaspad/database"
 	"github.com/kaspanet/kaspad/dbaccess"
 	"math"
 	"sort"
@@ -1486,6 +1487,16 @@ func (dag *BlockDAG) BlueScoreByBlockHash(hash *daghash.Hash) (uint64, error) {
 	return node.blueScore, nil
 }
 
+// ParentHashesByBlockHash returns the parent hashes of a block with the given hash.
+func (dag *BlockDAG) ParentHashesByBlockHash(hash *daghash.Hash) ([]*daghash.Hash, error) {
+	node := dag.index.LookupNode(hash)
+	if node == nil {
+		return nil, errors.Errorf("block %s is unknown", hash)
+	}
+
+	return node.ParentHashes(), nil
+}
+
 // BlockConfirmationsByHash returns the confirmations number for a block with the
 // given hash. See blockConfirmations for further details.
 //
@@ -1942,16 +1953,58 @@ func (dag *BlockDAG) SubnetworkID() *subnetworkid.SubnetworkID {
 	return dag.subnetworkID
 }
 
-// ForEachHash runs the given fn on every hash that's currently known to
-// the DAG.
-//
-// This function is NOT safe for concurrent access. It is meant to be
-// used either on initialization or when the dag lock is held for reads.
-func (dag *BlockDAG) ForEachHash(fn func(hash daghash.Hash) error) error {
-	for hash := range dag.index.index {
-		err := fn(hash)
+// ForEachHashFrom runs the given fn on every hash that's currently known to
+// the DAG, starting from lowHash ordered by blueScore.
+func (dag *BlockDAG) ForEachHashFrom(lowHash *daghash.Hash, fn func(hash *daghash.Hash) (bool, error)) error {
+	var cursor database.Cursor
+	if lowHash == nil {
+		lowHash = dag.dagParams.GenesisHash
+	}
+	if !dag.IsInDAG(lowHash) {
+		return errors.Errorf("block %s not found", lowHash)
+	}
+	blueScore, err := dag.BlueScoreByBlockHash(lowHash)
+	if err != nil {
+		return err
+	}
+
+	key := blockIndexKey(lowHash, blueScore)
+	cursor, err = dbaccess.BlockIndexCursorFrom(dbaccess.NoTx(), key)
+	if dbaccess.IsNotFoundError(err) {
+		return errors.Wrapf(err, "block %s not in block index", lowHash)
+	}
+	if err != nil {
+		return err
+	}
+	defer cursor.Close()
+
+	for ok := true; ok; ok = cursor.Next() {
+		key, err := cursor.Key()
 		if err != nil {
 			return err
+		}
+		blockHash, err := blockHashFromBlockIndexKey(key.Suffix())
+		if err != nil {
+			return err
+		}
+
+		node := dag.index.LookupNode(blockHash)
+		if node == nil {
+			// This can happen for unprocessed nodes before dag.processUnprocessedBlockNodes was called.
+			continue
+		}
+
+		if !node.status.KnownValid() {
+			continue
+		}
+
+		shouldContinue, err := fn(blockHash)
+		if err != nil {
+			return err
+		}
+
+		if !shouldContinue {
+			break
 		}
 	}
 	return nil
@@ -2102,7 +2155,7 @@ func New(config *Config) (*BlockDAG, error) {
 	// Initialize the DAG state from the passed database. When the db
 	// does not yet contain any DAG state, both it and the DAG state
 	// will be initialized to contain only the genesis block.
-	err := dag.initDAGState()
+	unprocessedBlockNodes, err := dag.initDAGState(config)
 	if err != nil {
 		return nil, err
 	}
@@ -2114,6 +2167,12 @@ func New(config *Config) (*BlockDAG, error) {
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	log.Debugf("Processing unprocessed blockNodes...")
+	err = dag.processUnprocessedBlockNodes(unprocessedBlockNodes)
+	if err != nil {
+		return nil, err
 	}
 
 	genesis := index.LookupNode(params.GenesisHash)

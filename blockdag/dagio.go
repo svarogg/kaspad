@@ -174,77 +174,71 @@ func (dag *BlockDAG) createDAGState(localSubnetworkID *subnetworkid.SubnetworkID
 // initDAGState attempts to load and initialize the DAG state from the
 // database. When the db does not yet contain any DAG state, both it and the
 // DAG state are initialized to the genesis block.
-func (dag *BlockDAG) initDAGState() error {
+func (dag *BlockDAG) initDAGState(config *Config) (unprocessedBlockNodes []*blockNode, err error) {
 	// Fetch the stored DAG state from the database. If it doesn't exist,
 	// it means that kaspad is running for the first time.
 	serializedDAGState, err := dbaccess.FetchDAGState(dbaccess.NoTx())
 	if dbaccess.IsNotFoundError(err) {
 		// Initialize the database and the DAG state to the genesis block.
-		return dag.createDAGState(dag.subnetworkID)
+		return nil, dag.createDAGState(dag.subnetworkID)
 	}
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	dagState, err := deserializeDAGState(serializedDAGState)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = dag.validateLocalSubnetworkID(dagState)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	log.Debugf("Loading block index...")
-	unprocessedBlockNodes, err := dag.initBlockIndex()
+	unprocessedBlockNodes, err = dag.initBlockIndex()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	log.Debugf("Loading UTXO set...")
 	fullUTXOCollection, err := dag.initUTXOSet()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	log.Debugf("Loading reachability data...")
 	err = dag.reachabilityStore.init(dbaccess.NoTx())
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	log.Debugf("Loading multiset data...")
 	err = dag.multisetStore.init(dbaccess.NoTx())
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	log.Debugf("Applying the loaded utxoCollection to the virtual block...")
 	dag.virtual.utxoSet, err = newFullUTXOSetFromUTXOCollection(fullUTXOCollection)
 	if err != nil {
-		return AssertError(fmt.Sprintf("Error loading UTXOSet: %s", err))
+		return nil, AssertError(fmt.Sprintf("Error loading UTXOSet: %s", err))
 	}
 
 	log.Debugf("Applying the stored tips to the virtual block...")
 	err = dag.initVirtualBlockTips(dagState)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	log.Debugf("Setting the last finality point...")
 	dag.lastFinalityPoint = dag.index.LookupNode(dagState.LastFinalityPoint)
 	dag.finalizeNodesBelowFinalityPoint(false)
 
-	log.Debugf("Processing unprocessed blockNodes...")
-	err = dag.processUnprocessedBlockNodes(unprocessedBlockNodes)
-	if err != nil {
-		return err
-	}
-
 	log.Infof("DAG state initialized.")
 
-	return nil
+	return unprocessedBlockNodes, nil
 }
 
 func (dag *BlockDAG) validateLocalSubnetworkID(state *dagState) error {
@@ -608,43 +602,45 @@ func (dag *BlockDAG) BlockByHash(hash *daghash.Hash) (*util.Block, error) {
 //
 // This method MUST be called with the DAG lock held
 func (dag *BlockDAG) BlockHashesFrom(lowHash *daghash.Hash, limit int) ([]*daghash.Hash, error) {
-	blockHashes := make([]*daghash.Hash, 0, limit)
-	if lowHash == nil {
-		lowHash = dag.genesis.hash
+	blockHashes := make([]*daghash.Hash, limit)
+	i := 0
+	skippedFirst := false
+	err := dag.ForEachHashFrom(lowHash, func(hash *daghash.Hash) (bool, error) {
+		if lowHash != nil && !skippedFirst {
+			skippedFirst = true
+			return true, nil
+		}
 
-		// If we're starting from the beginning we should include the
-		// genesis hash in the result
-		blockHashes = append(blockHashes, dag.genesis.hash)
-	}
-	if !dag.IsInDAG(lowHash) {
-		return nil, errors.Errorf("block %s not found", lowHash)
-	}
-	blueScore, err := dag.BlueScoreByBlockHash(lowHash)
+		blockHashes[i] = hash
+		i++
+		if i >= limit {
+			return false, nil
+		}
+		return true, nil
+	})
 	if err != nil {
 		return nil, err
-	}
-
-	key := blockIndexKey(lowHash, blueScore)
-	cursor, err := dbaccess.BlockIndexCursorFrom(dbaccess.NoTx(), key)
-	if dbaccess.IsNotFoundError(err) {
-		return nil, errors.Wrapf(err, "block %s not in block index", lowHash)
-	}
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close()
-
-	for cursor.Next() && len(blockHashes) < limit {
-		key, err := cursor.Key()
-		if err != nil {
-			return nil, err
-		}
-		blockHash, err := blockHashFromBlockIndexKey(key.Suffix())
-		if err != nil {
-			return nil, err
-		}
-		blockHashes = append(blockHashes, blockHash)
 	}
 
 	return blockHashes, nil
+}
+
+// LowestBlockByBlockIndexKey returns the hash of the block with the lowest
+// block index key.
+func (dag *BlockDAG) LowestBlockByBlockIndexKey(blockHashes ...*daghash.Hash) *daghash.Hash {
+	if len(blockHashes) == 0 {
+		return nil
+	}
+
+	lowestNode := dag.index.LookupNode(blockHashes[0])
+	lowestKey := blockIndexKey(lowestNode.hash, lowestNode.blueScore)
+	for _, hash := range blockHashes[1:] {
+		node := dag.index.LookupNode(hash)
+		key := blockIndexKey(node.hash, node.blueScore)
+		if bytes.Compare(lowestKey, key) > 0 {
+			lowestNode = node
+			lowestKey = key
+		}
+	}
+	return lowestNode.hash
 }

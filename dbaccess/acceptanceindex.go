@@ -7,7 +7,8 @@ import (
 )
 
 var (
-	acceptanceIndexBucket = database.MakeBucket([]byte("acceptance-index"))
+	acceptanceIndexBucket    = database.MakeBucket([]byte("acceptance-index"))
+	acceptanceIndexTipHashes = database.MakeBucket().Key([]byte("acceptance-index-tip-hashes"))
 )
 
 func acceptanceIndexKey(hash *daghash.Hash) *database.Key {
@@ -61,4 +62,24 @@ func FetchAcceptanceData(context Context, hash *daghash.Hash) ([]byte, error) {
 // DropAcceptanceIndex completely removes all acceptanceData entries.
 func DropAcceptanceIndex(dbTx *TxContext) error {
 	return clearBucket(dbTx, acceptanceIndexBucket)
+}
+
+// UpdateAcceptanceIndexTipHashes updates acceptance index tip hashes.
+func UpdateAcceptanceIndexTipHashes(context Context, serializedTipHashes []byte) error {
+	accessor, err := context.accessor()
+	if err != nil {
+		return err
+	}
+
+	return accessor.Put(acceptanceIndexTipHashes, serializedTipHashes)
+}
+
+// FetchAcceptanceIndexTipHashes fetches acceptance index tip hashes.
+func FetchAcceptanceIndexTipHashes(context Context) ([]byte, error) {
+	accessor, err := context.accessor()
+	if err != nil {
+		return nil, err
+	}
+
+	return accessor.Get(acceptanceIndexTipHashes)
 }

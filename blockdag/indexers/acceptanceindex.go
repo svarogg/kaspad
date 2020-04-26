@@ -8,13 +8,17 @@ import (
 	"github.com/kaspanet/kaspad/util"
 	"github.com/kaspanet/kaspad/util/daghash"
 	"github.com/kaspanet/kaspad/wire"
+	"github.com/pkg/errors"
+	"io"
 )
 
 // AcceptanceIndex implements a txAcceptanceData by block hash index. That is to say,
 // it stores a mapping between a block's hash and the set of transactions that the
 // block accepts among its blue blocks.
 type AcceptanceIndex struct {
-	dag *blockdag.BlockDAG
+	dag           *blockdag.BlockDAG
+	tipHashesSet  map[daghash.Hash]struct{}
+	lowestTipHash *daghash.Hash
 }
 
 // Ensure the AcceptanceIndex type implements the Indexer interface.
@@ -51,7 +55,64 @@ func DropAcceptanceIndex() error {
 // This is part of the Indexer interface.
 func (idx *AcceptanceIndex) Init(dag *blockdag.BlockDAG) error {
 	idx.dag = dag
+	err := idx.loadTipHashes()
+	if err != nil {
+		return err
+	}
 	return idx.recover()
+}
+
+func (idx *AcceptanceIndex) loadTipHashes() error {
+	idx.tipHashesSet = make(map[daghash.Hash]struct{})
+
+	serializedTipHashes, err := dbaccess.FetchAcceptanceIndexTipHashes(dbaccess.NoTx())
+	if dbaccess.IsNotFoundError(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	r := bytes.NewBuffer(serializedTipHashes)
+	var hash daghash.Hash
+	for {
+		_, err := r.Read(hash[:])
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		idx.tipHashesSet[hash] = struct{}{}
+	}
+
+	idx.updateLowesetTipHash()
+
+	return nil
+}
+
+func (idx *AcceptanceIndex) updateLowesetTipHash() {
+	idx.lowestTipHash = idx.dag.LowestBlockByBlockIndexKey(idx.tipHashes()...)
+}
+
+func (idx *AcceptanceIndex) tipHashes() []*daghash.Hash {
+	hashes := make([]*daghash.Hash, len(idx.tipHashesSet))
+	i := 0
+	for hash := range idx.tipHashesSet {
+		hash := hash
+		hashes[i] = &hash
+		i++
+	}
+	return hashes
+}
+
+func (idx *AcceptanceIndex) shouldRecover() bool {
+	for _, hash := range idx.dag.TipHashes() {
+		if _, ok := idx.tipHashesSet[*hash]; !ok {
+			return true
+		}
+	}
+	return false
 }
 
 // recover attempts to insert any data that's missing from the
@@ -65,19 +126,38 @@ func (idx *AcceptanceIndex) recover() error {
 	}
 	defer dbTx.RollbackUnlessClosed()
 
-	err = idx.dag.ForEachHash(func(hash daghash.Hash) error {
-		exists, err := dbaccess.HasAcceptanceData(dbTx, &hash)
-		if err != nil {
-			return err
+	if !idx.shouldRecover() {
+		return nil
+	}
+
+	log.Info("Recovering missing blocks from the acceptance index...")
+	skippedFirst := false
+	err = idx.dag.ForEachHashFrom(idx.lowestTipHash, func(hash *daghash.Hash) (bool, error) {
+		if idx.lowestTipHash != nil && !skippedFirst {
+			skippedFirst = true
+			return true, nil
 		}
+
+		exists, err := dbaccess.HasAcceptanceData(dbTx, hash)
+		if err != nil {
+			return false, err
+		}
+
 		if exists {
-			return nil
+			return true, nil
 		}
-		txAcceptanceData, err := idx.dag.TxsAcceptedByBlockHash(&hash)
+
+		txAcceptanceData, err := idx.dag.TxsAcceptedByBlockHash(hash)
 		if err != nil {
-			return err
+			return false, err
 		}
-		return idx.ConnectBlock(dbTx, &hash, txAcceptanceData)
+
+		err = idx.ConnectBlock(dbTx, hash, txAcceptanceData)
+		if err != nil {
+			return false, err
+		}
+
+		return true, nil
 	})
 	if err != nil {
 		return err
@@ -96,7 +176,58 @@ func (idx *AcceptanceIndex) ConnectBlock(dbContext *dbaccess.TxContext, blockHas
 	if err != nil {
 		return err
 	}
-	return dbaccess.StoreAcceptanceData(dbContext, blockHash, serializedTxsAcceptanceData)
+
+	exists, err := dbaccess.HasAcceptanceData(dbContext, blockHash)
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		return errors.Errorf("Can't override an existing acceptance data entry for block %s", blockHash)
+	}
+
+	err = dbaccess.StoreAcceptanceData(dbContext, blockHash, serializedTxsAcceptanceData)
+	if err != nil {
+		return err
+	}
+
+	return idx.addTip(dbContext, blockHash)
+}
+
+func (idx *AcceptanceIndex) addTip(dbContext dbaccess.Context, blockHash *daghash.Hash) error {
+	parentHashes, err := idx.dag.ParentHashesByBlockHash(blockHash)
+	if err != nil {
+		return err
+	}
+
+	for _, parentHash := range parentHashes {
+		delete(idx.tipHashesSet, *parentHash)
+	}
+
+	idx.tipHashesSet[*blockHash] = struct{}{}
+	idx.updateLowesetTipHash()
+	return idx.updateTipsInDatabase(dbContext)
+}
+
+func (idx *AcceptanceIndex) serializeTipsInDatabase() ([]byte, error) {
+	tipHashes := idx.tipHashes()
+	w := bytes.NewBuffer(make([]byte, 0, len(tipHashes)*daghash.HashSize))
+	for _, hash := range tipHashes {
+		_, err := w.Write(hash[:])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return w.Bytes(), nil
+}
+
+func (idx *AcceptanceIndex) updateTipsInDatabase(dbContext dbaccess.Context) error {
+	serializedTipHashes, err := idx.serializeTipsInDatabase()
+	if err != nil {
+		return err
+	}
+
+	return dbaccess.UpdateAcceptanceIndexTipHashes(dbContext, serializedTipHashes)
 }
 
 // TxsAcceptanceData returns the acceptance data of all the transactions that
