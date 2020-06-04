@@ -166,7 +166,7 @@ func (diffStore *utxoDiffStore) clearOldEntries() {
 
 	toRemove := make(map[*blockNode]struct{})
 	for node := range diffStore.loaded {
-		if node.blueScore < minBlueScore {
+		if node.blueScore < minBlueScore && !diffStore.dag.virtual.tips().contains(node) {
 			toRemove[node] = struct{}{}
 		}
 	}
