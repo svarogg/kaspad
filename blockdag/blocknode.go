@@ -31,6 +31,17 @@ const (
 	// statusInvalidAncestor indicates that one of the block's ancestors has
 	// has failed validation, thus the block is also invalid.
 	statusInvalidAncestor
+
+	// statusSuspect indicates that the block has passed initial verification
+	// but has not entered the virtual block's blue set. Meaning that it is
+	// suspected that this block is red.
+	statusSuspect
+
+	// statusOutcast indicates one of the following occurred:
+	// * The finality point is not in the block's selected parent chain
+	// * The block has other blocks with statusOutcast in its blue set
+	// * UTXO sanity validation failed for the block
+	statusOutcast
 )
 
 // KnownValid returns whether the block is known to be valid. This will return
