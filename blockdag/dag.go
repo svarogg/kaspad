@@ -565,13 +565,27 @@ func (dag *BlockDAG) connectBlock(node *blockNode,
 			return nil, err
 		}
 	}
-
 	if err := dag.checkFinalityRules(node); err != nil {
 		return nil, err
 	}
-
 	if err := dag.validateGasLimit(block); err != nil {
 		return nil, err
+	}
+
+	// Add the block to the reachability structures
+	err := dag.updateReachability(node, selectedParentAnticone)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed updating reachability")
+	}
+	isSuspect, newVirtual, updates := dag.checkIsSuspect(node)
+	if isSuspect {
+		dag.virtual = newVirtual
+		dag.index.SetStatusFlags(node, statusSuspect)
+		err := dag.saveChangesFromSuspect()
+		if err != nil {
+			return nil, err
+		}
+		return updates, nil
 	}
 
 	newBlockPastUTXO, txsAcceptanceData, newBlockFeeData, newBlockMultiSet, err :=
@@ -606,6 +620,62 @@ func (dag *BlockDAG) connectBlock(node *blockNode,
 	}
 
 	return chainUpdates, nil
+}
+
+func (dag *BlockDAG) checkIsSuspect(node *blockNode) (
+	isSuspect bool, newVirtual *virtualBlock, updates *chainUpdates) {
+	currentTips := dag.virtual.tips()
+	newVirtual = newVirtualBlock(dag, currentTips)
+	updates = newVirtual.addTip(node)
+
+	found := false
+	for _, blue := range newVirtual.blues {
+		if node == blue {
+			found = true
+			break
+		}
+	}
+	isSuspect = !found
+
+	return isSuspect, newVirtual, updates
+}
+
+func (dag *BlockDAG) saveChangesFromSuspect() error {
+	dbTx, err := dbaccess.NewTx()
+	if err != nil {
+		return err
+	}
+	defer dbTx.RollbackUnlessClosed()
+
+	err = dag.index.flushToDB(dbTx)
+	if err != nil {
+		return err
+	}
+
+	err = dag.reachabilityStore.flushToDB(dbTx)
+	if err != nil {
+		return err
+	}
+
+	state := &dagState{
+		TipHashes:         dag.TipHashes(),
+		LastFinalityPoint: dag.lastFinalityPoint.hash,
+		LocalSubnetworkID: dag.subnetworkID,
+	}
+	err = saveDAGState(dbTx, state)
+	if err != nil {
+		return err
+	}
+
+	err = dbTx.Commit()
+	if err != nil {
+		return err
+	}
+
+	dag.index.clearDirtyEntries()
+	dag.reachabilityStore.clearDirtyEntries()
+
+	return nil
 }
 
 // calcMultiset returns the multiset of the past UTXO of the given block.
@@ -975,12 +1045,6 @@ func (dag *BlockDAG) TxsAcceptedByBlockHash(blockHash *daghash.Hash) (MultiBlock
 func (dag *BlockDAG) applyDAGChanges(node *blockNode, newBlockPastUTXO UTXOSet,
 	newBlockMultiset *secp256k1.MultiSet, selectedParentAnticone []*blockNode) (
 	virtualUTXODiff *UTXODiff, chainUpdates *chainUpdates, err error) {
-
-	// Add the block to the reachability structures
-	err = dag.updateReachability(node, selectedParentAnticone)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed updating reachability")
-	}
 
 	dag.multisetStore.setMultiset(node, newBlockMultiset)
 
