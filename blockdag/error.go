@@ -211,6 +211,10 @@ const (
 	// ErrDelayedBlockIsNotAllowed indicates that a block with a delayed timestamp was
 	// submitted with BFDisallowDelay flag raised.
 	ErrDelayedBlockIsNotAllowed
+
+	// ErrBlueBlockInvalid indicates that a block within this block's blue set is
+	// not valid.
+	ErrBlueBlockInvalid
 )
 
 // Map of ErrorCode values back to their constant names for pretty printing.

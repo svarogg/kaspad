@@ -650,6 +650,11 @@ func (dag *BlockDAG) checkValidateIsOutcast(block *util.Block, node *blockNode, 
 		return nil, nil, nil, nil, err
 	}
 
+	err = dag.revalidateBlueSuspects(node, fastAdd)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
 	newBlockPastUTXO, txsAcceptanceData, newBlockFeeData, newBlockMultiset, err =
 		node.verifyAndBuildUTXO(dag, block.Transactions(), fastAdd)
 	if err != nil {
@@ -671,6 +676,30 @@ func (dag *BlockDAG) checkContainsOutcastsInBlues(node *blockNode) bool {
 		}
 	}
 	return false
+}
+
+func (dag *BlockDAG) revalidateBlueSuspects(node *blockNode, fastAdd bool) error {
+	for _, blue := range node.blues {
+		if dag.index.NodeStatus(blue) == statusSuspect {
+			selectedParentAnticone, err := dag.ghostdag(blue)
+			if err != nil {
+				return err
+			}
+			blueBlock, err := dag.BlockByHash(node.hash)
+			if err != nil {
+				return err
+			}
+			_, err = dag.connectBlock(blue, blueBlock, selectedParentAnticone, fastAdd)
+			if err != nil {
+				return err
+			}
+			if dag.index.NodeStatus(node) != statusValid {
+				str := fmt.Sprintf("blue %s of block %s is not valid", blue.hash, node.hash)
+				return ruleError(ErrBlueBlockInvalid, str)
+			}
+		}
+	}
+	return nil
 }
 
 // calcMultiset returns the multiset of the past UTXO of the given block.
