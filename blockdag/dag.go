@@ -565,9 +565,6 @@ func (dag *BlockDAG) connectBlock(node *blockNode,
 			return nil, err
 		}
 	}
-	if err := dag.checkFinalityRules(node); err != nil {
-		return nil, err
-	}
 	if err := dag.validateGasLimit(block); err != nil {
 		return nil, err
 	}
@@ -586,6 +583,10 @@ func (dag *BlockDAG) connectBlock(node *blockNode,
 			return nil, err
 		}
 		return updates, nil
+	}
+
+	if err := dag.checkFinalityRules(node); err != nil {
+		return nil, err
 	}
 
 	newBlockPastUTXO, txsAcceptanceData, newBlockFeeData, newBlockMultiSet, err :=
