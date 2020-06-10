@@ -671,7 +671,7 @@ func (dag *BlockDAG) checkValidateIsOutcast(block *util.Block, node *blockNode, 
 
 func (dag *BlockDAG) checkContainsOutcastsInBlues(node *blockNode) bool {
 	for _, blue := range node.blues {
-		if dag.index.NodeStatus(blue) == statusOutcast {
+		if dag.index.NodeStatus(blue).isOutcast() {
 			return true
 		}
 	}
@@ -680,7 +680,7 @@ func (dag *BlockDAG) checkContainsOutcastsInBlues(node *blockNode) bool {
 
 func (dag *BlockDAG) revalidateBlueSuspects(node *blockNode, fastAdd bool) error {
 	for _, blue := range node.blues {
-		if dag.index.NodeStatus(blue) == statusSuspect {
+		if dag.index.NodeStatus(blue).isSuspect() {
 			selectedParentAnticone, err := dag.ghostdag(blue)
 			if err != nil {
 				return err
@@ -693,7 +693,7 @@ func (dag *BlockDAG) revalidateBlueSuspects(node *blockNode, fastAdd bool) error
 			if err != nil {
 				return err
 			}
-			if dag.index.NodeStatus(node) != statusValid {
+			if dag.index.NodeStatus(node).KnownValid() {
 				str := fmt.Sprintf("blue %s of block %s is not valid", blue.hash, node.hash)
 				return ruleError(ErrBlueBlockInvalid, str)
 			}
@@ -808,14 +808,14 @@ func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, node *blockNode,
 		return err
 	}
 
-	if status == statusValid {
+	if status.KnownValid() {
 		err = dag.multisetStore.flushToDB(dbTx)
 		if err != nil {
 			return err
 		}
 	}
 
-	if status != statusOutcast {
+	if status.KnownValid() || status.isSuspect() {
 		// Update DAG state.
 		state := &dagState{
 			TipHashes:         dag.TipHashes(),
@@ -828,7 +828,7 @@ func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, node *blockNode,
 		}
 	}
 
-	if status == statusValid {
+	if status.KnownValid() {
 		// Update the UTXO set using the diffSet that was melded into the
 		// full UTXO set.
 		err = updateUTXOSet(dbTx, virtualUTXODiff)
@@ -868,7 +868,7 @@ func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, node *blockNode,
 
 	dag.index.clearDirtyEntries()
 	dag.reachabilityStore.clearDirtyEntries()
-	if status == statusValid {
+	if status.KnownValid() {
 		dag.utxoDiffStore.clearDirtyEntries()
 		dag.utxoDiffStore.clearOldEntries()
 		dag.multisetStore.clearNewEntries()

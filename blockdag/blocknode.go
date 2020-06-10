@@ -58,6 +58,14 @@ func (status blockStatus) KnownInvalid() bool {
 	return status&(statusValidateFailed|statusInvalidAncestor) != 0
 }
 
+func (status blockStatus) isSuspect() bool {
+	return status&statusSuspect != 0
+}
+
+func (status blockStatus) isOutcast() bool {
+	return status&statusOutcast != 0
+}
+
 // blockNode represents a block within the block DAG. The DAG is stored into
 // the block database.
 type blockNode struct {
