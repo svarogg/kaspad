@@ -585,35 +585,21 @@ func (dag *BlockDAG) connectBlock(node *blockNode,
 		return updates, nil
 	}
 
-	if err := dag.checkFinalityRules(node); err != nil {
-		err := dag.saveChangesFromBlock(block, node, nil, nil, nil)
-		if err != nil {
-			return nil, err
+	newBlockPastUTXO, newBlockMultiSet, txsAcceptanceData, newBlockFeeData, err :=
+		dag.checkValidateIsOutcast(block, node, fastAdd)
+	if err != nil {
+		var ruleErr RuleError
+		if ok := errors.As(err, &ruleErr); !ok {
+			return nil, errors.Wrapf(err, "error validating outcast: %s", err)
 		}
-		return nil, err
-	}
-	if dag.checkContainsOutcastsInBlues(node) {
+
 		dag.index.SetStatusFlags(node, statusOutcast)
 		err := dag.saveChangesFromBlock(block, node, nil, nil, nil)
 		if err != nil {
 			return nil, err
 		}
-		return nil, nil
-	}
 
-	newBlockPastUTXO, txsAcceptanceData, newBlockFeeData, newBlockMultiSet, err :=
-		node.verifyAndBuildUTXO(dag, block.Transactions(), fastAdd)
-	if err != nil {
-		var ruleErr RuleError
-		if ok := errors.As(err, &ruleErr); ok {
-			return nil, ruleError(ruleErr.ErrorCode, fmt.Sprintf("error verifying UTXO for %s: %s", node, err))
-		}
-		return nil, errors.Wrapf(err, "error verifying UTXO for %s", node)
-	}
-
-	err = node.validateCoinbaseTransaction(dag, block, txsAcceptanceData)
-	if err != nil {
-		return nil, err
+		return nil, ruleErr
 	}
 
 	// Apply all changes to the DAG.
@@ -651,6 +637,31 @@ func (dag *BlockDAG) checkIsSuspect(node *blockNode) (
 	isSuspect = !found
 
 	return isSuspect, newVirtual, updates
+}
+
+func (dag *BlockDAG) checkValidateIsOutcast(block *util.Block, node *blockNode, fastAdd bool) (
+	newBlockPastUTXO UTXOSet, newBlockMultiset *secp256k1.MultiSet,
+	txsAcceptanceData MultiBlockTxsAcceptanceData, newBlockFeeData compactFeeData, err error) {
+	if err := dag.checkFinalityRules(node); err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	if dag.checkContainsOutcastsInBlues(node) {
+		return nil, nil, nil, nil, err
+	}
+
+	newBlockPastUTXO, txsAcceptanceData, newBlockFeeData, newBlockMultiset, err =
+		node.verifyAndBuildUTXO(dag, block.Transactions(), fastAdd)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	err = node.validateCoinbaseTransaction(dag, block, txsAcceptanceData)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	return newBlockPastUTXO, newBlockMultiset, txsAcceptanceData, newBlockFeeData, nil
 }
 
 func (dag *BlockDAG) checkContainsOutcastsInBlues(node *blockNode) bool {
