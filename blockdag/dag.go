@@ -578,7 +578,7 @@ func (dag *BlockDAG) connectBlock(node *blockNode,
 	if isSuspect {
 		dag.virtual = newVirtual
 		dag.index.SetStatusFlags(node, statusSuspect)
-		err := dag.saveChangesFromSuspect()
+		err := dag.saveChangesFromBlock(block, node, nil, nil, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -586,7 +586,19 @@ func (dag *BlockDAG) connectBlock(node *blockNode,
 	}
 
 	if err := dag.checkFinalityRules(node); err != nil {
+		err := dag.saveChangesFromBlock(block, node, nil, nil, nil)
+		if err != nil {
+			return nil, err
+		}
 		return nil, err
+	}
+	if dag.checkContainsOutcastsInBlues(node) {
+		dag.index.SetStatusFlags(node, statusOutcast)
+		err := dag.saveChangesFromBlock(block, node, nil, nil, nil)
+		if err != nil {
+			return nil, err
+		}
+		return nil, nil
 	}
 
 	newBlockPastUTXO, txsAcceptanceData, newBlockFeeData, newBlockMultiSet, err :=
@@ -615,7 +627,7 @@ func (dag *BlockDAG) connectBlock(node *blockNode,
 		panic(err)
 	}
 
-	err = dag.saveChangesFromBlock(block, virtualUTXODiff, txsAcceptanceData, newBlockFeeData)
+	err = dag.saveChangesFromBlock(block, node, virtualUTXODiff, txsAcceptanceData, newBlockFeeData)
 	if err != nil {
 		return nil, err
 	}
@@ -641,42 +653,13 @@ func (dag *BlockDAG) checkIsSuspect(node *blockNode) (
 	return isSuspect, newVirtual, updates
 }
 
-func (dag *BlockDAG) saveChangesFromSuspect() error {
-	dbTx, err := dbaccess.NewTx()
-	if err != nil {
-		return err
+func (dag *BlockDAG) checkContainsOutcastsInBlues(node *blockNode) bool {
+	for _, blue := range node.blues {
+		if dag.index.NodeStatus(blue) == statusOutcast {
+			return true
+		}
 	}
-	defer dbTx.RollbackUnlessClosed()
-
-	err = dag.index.flushToDB(dbTx)
-	if err != nil {
-		return err
-	}
-
-	err = dag.reachabilityStore.flushToDB(dbTx)
-	if err != nil {
-		return err
-	}
-
-	state := &dagState{
-		TipHashes:         dag.TipHashes(),
-		LastFinalityPoint: dag.lastFinalityPoint.hash,
-		LocalSubnetworkID: dag.subnetworkID,
-	}
-	err = saveDAGState(dbTx, state)
-	if err != nil {
-		return err
-	}
-
-	err = dbTx.Commit()
-	if err != nil {
-		return err
-	}
-
-	dag.index.clearDirtyEntries()
-	dag.reachabilityStore.clearDirtyEntries()
-
-	return nil
+	return false
 }
 
 // calcMultiset returns the multiset of the past UTXO of the given block.
@@ -758,14 +741,17 @@ func addTxToMultiset(ms *secp256k1.MultiSet, tx *wire.MsgTx, pastUTXO UTXOSet, b
 	return ms, nil
 }
 
-func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, virtualUTXODiff *UTXODiff,
-	txsAcceptanceData MultiBlockTxsAcceptanceData, feeData compactFeeData) error {
+func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, node *blockNode,
+	virtualUTXODiff *UTXODiff, txsAcceptanceData MultiBlockTxsAcceptanceData,
+	feeData compactFeeData) error {
 
 	dbTx, err := dbaccess.NewTx()
 	if err != nil {
 		return err
 	}
 	defer dbTx.RollbackUnlessClosed()
+
+	status := dag.index.NodeStatus(node)
 
 	err = dag.index.flushToDB(dbTx)
 	if err != nil {
@@ -782,51 +768,57 @@ func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, virtualUTXODiff *UT
 		return err
 	}
 
-	err = dag.multisetStore.flushToDB(dbTx)
-	if err != nil {
-		return err
-	}
-
-	// Update DAG state.
-	state := &dagState{
-		TipHashes:         dag.TipHashes(),
-		LastFinalityPoint: dag.lastFinalityPoint.hash,
-		LocalSubnetworkID: dag.subnetworkID,
-	}
-	err = saveDAGState(dbTx, state)
-	if err != nil {
-		return err
-	}
-
-	// Update the UTXO set using the diffSet that was melded into the
-	// full UTXO set.
-	err = updateUTXOSet(dbTx, virtualUTXODiff)
-	if err != nil {
-		return err
-	}
-
-	// Scan all accepted transactions and register any subnetwork registry
-	// transaction. If any subnetwork registry transaction is not well-formed,
-	// fail the entire block.
-	err = registerSubnetworks(dbTx, block.Transactions())
-	if err != nil {
-		return err
-	}
-
-	// Allow the index manager to call each of the currently active
-	// optional indexes with the block being connected so they can
-	// update themselves accordingly.
-	if dag.indexManager != nil {
-		err := dag.indexManager.ConnectBlock(dbTx, block.Hash(), txsAcceptanceData)
+	if status == statusValid {
+		err = dag.multisetStore.flushToDB(dbTx)
 		if err != nil {
 			return err
 		}
 	}
 
-	// Apply the fee data into the database
-	err = dbaccess.StoreFeeData(dbTx, block.Hash(), feeData)
-	if err != nil {
-		return err
+	if status != statusOutcast {
+		// Update DAG state.
+		state := &dagState{
+			TipHashes:         dag.TipHashes(),
+			LastFinalityPoint: dag.lastFinalityPoint.hash,
+			LocalSubnetworkID: dag.subnetworkID,
+		}
+		err = saveDAGState(dbTx, state)
+		if err != nil {
+			return err
+		}
+	}
+
+	if status == statusValid {
+		// Update the UTXO set using the diffSet that was melded into the
+		// full UTXO set.
+		err = updateUTXOSet(dbTx, virtualUTXODiff)
+		if err != nil {
+			return err
+		}
+
+		// Scan all accepted transactions and register any subnetwork registry
+		// transaction. If any subnetwork registry transaction is not well-formed,
+		// fail the entire block.
+		err = registerSubnetworks(dbTx, block.Transactions())
+		if err != nil {
+			return err
+		}
+
+		// Allow the index manager to call each of the currently active
+		// optional indexes with the block being connected so they can
+		// update themselves accordingly.
+		if dag.indexManager != nil {
+			err := dag.indexManager.ConnectBlock(dbTx, block.Hash(), txsAcceptanceData)
+			if err != nil {
+				return err
+			}
+		}
+
+		// Apply the fee data into the database
+		err = dbaccess.StoreFeeData(dbTx, block.Hash(), feeData)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = dbTx.Commit()
@@ -835,10 +827,12 @@ func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, virtualUTXODiff *UT
 	}
 
 	dag.index.clearDirtyEntries()
-	dag.utxoDiffStore.clearDirtyEntries()
-	dag.utxoDiffStore.clearOldEntries()
 	dag.reachabilityStore.clearDirtyEntries()
-	dag.multisetStore.clearNewEntries()
+	if status == statusValid {
+		dag.utxoDiffStore.clearDirtyEntries()
+		dag.utxoDiffStore.clearOldEntries()
+		dag.multisetStore.clearNewEntries()
+	}
 
 	return nil
 }
