@@ -90,6 +90,11 @@ func (tx *LevelDBTransaction) Put(key *database.Key, value []byte) error {
 	return nil
 }
 
+// PrintStats kaka
+func (tx *LevelDBTransaction) PrintStats() {
+	tx.db.PrintStats()
+}
+
 // Get gets the value for the given key. It returns
 // ErrNotFound if the given key does not exist.
 func (tx *LevelDBTransaction) Get(key *database.Key) ([]byte, error) {

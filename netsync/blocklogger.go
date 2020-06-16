@@ -5,6 +5,7 @@
 package netsync
 
 import (
+	"github.com/kaspanet/kaspad/dbaccess"
 	"sync"
 	"time"
 
@@ -69,6 +70,8 @@ func (b *blockProgressLogger) LogBlockBlueScore(block *util.Block, blueScore uin
 	b.subsystemLogger.Infof("%s %d %s in the last %s (%d %s, blue score %d, %s)",
 		b.progressAction, b.receivedLogBlocks, blockStr, tDuration, b.receivedLogTx,
 		txStr, blueScore, block.MsgBlock().Header.Timestamp)
+
+	dbaccess.PrintStats(dbaccess.NoTx())
 
 	b.receivedLogBlocks = 0
 	b.receivedLogTx = 0

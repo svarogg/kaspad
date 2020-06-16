@@ -77,6 +77,11 @@ func (db *ffldb) Has(key *database.Key) (bool, error) {
 	return db.levelDB.Has(key)
 }
 
+// PrintStats kaka
+func (db *ffldb) PrintStats() {
+	db.levelDB.PrintStats()
+}
+
 // Delete deletes the value for the given key. Will not
 // return an error if the key doesn't exist.
 // This method is part of the DataAccessor interface.

@@ -30,6 +30,11 @@ func (tx *transaction) Put(key *database.Key, value []byte) error {
 	return tx.ldbTx.Put(key, value)
 }
 
+// PrintStats kaka
+func (tx *transaction) PrintStats() {
+	tx.ldbTx.PrintStats()
+}
+
 // Get gets the value for the given key. It returns
 // ErrNotFound if the given key does not exist.
 // This method is part of the DataAccessor interface.

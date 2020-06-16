@@ -49,6 +49,15 @@ func (db *LevelDB) Close() error {
 	return errors.WithStack(err)
 }
 
+// PrintStats kaka
+func (db *LevelDB) PrintStats() {
+	statsToPrint := []string{"stats", "compcount", "iostats", "writedelay", "blockpool", "cachedblock", "openedtables", "alivesnaps", "aliveiters"}
+	for _, stat := range statsToPrint {
+		stats, _ := db.ldb.GetProperty("leveldb." + stat)
+		log.Criticalf("%s: %s", stat, stats)
+	}
+}
+
 // Put sets the value for the given key. It overwrites
 // any previous value for that key.
 func (db *LevelDB) Put(key *database.Key, value []byte) error {

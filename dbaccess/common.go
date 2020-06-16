@@ -36,3 +36,9 @@ func clearBucket(dbTx *TxContext, bucket *database.Bucket) error {
 
 	return nil
 }
+
+// PrintStats kaka
+func PrintStats(context Context) {
+	accessor, _ := context.accessor()
+	accessor.PrintStats()
+}
