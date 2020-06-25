@@ -65,11 +65,12 @@ func (tx *transaction) Delete(key *database.Key) error {
 
 // AppendToStore appends the given data to the flat
 // file store defined by storeName. This function
-// returns a serialized location handle that's meant
-// to be stored and later used when querying the data
+// returns a location handle that's meant to be
+// stored and later used when querying the data
 // that has just now been inserted.
+//
 // This method is part of the DataAccessor interface.
-func (tx *transaction) AppendToStore(storeName string, data []byte) ([]byte, error) {
+func (tx *transaction) AppendToStore(storeName string, data []byte) (database.StoreLocation, error) {
 	if tx.isClosed {
 		return nil, errors.New("cannot append to store on a closed transaction")
 	}
@@ -78,16 +79,29 @@ func (tx *transaction) AppendToStore(storeName string, data []byte) ([]byte, err
 }
 
 // RetrieveFromStore retrieves data from the store defined by
-// storeName using the given serialized location handle. It
-// returns ErrNotFound if the location does not exist. See
+// storeName using the given location handle. It returns
+// ErrNotFound if the location does not exist. See
 // AppendToStore for further details.
+//
 // This method is part of the DataAccessor interface.
-func (tx *transaction) RetrieveFromStore(storeName string, location []byte) ([]byte, error) {
+func (tx *transaction) RetrieveFromStore(storeName string, location database.StoreLocation) ([]byte, error) {
 	if tx.isClosed {
 		return nil, errors.New("cannot retrieve from store on a closed transaction")
 	}
 
 	return tx.ffdb.Read(storeName, location)
+}
+
+// DeleteFromStoreUpToLocation deletes all data in the store that predate `dbLocation`.
+// If `dbPreservedLocations` is not nil - it also excludes from deletion any location specified in it.
+func (tx *transaction) DeleteFromStoreUpToLocation(
+	storeName string, dbLocation database.StoreLocation, dbPreservedLocations []database.StoreLocation) error {
+
+	if tx.isClosed {
+		return errors.New("cannot retrieve from store on a closed transaction")
+	}
+
+	return tx.ffdb.DeleteFromStoreUpToLocation(storeName, dbLocation, dbPreservedLocations)
 }
 
 // Cursor begins a new cursor over the given bucket.

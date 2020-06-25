@@ -20,16 +20,20 @@ type DataAccessor interface {
 	Delete(key *Key) error
 
 	// AppendToStore appends the given data to the store
-	// defined by storeName. This function returns a serialized
-	// location handle that's meant to be stored and later used
+	// defined by storeName. This function returns a location
+	// handle that's meant to be stored and later used
 	// when querying the data that has just now been inserted.
-	AppendToStore(storeName string, data []byte) ([]byte, error)
+	AppendToStore(storeName string, data []byte) (StoreLocation, error)
 
 	// RetrieveFromStore retrieves data from the store defined by
-	// storeName using the given serialized location handle. It
-	// returns ErrNotFound if the location does not exist. See
+	// storeName using the given location handle. It returns
+	// ErrNotFound if the location does not exist. See
 	// AppendToStore for further details.
-	RetrieveFromStore(storeName string, location []byte) ([]byte, error)
+	RetrieveFromStore(storeName string, location StoreLocation) ([]byte, error)
+
+	// DeleteFromStoreUpToLocation deletes all data in the store that predate `dbLocation`.
+	// If `dbPreservedLocations` is not nil - it also excludes from deletion any location specified in it.
+	DeleteFromStoreUpToLocation(storeName string, dbLocation StoreLocation, dbPreservedLocations []StoreLocation) error
 
 	// Cursor begins a new cursor over the given bucket.
 	Cursor(bucket *Bucket) (Cursor, error)

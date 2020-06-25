@@ -18,6 +18,30 @@ func blockLocationKey(hash *daghash.Hash) *database.Key {
 	return blockLocationsBucket.Key(hash[:])
 }
 
+// PruneBlocksData deletes as much block data as it can from the database, while guaranteeing
+// that pruningPoint, its future and pruningPointAnticone will be kept.
+func PruneBlocksData(context Context, pruningPoint *daghash.Hash, pruningPointAnticone []*daghash.Hash) error {
+	accessor, err := context.accessor()
+	if err != nil {
+		return err
+	}
+
+	pruningPointLocation, err := blockLocationByHash(accessor, pruningPoint)
+	if err != nil {
+		return err
+	}
+
+	pruningPointAnticoneLocations := make([]database.StoreLocation, len(pruningPointAnticone))
+	for i, hash := range pruningPointAnticone {
+		pruningPointAnticoneLocations[i], err = blockLocationByHash(accessor, hash)
+		if err != nil {
+			return err
+		}
+	}
+
+	return accessor.DeleteFromStoreUpToLocation(blockStoreName, pruningPointLocation, pruningPointAnticoneLocations)
+}
+
 // StoreBlock stores the given block in the database.
 func StoreBlock(context *TxContext, hash *daghash.Hash, blockBytes []byte) error {
 	accessor, err := context.accessor()
@@ -42,7 +66,7 @@ func StoreBlock(context *TxContext, hash *daghash.Hash, blockBytes []byte) error
 
 	// Write the block's hash to the blockLocations bucket
 	blockLocationsKey := blockLocationKey(hash)
-	err = accessor.Put(blockLocationsKey, blockLocation)
+	err = accessor.Put(blockLocationsKey, blockLocation.Serialize())
 	if err != nil {
 		return err
 	}
@@ -72,8 +96,22 @@ func FetchBlock(context Context, hash *daghash.Hash) ([]byte, error) {
 		return nil, err
 	}
 
+	blockLocation, err := blockLocationByHash(accessor, hash)
+	if err != nil {
+		return nil, err
+	}
+
+	bytes, err := accessor.RetrieveFromStore(blockStoreName, blockLocation)
+	if err != nil {
+		return nil, err
+	}
+
+	return bytes, nil
+}
+
+func blockLocationByHash(accessor database.DataAccessor, hash *daghash.Hash) (database.StoreLocation, error) {
 	blockLocationsKey := blockLocationKey(hash)
-	blockLocation, err := accessor.Get(blockLocationsKey)
+	serializedBlockLocation, err := accessor.Get(blockLocationsKey)
 	if err != nil {
 		if database.IsNotFoundError(err) {
 			return nil, errors.Wrapf(err,
@@ -81,10 +119,7 @@ func FetchBlock(context Context, hash *daghash.Hash) ([]byte, error) {
 		}
 		return nil, err
 	}
-	bytes, err := accessor.RetrieveFromStore(blockStoreName, blockLocation)
-	if err != nil {
-		return nil, err
-	}
-
-	return bytes, nil
+	var blockLocation database.StoreLocation
+	blockLocation.Deserialize(serializedBlockLocation)
+	return blockLocation, nil
 }

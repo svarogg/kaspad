@@ -86,15 +86,16 @@ func (db *ffldb) Delete(key *database.Key) error {
 
 // AppendToStore appends the given data to the flat
 // file store defined by storeName. This function
-// returns a serialized location handle that's meant
-// to be stored and later used when querying the data
+// returns a location handle that's meant to be
+// stored and later used when querying the data
 // that has just now been inserted.
+//
 // This method is part of the DataAccessor interface.
-func (db *ffldb) AppendToStore(storeName string, data []byte) ([]byte, error) {
+func (db *ffldb) AppendToStore(storeName string, data []byte) (database.StoreLocation, error) {
 	return appendToStore(db, db.flatFileDB, storeName, data)
 }
 
-func appendToStore(accessor database.DataAccessor, ffdb *ff.FlatFileDB, storeName string, data []byte) ([]byte, error) {
+func appendToStore(accessor database.DataAccessor, ffdb *ff.FlatFileDB, storeName string, data []byte) (database.StoreLocation, error) {
 	// Save a reference to the current location in case
 	// we fail and need to rollback.
 	previousLocation, err := ffdb.CurrentLocation(storeName)
@@ -136,7 +137,9 @@ func appendToStore(accessor database.DataAccessor, ffdb *ff.FlatFileDB, storeNam
 		return nil, err
 	}
 
-	return location, err
+	var dbStoreLocation database.StoreLocation
+	dbStoreLocation.Deserialize(location)
+	return dbStoreLocation, err
 }
 
 func setCurrentStoreLocation(accessor database.DataAccessor, storeName string, location []byte) error {
@@ -145,12 +148,13 @@ func setCurrentStoreLocation(accessor database.DataAccessor, storeName string, l
 }
 
 // RetrieveFromStore retrieves data from the store defined by
-// storeName using the given serialized location handle. It
-// returns ErrNotFound if the location does not exist. See
+// storeName using the given location handle. It returns
+// ErrNotFound if the location does not exist. See
 // AppendToStore for further details.
+//
 // This method is part of the DataAccessor interface.
-func (db *ffldb) RetrieveFromStore(storeName string, location []byte) ([]byte, error) {
-	return db.flatFileDB.Read(storeName, location)
+func (db *ffldb) RetrieveFromStore(storeName string, location database.StoreLocation) ([]byte, error) {
+	return db.flatFileDB.Read(storeName, location.Serialize())
 }
 
 // Cursor begins a new cursor over the given bucket.
@@ -159,6 +163,15 @@ func (db *ffldb) Cursor(bucket *database.Bucket) (database.Cursor, error) {
 	ldbCursor := db.levelDB.Cursor(bucket)
 
 	return ldbCursor, nil
+}
+
+// DeleteFromStoreUpToLocation deletes as much data as it can from the given store, while keeping the data that
+// dbLocation, its following locations, and dbPreservedLocations point to.
+//
+// This method is part of the Database interface.
+func (db *ffldb) DeleteFromStoreUpToLocation(storeName string, dbLocation database.StoreLocation,
+	dbPreservedLocations []database.StoreLocation) error {
+	return db.flatFileDB.DeleteFromStoreUpToLocation(storeName, dbLocation, dbPreservedLocations)
 }
 
 // Begin begins a new ffldb transaction.
