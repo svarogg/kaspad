@@ -180,7 +180,7 @@ func (sm *SyncManager) startSync() {
 			continue
 		}
 
-		if !peer.IsSelectedTipKnown() {
+		if peer.IsSelectedTipKnown() {
 			continue
 		}
 
