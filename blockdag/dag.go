@@ -6,6 +6,7 @@ package blockdag
 
 import (
 	"fmt"
+	"github.com/kaspanet/kaspad/util/mstime"
 	"math"
 	"sort"
 	"sync"
@@ -38,13 +39,13 @@ const (
 // forever.
 type orphanBlock struct {
 	block      *util.Block
-	expiration time.Time
+	expiration mstime.Time
 }
 
 // delayedBlock represents a block which has a delayed timestamp and will be processed at processTime
 type delayedBlock struct {
 	block       *util.Block
-	processTime time.Time
+	processTime mstime.Time
 }
 
 // chainUpdates represents the updates made to the selected parent chain after
@@ -151,12 +152,13 @@ type BlockDAG struct {
 
 	lastFinalityPoint *blockNode
 
-	utxoDiffStore     *utxoDiffStore
-	reachabilityStore *reachabilityStore
-	multisetStore     *multisetStore
+	utxoDiffStore *utxoDiffStore
+	multisetStore *multisetStore
 
-	recentBlockProcessingTimestamps []time.Time
-	startTime                       time.Time
+	reachabilityTree *reachabilityTree
+
+	recentBlockProcessingTimestamps []mstime.Time
+	startTime                       mstime.Time
 }
 
 // IsKnownBlock returns whether or not the DAG instance has the block represented
@@ -292,7 +294,7 @@ func (dag *BlockDAG) removeOrphanBlock(orphan *orphanBlock) {
 func (dag *BlockDAG) addOrphanBlock(block *util.Block) {
 	// Remove expired orphan blocks.
 	for _, oBlock := range dag.orphans {
-		if time.Now().After(oBlock.expiration) {
+		if mstime.Now().After(oBlock.expiration) {
 			dag.removeOrphanBlock(oBlock)
 			continue
 		}
@@ -324,7 +326,7 @@ func (dag *BlockDAG) addOrphanBlock(block *util.Block) {
 
 	// Insert the block into the orphan map with an expiration time
 	// 1 hour from now.
-	expiration := time.Now().Add(time.Hour)
+	expiration := mstime.Now().Add(time.Hour)
 	oBlock := &orphanBlock{
 		block:      block,
 		expiration: expiration,
@@ -344,7 +346,7 @@ func (dag *BlockDAG) addOrphanBlock(block *util.Block) {
 // block either after 'seconds' (according to past median time), or once the
 // 'BlockBlueScore' has been reached.
 type SequenceLock struct {
-	Seconds        int64
+	Milliseconds   int64
 	BlockBlueScore int64
 }
 
@@ -378,7 +380,7 @@ func (dag *BlockDAG) calcSequenceLock(node *blockNode, utxoSet UTXOSet, tx *util
 	// A value of -1 for each relative lock type represents a relative time
 	// lock value that will allow a transaction to be included in a block
 	// at any given height or time.
-	sequenceLock := &SequenceLock{Seconds: -1, BlockBlueScore: -1}
+	sequenceLock := &SequenceLock{Milliseconds: -1, BlockBlueScore: -1}
 
 	// Sequence locks don't apply to coinbase transactions Therefore, we
 	// return sequence lock values of -1 indicating that this transaction
@@ -430,16 +432,15 @@ func (dag *BlockDAG) calcSequenceLock(node *blockNode, utxoSet UTXOSet, tx *util
 			}
 			medianTime := blockNode.PastMedianTime(dag)
 
-			// Time based relative time-locks as defined by BIP 68
-			// have a time granularity of RelativeLockSeconds, so
-			// we shift left by this amount to convert to the
-			// proper relative time-lock. We also subtract one from
-			// the relative lock to maintain the original lockTime
-			// semantics.
-			timeLockSeconds := (relativeLock << wire.SequenceLockTimeGranularity) - 1
-			timeLock := medianTime.Unix() + timeLockSeconds
-			if timeLock > sequenceLock.Seconds {
-				sequenceLock.Seconds = timeLock
+			// Time based relative time-locks have a time granularity of
+			// wire.SequenceLockTimeGranularity, so we shift left by this
+			// amount to convert to the proper relative time-lock. We also
+			// subtract one from the relative lock to maintain the original
+			// lockTime semantics.
+			timeLockMilliseconds := (relativeLock << wire.SequenceLockTimeGranularity) - 1
+			timeLock := medianTime.UnixMilliseconds() + timeLockMilliseconds
+			if timeLock > sequenceLock.Milliseconds {
+				sequenceLock.Milliseconds = timeLock
 			}
 		default:
 			// The relative lock-time for this input is expressed
@@ -458,18 +459,18 @@ func (dag *BlockDAG) calcSequenceLock(node *blockNode, utxoSet UTXOSet, tx *util
 }
 
 // LockTimeToSequence converts the passed relative locktime to a sequence
-// number in accordance to BIP-68.
-func LockTimeToSequence(isSeconds bool, locktime uint64) uint64 {
+// number.
+func LockTimeToSequence(isMilliseconds bool, locktime uint64) uint64 {
 	// If we're expressing the relative lock time in blocks, then the
 	// corresponding sequence number is simply the desired input age.
-	if !isSeconds {
+	if !isMilliseconds {
 		return locktime
 	}
 
-	// Set the 22nd bit which indicates the lock time is in seconds, then
-	// shift the locktime over by 9 since the time granularity is in
-	// 512-second intervals (2^9). This results in a max lock-time of
-	// 33,553,920 seconds, or 1.1 years.
+	// Set the 22nd bit which indicates the lock time is in milliseconds, then
+	// shift the locktime over by 19 since the time granularity is in
+	// 524288-millisecond intervals (2^19). This results in a max lock-time of
+	// 34,359,214,080 seconds, or 1.1 years.
 	return wire.SequenceLockTimeIsSeconds |
 		locktime>>wire.SequenceLockTimeGranularity
 }
@@ -566,7 +567,7 @@ func (dag *BlockDAG) connectBlock(node *blockNode,
 		}
 	}
 
-	if err := dag.checkFinalityRules(node); err != nil {
+	if err := dag.checkFinalityViolation(node); err != nil {
 		return nil, err
 	}
 
@@ -700,7 +701,7 @@ func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, virtualUTXODiff *UT
 		return err
 	}
 
-	err = dag.reachabilityStore.flushToDB(dbTx)
+	err = dag.reachabilityTree.storeState(dbTx)
 	if err != nil {
 		return err
 	}
@@ -760,7 +761,7 @@ func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, virtualUTXODiff *UT
 	dag.index.clearDirtyEntries()
 	dag.utxoDiffStore.clearDirtyEntries()
 	dag.utxoDiffStore.clearOldEntries()
-	dag.reachabilityStore.clearDirtyEntries()
+	dag.reachabilityTree.store.clearDirtyEntries()
 	dag.multisetStore.clearNewEntries()
 
 	return nil
@@ -816,20 +817,40 @@ func (dag *BlockDAG) LastFinalityPointHash() *daghash.Hash {
 	return dag.lastFinalityPoint.hash
 }
 
-// checkFinalityRules checks the new block does not violate the finality rules
-// specifically - the new block selectedParent chain should contain the old finality point
-func (dag *BlockDAG) checkFinalityRules(newNode *blockNode) error {
+// isInSelectedParentChainOf returns whether `node` is in the selected parent chain of `other`.
+func (dag *BlockDAG) isInSelectedParentChainOf(node *blockNode, other *blockNode) (bool, error) {
+	// By definition, a node is not in the selected parent chain of itself.
+	if node == other {
+		return false, nil
+	}
+
+	return dag.reachabilityTree.isReachabilityTreeAncestorOf(node, other)
+}
+
+// checkFinalityViolation checks the new block does not violate the finality rules
+// specifically - the new block selectedParent chain should contain the old finality point.
+func (dag *BlockDAG) checkFinalityViolation(newNode *blockNode) error {
 	// the genesis block can not violate finality rules
 	if newNode.isGenesis() {
 		return nil
 	}
 
-	for currentNode := newNode; currentNode != dag.lastFinalityPoint; currentNode = currentNode.selectedParent {
-		// If we went past dag's last finality point without encountering it -
-		// the new block has violated finality.
-		if currentNode.blueScore <= dag.lastFinalityPoint.blueScore {
-			return ruleError(ErrFinality, "The last finality point is not in the selected chain of this block")
-		}
+	// Because newNode doesn't have reachability data we
+	// need to check if the last finality point is in the
+	// selected parent chain of newNode.selectedParent, so
+	// we explicitly check if newNode.selectedParent is
+	// the finality point.
+	if dag.lastFinalityPoint == newNode.selectedParent {
+		return nil
+	}
+
+	isInSelectedChain, err := dag.isInSelectedParentChainOf(dag.lastFinalityPoint, newNode.selectedParent)
+	if err != nil {
+		return err
+	}
+
+	if !isInSelectedChain {
+		return ruleError(ErrFinality, "the last finality point is not in the selected parent chain of this block")
 	}
 	return nil
 }
@@ -894,7 +915,7 @@ func (dag *BlockDAG) finalizeNodesBelowFinalityPoint(deleteDiffData bool) {
 // IsKnownFinalizedBlock returns whether the block is below the finality point.
 // IsKnownFinalizedBlock might be false-negative because node finality status is
 // updated in a separate goroutine. To get a definite answer if a block
-// is finalized or not, use dag.checkFinalityRules.
+// is finalized or not, use dag.checkFinalityViolation.
 func (dag *BlockDAG) IsKnownFinalizedBlock(blockHash *daghash.Hash) bool {
 	node, ok := dag.index.LookupNode(blockHash)
 	return ok && node.isFinalized
@@ -970,10 +991,10 @@ func (dag *BlockDAG) applyDAGChanges(node *blockNode, newBlockPastUTXO UTXOSet,
 	newBlockMultiset *secp256k1.MultiSet, selectedParentAnticone []*blockNode) (
 	virtualUTXODiff *UTXODiff, chainUpdates *chainUpdates, err error) {
 
-	// Add the block to the reachability structures
-	err = dag.updateReachability(node, selectedParentAnticone)
+	// Add the block to the reachability tree
+	err = dag.reachabilityTree.addBlock(node, selectedParentAnticone)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed updating reachability")
+		return nil, nil, errors.Wrap(err, "failed adding block to the reachability tree")
 	}
 
 	dag.multisetStore.setMultiset(node, newBlockMultiset)
@@ -1320,18 +1341,18 @@ func (dag *BlockDAG) isSynced() bool {
 	var dagTimestamp int64
 	selectedTip := dag.selectedTip()
 	if selectedTip == nil {
-		dagTimestamp = dag.dagParams.GenesisBlock.Header.Timestamp.Unix()
+		dagTimestamp = dag.dagParams.GenesisBlock.Header.Timestamp.UnixMilliseconds()
 	} else {
 		dagTimestamp = selectedTip.timestamp
 	}
-	dagTime := time.Unix(dagTimestamp, 0)
+	dagTime := mstime.UnixMilliseconds(dagTimestamp)
 	return dag.Now().Sub(dagTime) <= isDAGCurrentMaxDiff
 }
 
 // Now returns the adjusted time according to
 // dag.timeSource. See TimeSource.Now for
 // more details.
-func (dag *BlockDAG) Now() time.Time {
+func (dag *BlockDAG) Now() mstime.Time {
 	return dag.timeSource.Now()
 }
 
@@ -1386,7 +1407,7 @@ func (dag *BlockDAG) UTXOSet() *FullUTXOSet {
 }
 
 // CalcPastMedianTime returns the past median time of the DAG.
-func (dag *BlockDAG) CalcPastMedianTime() time.Time {
+func (dag *BlockDAG) CalcPastMedianTime() mstime.Time {
 	return dag.virtual.tips().bluest().PastMedianTime(dag)
 }
 
@@ -1760,7 +1781,7 @@ func (dag *BlockDAG) antiPastBetween(lowHash, highHash *daghash.Hash, maxEntries
 			continue
 		}
 		visited.add(current)
-		isCurrentAncestorOfLowNode, err := dag.isAncestorOf(current, lowNode)
+		isCurrentAncestorOfLowNode, err := dag.isInPast(current, lowNode)
 		if err != nil {
 			return nil, err
 		}
@@ -1784,6 +1805,10 @@ func (dag *BlockDAG) antiPastBetween(lowHash, highHash *daghash.Hash, maxEntries
 		nodes[i] = candidateNodes.pop()
 	}
 	return nodes, nil
+}
+
+func (dag *BlockDAG) isInPast(this *blockNode, other *blockNode) (bool, error) {
+	return dag.reachabilityTree.isInPast(this, other)
 }
 
 // AntiPastHashesBetween returns the hashes of the blocks between the
@@ -2034,13 +2059,13 @@ func New(config *Config) (*BlockDAG, error) {
 		deploymentCaches:               newThresholdCaches(dagconfig.DefinedDeployments),
 		blockCount:                     0,
 		subnetworkID:                   config.SubnetworkID,
-		startTime:                      time.Now(),
+		startTime:                      mstime.Now(),
 	}
 
 	dag.virtual = newVirtualBlock(dag, nil)
 	dag.utxoDiffStore = newUTXODiffStore(dag)
-	dag.reachabilityStore = newReachabilityStore(dag)
 	dag.multisetStore = newMultisetStore(dag)
+	dag.reachabilityTree = newReachabilityTree(dag)
 
 	// Initialize the DAG state from the passed database. When the db
 	// does not yet contain any DAG state, both it and the DAG state
