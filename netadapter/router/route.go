@@ -1,9 +1,11 @@
 package router
 
 import (
+	"sync"
+	"time"
+
 	"github.com/kaspanet/kaspad/wire"
 	"github.com/pkg/errors"
-	"time"
 )
 
 const (
@@ -19,8 +21,9 @@ type onCapacityReachedHandler func()
 
 // Route represents an incoming or outgoing Router route
 type Route struct {
-	channel chan wire.Message
-	closed  bool
+	channel   chan wire.Message
+	closed    bool
+	closeLock sync.Mutex
 
 	onCapacityReachedHandler onCapacityReachedHandler
 }
@@ -33,8 +36,15 @@ func NewRoute() *Route {
 	}
 }
 
+func (r *Route) getLock() {
+	r.closeLock.Lock()
+}
+
 // Enqueue enqueues a message to the Route
 func (r *Route) Enqueue(message wire.Message) (isOpen bool) {
+	r.getLock()
+	defer r.closeLock.Unlock()
+
 	if r.closed {
 		return false
 	}
@@ -47,15 +57,15 @@ func (r *Route) Enqueue(message wire.Message) (isOpen bool) {
 
 // Dequeue dequeues a message from the Route
 func (r *Route) Dequeue() (message wire.Message, isOpen bool) {
-	if r.closed {
-		return nil, false
-	}
-	return <-r.channel, true
+	return <-r.channel, !r.closed
 }
 
 // EnqueueWithTimeout attempts to enqueue a message to the Route
 // and returns an error if the given timeout expires first.
 func (r *Route) EnqueueWithTimeout(message wire.Message, timeout time.Duration) (isOpen bool, err error) {
+	r.getLock()
+	defer r.closeLock.Unlock()
+
 	if r.closed {
 		return false, nil
 	}
@@ -73,14 +83,11 @@ func (r *Route) EnqueueWithTimeout(message wire.Message, timeout time.Duration) 
 // DequeueWithTimeout attempts to dequeue a message from the Route
 // and returns an error if the given timeout expires first.
 func (r *Route) DequeueWithTimeout(timeout time.Duration) (message wire.Message, isOpen bool, err error) {
-	if r.closed {
-		return nil, false, nil
-	}
 	select {
 	case <-time.After(timeout):
 		return nil, false, errors.Wrapf(ErrTimeout, "got timeout after %s", timeout)
 	case message := <-r.channel:
-		return message, true, nil
+		return message, !r.closed, nil
 	}
 }
 
@@ -90,6 +97,9 @@ func (r *Route) setOnCapacityReachedHandler(onCapacityReachedHandler onCapacityR
 
 // Close closes this route
 func (r *Route) Close() error {
+	r.getLock()
+	defer r.closeLock.Unlock()
+
 	r.closed = true
 	close(r.channel)
 	return nil
