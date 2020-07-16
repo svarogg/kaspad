@@ -102,3 +102,7 @@ func (c *ConnectionManager) AddConnectionRequest(address string, isPermanent boo
 		}
 	})
 }
+
+func (c *ConnectionManager) SetConnectionRequestPermanent(address string, isPermanent bool) error {
+	connReq := c.pen
+}

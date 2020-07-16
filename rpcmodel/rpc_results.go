@@ -6,6 +6,7 @@ package rpcmodel
 
 import (
 	"encoding/json"
+
 	"github.com/kaspanet/kaspad/addrmgr"
 )
 
@@ -67,20 +68,6 @@ type DecodeScriptResult struct {
 	Type    string  `json:"type"`
 	Address *string `json:"address,omitempty"`
 	P2sh    string  `json:"p2sh,omitempty"`
-}
-
-// GetManualNodeInfoResultAddr models the data of the addresses portion of the
-// getmanualnodeinfo command.
-type GetManualNodeInfoResultAddr struct {
-	Address   string `json:"address"`
-	Connected string `json:"connected"`
-}
-
-// GetManualNodeInfoResult models the data from the getmanualnodeinfo command.
-type GetManualNodeInfoResult struct {
-	ManualNode string                         `json:"manualNode"`
-	Connected  *bool                          `json:"connected,omitempty"`
-	Addresses  *[]GetManualNodeInfoResultAddr `json:"addresses,omitempty"`
 }
 
 // SoftForkDescription describes the current state of a soft-fork which was
@@ -439,22 +426,6 @@ type TxRawResult struct {
 	IsInMempool bool    `json:"isInMempool"`
 	Time        uint64  `json:"time,omitempty"`
 	BlockTime   uint64  `json:"blockTime,omitempty"`
-}
-
-// TxRawDecodeResult models the data from the decoderawtransaction command.
-type TxRawDecodeResult struct {
-	TxID     string `json:"txId"`
-	Version  int32  `json:"version"`
-	Locktime uint64 `json:"lockTime"`
-	Vin      []Vin  `json:"vin"`
-	Vout     []Vout `json:"vout"`
-}
-
-// ValidateAddressResult models the data returned by the kaspa rpc server
-// validateaddress command.
-type ValidateAddressResult struct {
-	IsValid bool   `json:"isValid"`
-	Address string `json:"address,omitempty"`
 }
 
 // ChainBlock models a block that is part of the selected parent chain.

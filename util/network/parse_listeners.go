@@ -8,26 +8,26 @@ import (
 	"github.com/pkg/errors"
 )
 
-// simpleAddr implements the net.Addr interface with two struct fields
+// simpleAddr implements the net.Target interface with two struct fields
 type simpleAddr struct {
 	net, addr string
 }
 
 // String returns the address.
 //
-// This is part of the net.Addr interface.
+// This is part of the net.Target interface.
 func (a simpleAddr) String() string {
 	return a.addr
 }
 
 // Network returns the network.
 //
-// This is part of the net.Addr interface.
+// This is part of the net.Target interface.
 func (a simpleAddr) Network() string {
 	return a.net
 }
 
-// Ensure simpleAddr implements the net.Addr interface.
+// Ensure simpleAddr implements the net.Target interface.
 var _ net.Addr = simpleAddr{}
 
 // ParseListeners determines whether each listen address is IPv4 and IPv6 and

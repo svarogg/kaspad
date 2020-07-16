@@ -7,6 +7,8 @@ package rpc
 import (
 	"sync/atomic"
 
+	"github.com/kaspanet/kaspad/connmanager"
+
 	"github.com/kaspanet/kaspad/blockdag"
 	"github.com/kaspanet/kaspad/mempool"
 	"github.com/kaspanet/kaspad/netsync"
@@ -65,7 +67,7 @@ func (p *rpcPeer) FeeFilter() int64 {
 // rpcConnManager provides a connection manager for use with the RPC server and
 // implements the rpcserverConnManager interface.
 type rpcConnManager struct {
-	server *p2p.Server
+	connectionManager connmanager.ConnectionManager
 }
 
 // Ensure rpcConnManager implements the rpcserverConnManager interface.
@@ -73,19 +75,13 @@ var _ rpcserverConnManager = &rpcConnManager{}
 
 // Connect adds the provided address as a new outbound peer. The permanent flag
 // indicates whether or not to make the peer persistent and reconnect if the
-// connection is lost. Attempting to connect to an already existing peer will
-// return an error.
+// connection is lost.
 //
 // This function is safe for concurrent access and is part of the
 // rpcserverConnManager interface implementation.
 func (cm *rpcConnManager) Connect(addr string, permanent bool) error {
-	replyChan := make(chan error)
-	cm.server.Query <- p2p.ConnectNodeMsg{
-		Addr:      addr,
-		Permanent: permanent,
-		Reply:     replyChan,
-	}
-	return <-replyChan
+	cm.connectionManager.AddConnectionRequest(addr, permanent)
+	return nil
 }
 
 // RemoveByID removes the peer associated with the provided id from the list of

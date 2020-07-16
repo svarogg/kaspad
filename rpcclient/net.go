@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+
 	"github.com/kaspanet/kaspad/util/daghash"
 	"github.com/kaspanet/kaspad/util/pointers"
 	"github.com/kaspanet/kaspad/wire"
@@ -32,7 +33,7 @@ func (r FutureAddNodeResult) Receive() error {
 //
 // See AddNode for the blocking version and more details.
 func (c *Client) AddManualNodeAsync(host string) FutureAddNodeResult {
-	cmd := rpcmodel.NewAddManualNodeCmd(host, pointers.Bool(false))
+	cmd := rpcmodel.NewConnectCmd(host, pointers.Bool(false))
 	return c.sendCmd(cmd)
 }
 
@@ -73,7 +74,7 @@ func (r FutureGetManualNodeInfoResult) Receive() ([]rpcmodel.GetManualNodeInfoRe
 //
 // See GetManualNodeInfo for the blocking version and more details.
 func (c *Client) GetManualNodeInfoAsync(peer string) FutureGetManualNodeInfoResult {
-	cmd := rpcmodel.NewGetManualNodeInfoCmd(peer, nil)
+	cmd := rpcmodel.NewGetPeerInfoCmd(peer, nil)
 	return c.sendCmd(cmd)
 }
 
@@ -113,7 +114,7 @@ func (r FutureGetManualNodeInfoNoDNSResult) Receive() ([]string, error) {
 //
 // See GetManualNodeInfoNoDNS for the blocking version and more details.
 func (c *Client) GetManualNodeInfoNoDNSAsync(peer string) FutureGetManualNodeInfoNoDNSResult {
-	cmd := rpcmodel.NewGetManualNodeInfoCmd(peer, pointers.Bool(false))
+	cmd := rpcmodel.NewGetPeerInfoCmd(peer, pointers.Bool(false))
 	return c.sendCmd(cmd)
 }
 

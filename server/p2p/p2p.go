@@ -66,26 +66,26 @@ var (
 	userAgentVersion = version.Version()
 )
 
-// simpleAddr implements the net.Addr interface with two struct fields
+// simpleAddr implements the net.Target interface with two struct fields
 type simpleAddr struct {
 	net, addr string
 }
 
 // String returns the address.
 //
-// This is part of the net.Addr interface.
+// This is part of the net.Target interface.
 func (a simpleAddr) String() string {
 	return a.addr
 }
 
 // Network returns the network.
 //
-// This is part of the net.Addr interface.
+// This is part of the net.Target interface.
 func (a simpleAddr) Network() string {
 	return a.net
 }
 
-// Ensure simpleAddr implements the net.Addr interface.
+// Ensure simpleAddr implements the net.Target interface.
 var _ net.Addr = simpleAddr{}
 
 // broadcastMsg provides the ability to house a kaspa message to be broadcast
@@ -1676,9 +1676,9 @@ func initListeners(amgr *addrmgr.AddrManager, listenAddrs []string, services wir
 }
 
 // addrStringToNetAddr takes an address in the form of 'host:port' and returns
-// a net.Addr which maps to the original address with any host names resolved
+// a net.Target which maps to the original address with any host names resolved
 // to IP addresses. It also handles tor addresses properly by returning a
-// net.Addr that encapsulates the address.
+// net.Target that encapsulates the address.
 func addrStringToNetAddr(addr string) (*net.TCPAddr, error) {
 	host, strPort, err := net.SplitHostPort(addr)
 	if err != nil {

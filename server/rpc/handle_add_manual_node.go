@@ -7,11 +7,11 @@ import (
 
 // handleAddManualNode handles addManualNode commands.
 func handleAddManualNode(s *Server, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*rpcmodel.AddManualNodeCmd)
+	c := cmd.(*rpcmodel.ConnectCmd)
 
 	oneTry := c.OneTry != nil && *c.OneTry
 
-	addr, err := network.NormalizeAddress(c.Addr, s.cfg.DAGParams.DefaultPort)
+	addr, err := network.NormalizeAddress(c.Target, s.cfg.DAGParams.DefaultPort)
 	if err != nil {
 		return nil, &rpcmodel.RPCError{
 			Code:    rpcmodel.ErrRPCInvalidParameter,
@@ -20,16 +20,9 @@ func handleAddManualNode(s *Server, cmd interface{}, closeChan <-chan struct{}) 
 	}
 
 	if oneTry {
-		err = s.cfg.ConnMgr.Connect(addr, false)
+		s.cfg.ConnMgr.Connect(addr, false)
 	} else {
-		err = s.cfg.ConnMgr.Connect(addr, true)
-	}
-
-	if err != nil {
-		return nil, &rpcmodel.RPCError{
-			Code:    rpcmodel.ErrRPCInvalidParameter,
-			Message: err.Error(),
-		}
+		s.cfg.ConnMgr.Connect(addr, true)
 	}
 
 	// no data returned unless an error.

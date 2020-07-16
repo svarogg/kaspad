@@ -867,7 +867,7 @@ func (m *mockListener) Close() error {
 	return nil
 }
 
-// Addr returns the address the mock listener was configured with.
+// Target returns the address the mock listener was configured with.
 //
 // This is part of the net.Listener interface.
 func (m *mockListener) Addr() net.Addr {

@@ -7,7 +7,7 @@ import (
 
 // handleRemoveManualNode handles removeManualNode command.
 func handleRemoveManualNode(s *Server, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*rpcmodel.RemoveManualNodeCmd)
+	c := cmd.(*rpcmodel.DisconnectCmd)
 
 	addr, err := network.NormalizeAddress(c.Addr, s.cfg.DAGParams.DefaultPort)
 	if err != nil {

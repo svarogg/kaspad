@@ -670,24 +670,13 @@ type rpcserverPeer interface {
 type rpcserverConnManager interface {
 	// Connect adds the provided address as a new outbound peer. The
 	// permanent flag indicates whether or not to make the peer persistent
-	// and reconnect if the connection is lost. Attempting to connect to an
-	// already existing peer will return an error.
-	Connect(addr string, permanent bool) error
-
-	// RemoveByID removes the peer associated with the provided id from the
-	// list of persistent peers. Attempting to remove an id that does not
-	// exist will return an error.
-	RemoveByID(id int32) error
+	// and reconnect if the connection is lost.
+	Connect(addr string, permanent bool)
 
 	// RemoveByAddr removes the peer associated with the provided address
 	// from the list of persistent peers. Attempting to remove an address
 	// that does not exist will return an error.
 	RemoveByAddr(addr string) error
-
-	// DisconnectByID disconnects the peer associated with the provided id.
-	// This applies to both inbound and outbound peers. Attempting to
-	// remove an id that does not exist will return an error.
-	DisconnectByID(id int32) error
 
 	// DisconnectByAddr disconnects the peer associated with the provided
 	// address. This applies to both inbound and outbound peers.

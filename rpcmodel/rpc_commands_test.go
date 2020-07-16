@@ -9,9 +9,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/kaspanet/kaspad/util/pointers"
 	"reflect"
 	"testing"
+
+	"github.com/kaspanet/kaspad/util/pointers"
 
 	"github.com/kaspanet/kaspad/rpcmodel"
 )
@@ -37,10 +38,10 @@ func TestRPCServerCommands(t *testing.T) {
 				return rpcmodel.NewCommand("addManualNode", "127.0.0.1")
 			},
 			staticCmd: func() interface{} {
-				return rpcmodel.NewAddManualNodeCmd("127.0.0.1", nil)
+				return rpcmodel.NewConnectCmd("127.0.0.1", nil)
 			},
 			marshalled:   `{"jsonrpc":"1.0","method":"addManualNode","params":["127.0.0.1"],"id":1}`,
-			unmarshalled: &rpcmodel.AddManualNodeCmd{Addr: "127.0.0.1", OneTry: pointers.Bool(false)},
+			unmarshalled: &rpcmodel.ConnectCmd{Target: "127.0.0.1", OneTry: pointers.Bool(false)},
 		},
 		{
 			name: "createRawTransaction",
@@ -389,10 +390,10 @@ func TestRPCServerCommands(t *testing.T) {
 				return rpcmodel.NewCommand("getManualNodeInfo", "127.0.0.1")
 			},
 			staticCmd: func() interface{} {
-				return rpcmodel.NewGetManualNodeInfoCmd("127.0.0.1", nil)
+				return rpcmodel.NewGetPeerInfoCmd("127.0.0.1", nil)
 			},
 			marshalled: `{"jsonrpc":"1.0","method":"getManualNodeInfo","params":["127.0.0.1"],"id":1}`,
-			unmarshalled: &rpcmodel.GetManualNodeInfoCmd{
+			unmarshalled: &rpcmodel.GetPeerInfoCmd{
 				Node:    "127.0.0.1",
 				Details: pointers.Bool(true),
 			},
@@ -577,10 +578,10 @@ func TestRPCServerCommands(t *testing.T) {
 				return rpcmodel.NewCommand("removeManualNode", "127.0.0.1")
 			},
 			staticCmd: func() interface{} {
-				return rpcmodel.NewRemoveManualNodeCmd("127.0.0.1")
+				return rpcmodel.NewDisconnectCmd("127.0.0.1")
 			},
 			marshalled:   `{"jsonrpc":"1.0","method":"removeManualNode","params":["127.0.0.1"],"id":1}`,
-			unmarshalled: &rpcmodel.RemoveManualNodeCmd{Addr: "127.0.0.1"},
+			unmarshalled: &rpcmodel.DisconnectCmd{Addr: "127.0.0.1"},
 		},
 		{
 			name: "sendRawTransaction",

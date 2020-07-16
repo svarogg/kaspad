@@ -1,16 +1,17 @@
 package rpc
 
 import (
+	"net"
+
 	"github.com/kaspanet/kaspad/logger"
 	"github.com/kaspanet/kaspad/rpcmodel"
 	"github.com/kaspanet/kaspad/server/serverutils"
 	"github.com/kaspanet/kaspad/util/pointers"
-	"net"
 )
 
 // handleGetManualNodeInfo handles getManualNodeInfo commands.
 func handleGetManualNodeInfo(s *Server, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
-	c := cmd.(*rpcmodel.GetManualNodeInfoCmd)
+	c := cmd.(*rpcmodel.GetPeerInfoCmd)
 	results, err := getManualNodesInfo(s, c.Details, c.Node)
 	if err != nil {
 		return nil, err

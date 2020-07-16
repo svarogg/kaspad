@@ -8,8 +8,6 @@ import (
 	"bytes"
 	"container/list"
 	"fmt"
-	mathUtil "github.com/kaspanet/kaspad/util/math"
-	"github.com/kaspanet/kaspad/util/mstime"
 	"io"
 	"math/rand"
 	"net"
@@ -17,6 +15,9 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	mathUtil "github.com/kaspanet/kaspad/util/math"
+	"github.com/kaspanet/kaspad/util/mstime"
 
 	"github.com/pkg/errors"
 
@@ -260,7 +261,7 @@ type Config struct {
 }
 
 // newNetAddress attempts to extract the IP address and port from the passed
-// net.Addr interface and create a kaspa NetAddress structure using that
+// net.Target interface and create a kaspa NetAddress structure using that
 // information.
 func newNetAddress(addr net.Addr, services wire.ServiceFlag) (*wire.NetAddress, error) {
 	// addr will be a net.TCPAddr when not using a proxy.
@@ -525,7 +526,7 @@ func (p *Peer) NA() *wire.NetAddress {
 	return p.na
 }
 
-// Addr returns the peer address.
+// Target returns the peer address.
 //
 // This function is safe for concurrent access.
 func (p *Peer) Addr() string {

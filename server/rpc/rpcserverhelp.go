@@ -29,7 +29,7 @@ var helpDescsEnUS = map[string]string{
 	"debugLevel--result0":    "The string 'Done.'",
 	"debugLevel--result1":    "The list of subsystems",
 
-	// AddManualNodeCmd help.
+	// ConnectCmd help.
 	"addManualNode--synopsis": "Attempts to add or remove a persistent peer.",
 	"addManualNode-addr":      "IP address and port of the peer to operate on",
 	"addManualNode-oneTry":    "When enabled, will try a single connection to a peer",
@@ -135,7 +135,7 @@ var helpDescsEnUS = map[string]string{
 	"getManualNodeInfoResult-connected":  "Whether or not the peer is currently connected",
 	"getManualNodeInfoResult-addresses":  "DNS lookup and connection information about the peer",
 
-	// GetManualNodeInfoCmd help.
+	// GetPeerInfoCmd help.
 	"getManualNodeInfo--synopsis":   "Returns information about manually added (persistent) peers.",
 	"getManualNodeInfo-details":     "Specifies whether the returned data is a JSON object including DNS and connection information, or just a list of added peers",
 	"getManualNodeInfo-node":        "Only return information about this specific peer instead of all added peers",
@@ -517,7 +517,7 @@ var helpDescsEnUS = map[string]string{
 	"ping--synopsis": "Queues a ping to be sent to each connected peer.\n" +
 		"Ping times are provided by getConnectedPeerInfo via the pingtime and pingwait fields.",
 
-	// RemoveManualNodeCmd help.
+	// DisconnectCmd help.
 	"removeManualNode--synopsis": "Removes a peer from the manual nodes list",
 	"removeManualNode-addr":      "IP address and port of the peer to remove",
 
