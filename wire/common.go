@@ -7,7 +7,7 @@ package wire
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/kaspanet/kaspad/netadapter/id"
+	"github.com/kaspanet/go-secp256k1"
 	"github.com/kaspanet/kaspad/util/binaryserializer"
 	"github.com/kaspanet/kaspad/util/daghash"
 	"github.com/kaspanet/kaspad/util/mstime"
@@ -142,8 +142,28 @@ func ReadElement(r io.Reader, element interface{}) error {
 		}
 		return nil
 
-	case *id.ID:
-		return e.Deserialize(r)
+	case *secp256k1.SchnorrPublicKey:
+		serializedPublicKey := make(secp256k1.SerializedSchnorrPublicKey, secp256k1.SerializedSchnorrPublicKeyCompressedSize)
+		_, err := io.ReadFull(r, serializedPublicKey)
+		if err != nil {
+			return err
+		}
+		publicKey, err := secp256k1.DeserializeSchnorrPubKey(serializedPublicKey)
+		if err != nil {
+			return err
+		}
+		*e = *publicKey
+		return nil
+
+	case *secp256k1.SchnorrSignature:
+		serializedSignature := &secp256k1.SerializedSchnorrSignature{}
+		_, err := io.ReadFull(r, serializedSignature[:])
+		if err != nil {
+			return err
+		}
+		signature := secp256k1.DeserializeSchnorrSignature(serializedSignature)
+		*e = *signature
+		return nil
 
 	case *subnetworkid.SubnetworkID:
 		_, err := io.ReadFull(r, e[:])
@@ -291,8 +311,25 @@ func WriteElement(w io.Writer, element interface{}) error {
 		}
 		return nil
 
-	case *id.ID:
-		return e.Serialize(w)
+	case *secp256k1.SchnorrPublicKey:
+		serialized, err := e.SerializeCompressed()
+		if err != nil {
+			return err
+		}
+
+		_, err = w.Write(serialized)
+		if err != nil {
+			return err
+		}
+		return nil
+
+	case *secp256k1.SchnorrSignature:
+		serialized := e.Serialize()
+		_, err := w.Write(serialized[:])
+		if err != nil {
+			return err
+		}
+		return nil
 
 	case *subnetworkid.SubnetworkID:
 		_, err := w.Write(e[:])

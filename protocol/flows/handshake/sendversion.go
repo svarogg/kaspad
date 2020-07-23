@@ -49,7 +49,13 @@ func (flow *sendVersionFlow) start() error {
 	if err != nil {
 		panic(err)
 	}
-	msg := wire.NewMsgVersion(localAddress, flow.NetAdapter().ID(), selectedTipHash, subnetworkID)
+
+	signature, err := flow.SelfPrivateKey().SchnorrSign(handshakeMessageToSignHash)
+	if err != nil {
+		panic(err)
+	}
+
+	msg := wire.NewMsgVersion(localAddress, flow.SelfPublicKey(), signature, selectedTipHash, subnetworkID)
 	msg.AddUserAgent(userAgentName, userAgentVersion, flow.Config().UserAgentComments...)
 
 	// Advertise the services flag

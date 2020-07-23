@@ -6,10 +6,10 @@ package wire
 
 import (
 	"fmt"
+	"github.com/kaspanet/go-secp256k1"
 	"io"
 	"strings"
 
-	"github.com/kaspanet/kaspad/netadapter/id"
 	"github.com/kaspanet/kaspad/util/mstime"
 	"github.com/kaspanet/kaspad/version"
 
@@ -45,7 +45,10 @@ type MsgVersion struct {
 	Address *NetAddress
 
 	// The peer unique ID
-	ID *id.ID
+	PublicKey *secp256k1.SchnorrPublicKey
+
+	// The peer unique ID
+	Signature *secp256k1.SchnorrSignature
 
 	// The user agent that generated messsage. This is a encoded as a varString
 	// on the wire. This has a max length of MaxUserAgentLen.
@@ -118,11 +121,18 @@ func (msg *MsgVersion) KaspaDecode(r io.Reader, pver uint32) error {
 		}
 	}
 
-	msg.ID = new(id.ID)
-	err = ReadElement(r, msg.ID)
+	msg.PublicKey = new(secp256k1.SchnorrPublicKey)
+	err = ReadElement(r, msg.PublicKey)
 	if err != nil {
 		return err
 	}
+
+	msg.Signature = new(secp256k1.SchnorrSignature)
+	err = ReadElement(r, msg.Signature)
+	if err != nil {
+		return err
+	}
+
 	userAgent, err := ReadVarString(r, pver)
 	if err != nil {
 		return err
@@ -188,7 +198,12 @@ func (msg *MsgVersion) KaspaEncode(w io.Writer, pver uint32) error {
 		}
 	}
 
-	err = WriteElement(w, msg.ID)
+	err = WriteElement(w, msg.PublicKey)
+	if err != nil {
+		return err
+	}
+
+	err = WriteElement(w, msg.Signature)
 	if err != nil {
 		return err
 	}
@@ -232,7 +247,7 @@ func (msg *MsgVersion) MaxPayloadLength(pver uint32) uint32 {
 // NewMsgVersion returns a new kaspa version message that conforms to the
 // Message interface using the passed parameters and defaults for the remaining
 // fields.
-func NewMsgVersion(addr *NetAddress, id *id.ID,
+func NewMsgVersion(addr *NetAddress, publicKey *secp256k1.SchnorrPublicKey, signature *secp256k1.SchnorrSignature,
 	selectedTipHash *daghash.Hash, subnetworkID *subnetworkid.SubnetworkID) *MsgVersion {
 
 	// Limit the timestamp to one millisecond precision since the protocol
@@ -242,7 +257,8 @@ func NewMsgVersion(addr *NetAddress, id *id.ID,
 		Services:        0,
 		Timestamp:       mstime.Now(),
 		Address:         addr,
-		ID:              id,
+		PublicKey:       publicKey,
+		Signature:       signature,
 		UserAgent:       DefaultUserAgent,
 		SelectedTipHash: selectedTipHash,
 		DisableRelayTx:  false,

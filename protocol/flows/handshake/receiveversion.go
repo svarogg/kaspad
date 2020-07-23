@@ -51,8 +51,13 @@ func (flow *receiveVersionFlow) start() (*wire.NetAddress, error) {
 		return nil, protocolerrors.New(true, "a version message must precede all others")
 	}
 
-	if !allowSelfConnections && flow.NetAdapter().ID().IsEqual(msgVersion.ID) {
+	if !allowSelfConnections && flow.SelfPublicKey().IsEqual(msgVersion.PublicKey) {
 		return nil, protocolerrors.New(true, "connected to self")
+	}
+
+	err = flow.validateMsgVersionSignature(msgVersion)
+	if err != nil {
+		return nil, err
 	}
 
 	// Notify and disconnect clients that have a protocol version that is
@@ -62,7 +67,6 @@ func (flow *receiveVersionFlow) start() (*wire.NetAddress, error) {
 	// wire.RejectVersion, this should send a reject packet before
 	// disconnecting.
 	if msgVersion.ProtocolVersion < minAcceptableProtocolVersion {
-		//TODO(libp2p) create error type for disconnect but don't ban
 		return nil, protocolerrors.Errorf(false, "protocol version must be %d or greater",
 			minAcceptableProtocolVersion)
 	}
@@ -91,4 +95,11 @@ func (flow *receiveVersionFlow) start() (*wire.NetAddress, error) {
 		return nil, err
 	}
 	return msgVersion.Address, nil
+}
+
+func (flow *receiveVersionFlow) validateMsgVersionSignature(msgVersion *wire.MsgVersion) error {
+	if !msgVersion.PublicKey.SchnorrVerify(handshakeMessageToSignHash, msgVersion.Signature) {
+		return protocolerrors.New(true, "the signature inside the version message is invalid")
+	}
+	return nil
 }

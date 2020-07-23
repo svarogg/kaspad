@@ -6,7 +6,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/kaspanet/kaspad/netadapter/id"
 	"github.com/kaspanet/kaspad/util/daghash"
 	mathUtil "github.com/kaspanet/kaspad/util/math"
 	"github.com/kaspanet/kaspad/util/mstime"
@@ -75,8 +74,12 @@ func (p *Peer) SubnetworkID() *subnetworkid.SubnetworkID {
 }
 
 // ID returns the peer ID.
-func (p *Peer) ID() *id.ID {
-	return p.connection.ID()
+func (p *Peer) ID() string {
+	return p.connection.ID
+}
+
+func (p *Peer) SetID(id string) {
+	p.connection.ID = id
 }
 
 // UpdateFieldsFromMsgVersion updates the peer with the data from the version message.
@@ -97,6 +100,7 @@ func (p *Peer) UpdateFieldsFromMsgVersion(msg *wire.MsgVersion) {
 	p.disableRelayTx = msg.DisableRelayTx
 	p.selectedTipHash = msg.SelectedTipHash
 	p.subnetworkID = msg.SubnetworkID
+	p.connection.ID = msg.PublicKey.String()
 }
 
 // SetPingPending sets the ping state of the peer to 'pending'

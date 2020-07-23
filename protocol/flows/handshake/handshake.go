@@ -1,6 +1,7 @@
 package handshake
 
 import (
+	"github.com/kaspanet/go-secp256k1"
 	"github.com/kaspanet/kaspad/addrmgr"
 	"github.com/kaspanet/kaspad/blockdag"
 	"github.com/kaspanet/kaspad/config"
@@ -24,6 +25,8 @@ type HandleHandshakeContext interface {
 	AddressManager() *addrmgr.AddrManager
 	StartIBDIfRequired()
 	AddToPeers(peer *peerpkg.Peer) error
+	SelfPublicKey() *secp256k1.SchnorrPublicKey
+	SelfPrivateKey() *secp256k1.PrivateKey
 }
 
 // HandleHandshake sets up the handshake protocol - It sends a version message and waits for an incoming

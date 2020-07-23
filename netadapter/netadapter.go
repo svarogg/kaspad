@@ -7,7 +7,6 @@ import (
 	"sync/atomic"
 
 	"github.com/kaspanet/kaspad/config"
-	"github.com/kaspanet/kaspad/netadapter/id"
 	routerpkg "github.com/kaspanet/kaspad/netadapter/router"
 	"github.com/kaspanet/kaspad/netadapter/server"
 	"github.com/kaspanet/kaspad/netadapter/server/grpcserver"
@@ -26,7 +25,6 @@ type RouterInitializer func(netConnection *NetConnection) (*routerpkg.Router, er
 // to networking internals.
 type NetAdapter struct {
 	cfg               *config.Config
-	id                *id.ID
 	server            server.Server
 	routerInitializer RouterInitializer
 	stop              uint32
@@ -38,17 +36,12 @@ type NetAdapter struct {
 // NewNetAdapter creates and starts a new NetAdapter on the
 // given listeningPort
 func NewNetAdapter(cfg *config.Config) (*NetAdapter, error) {
-	netAdapterID, err := id.GenerateID()
-	if err != nil {
-		return nil, err
-	}
 	s, err := grpcserver.NewGRPCServer(cfg.Listeners)
 	if err != nil {
 		return nil, err
 	}
 	adapter := NetAdapter{
 		cfg:    cfg,
-		id:     netAdapterID,
 		server: s,
 
 		connectionsToRouters: make(map[*NetConnection]*routerpkg.Router),
@@ -101,7 +94,7 @@ func (na *NetAdapter) ConnectionCount() int {
 }
 
 func (na *NetAdapter) onConnectedHandler(connection server.Connection) error {
-	netConnection := newNetConnection(connection, nil)
+	netConnection := newNetConnection(connection, "")
 	router, err := na.routerInitializer(netConnection)
 	if err != nil {
 		return err
@@ -130,11 +123,6 @@ func (na *NetAdapter) onConnectedHandler(connection server.Connection) error {
 // for the net adapter
 func (na *NetAdapter) SetRouterInitializer(routerInitializer RouterInitializer) {
 	na.routerInitializer = routerInitializer
-}
-
-// ID returns this netAdapter's ID in the network
-func (na *NetAdapter) ID() *id.ID {
-	return na.id
 }
 
 // Broadcast sends the given `message` to every peer corresponding

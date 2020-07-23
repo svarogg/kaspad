@@ -3,30 +3,26 @@ package netadapter
 import (
 	"fmt"
 
-	"github.com/kaspanet/kaspad/netadapter/id"
 	"github.com/kaspanet/kaspad/netadapter/server"
 )
 
 // NetConnection is a wrapper to a server connection for use by services external to NetAdapter
 type NetConnection struct {
 	connection server.Connection
-	id         *id.ID
+
+	// ID returns the ID associated with this connection
+	ID string
 }
 
-func newNetConnection(connection server.Connection, id *id.ID) *NetConnection {
+func newNetConnection(connection server.Connection, id string) *NetConnection {
 	return &NetConnection{
 		connection: connection,
-		id:         id,
+		ID:         id,
 	}
 }
 
 func (c *NetConnection) String() string {
-	return fmt.Sprintf("<%s: %s>", c.id, c.connection)
-}
-
-// ID returns the ID associated with this connection
-func (c *NetConnection) ID() *id.ID {
-	return c.id
+	return fmt.Sprintf("<%s: %s>", c.ID, c.connection)
 }
 
 // Address returns the address associated with this connection

@@ -10,7 +10,7 @@ func handleGetConnectedPeerInfo(s *Server, cmd interface{}, closeChan <-chan str
 	infos := make([]*model.GetConnectedPeerInfoResult, 0, len(peers))
 	for _, peer := range peers {
 		info := &model.GetConnectedPeerInfoResult{
-			ID:               peer.ID().String(),
+			ID:               peer.ID(),
 			Address:          peer.Address(),
 			LastPingDuration: peer.LastPingDuration().Milliseconds(),
 			SelectedTipHash:  peer.SelectedTipHash().String(),

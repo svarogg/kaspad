@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"github.com/kaspanet/go-secp256k1"
 	"github.com/kaspanet/kaspad/addrmgr"
 	"github.com/kaspanet/kaspad/blockdag"
 	"github.com/kaspanet/kaspad/config"
@@ -27,11 +28,16 @@ func NewManager(cfg *config.Config, dag *blockdag.BlockDAG,
 		return nil, err
 	}
 
-	manager := Manager{
-		context: flowcontext.New(cfg, dag, addressManager, txPool, netAdapter, connectionManager),
+	privateKey, publicKey, err := generateKeyPair()
+	if err != nil {
+		return nil, err
+	}
+
+	manager := &Manager{
+		context: flowcontext.New(cfg, dag, addressManager, txPool, netAdapter, connectionManager, privateKey, publicKey),
 	}
 	netAdapter.SetRouterInitializer(manager.routerInitializer)
-	return &manager, nil
+	return manager, nil
 }
 
 // Start starts the p2p protocol
@@ -63,4 +69,18 @@ func (m *Manager) AddTransaction(tx *util.Tx) error {
 // AddBlock adds the given block to the DAG and propagates it.
 func (m *Manager) AddBlock(block *util.Block, flags blockdag.BehaviorFlags) error {
 	return m.context.AddBlock(block, flags)
+}
+
+func generateKeyPair() (*secp256k1.PrivateKey, *secp256k1.SchnorrPublicKey, error) {
+	privateKey, err := secp256k1.GeneratePrivateKey()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	publicKey, err := privateKey.SchnorrPublicKey()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return privateKey, publicKey, nil
 }

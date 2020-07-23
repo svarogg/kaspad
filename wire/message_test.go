@@ -7,7 +7,7 @@ package wire
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/kaspanet/kaspad/netadapter/id"
+	"github.com/kaspanet/go-secp256k1"
 	"github.com/kaspanet/kaspad/util/mstime"
 	"github.com/pkg/errors"
 	"io"
@@ -49,10 +49,16 @@ func TestMessage(t *testing.T) {
 	addrMe := &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 16111}
 	me := NewNetAddress(addrMe, SFNodeNetwork)
 	me.Timestamp = mstime.Time{} // Version message has zero value timestamp.
-	idMeBytes := make([]byte, id.IDLength)
-	idMeBytes[0] = 0xff
-	idMe := id.FromBytes(idMeBytes)
-	msgVersion := NewMsgVersion(me, idMe, &daghash.ZeroHash, nil)
+	privateKeyMe, err := secp256k1.GeneratePrivateKey()
+	if err != nil {
+		t.Fatalf("GeneratePrivateKey: %s", err)
+	}
+	publicKeyMe, err := privateKeyMe.SchnorrPublicKey()
+	if err != nil {
+		t.Fatalf("SchnorrPublicKey: %s", err)
+	}
+	signature := &secp256k1.SchnorrSignature{}
+	msgVersion := NewMsgVersion(me, publicKeyMe, signature, &daghash.ZeroHash, nil)
 
 	msgVerack := NewMsgVerAck()
 	msgGetAddresses := NewMsgGetAddresses(false, nil)
@@ -76,61 +82,56 @@ func TestMessage(t *testing.T) {
 	msgReject := NewMsgReject(CmdBlock, RejectDuplicate, "duplicate block")
 
 	tests := []struct {
-		in       Message  // Value to encode
-		out      Message  // Expected decoded value
+		msg      Message  // Value to encode
 		pver     uint32   // Protocol version for wire encoding
 		kaspaNet KaspaNet // Network to use for wire encoding
 		bytes    int      // Expected num bytes read/written
 	}{
-		{msgVersion, msgVersion, pver, Mainnet, 128},
-		{msgVerack, msgVerack, pver, Mainnet, 16},
-		{msgGetAddresses, msgGetAddresses, pver, Mainnet, 18},
-		{msgAddresses, msgAddresses, pver, Mainnet, 19},
-		{msgGetBlockInvs, msgGetBlockInvs, pver, Mainnet, 80},
-		{msgBlock, msgBlock, pver, Mainnet, 364},
-		{msgInv, msgInv, pver, Mainnet, 17},
-		{msgGetData, msgGetData, pver, Mainnet, 17},
-		{msgNotFound, msgNotFound, pver, Mainnet, 17},
-		{msgTx, msgTx, pver, Mainnet, 50},
-		{msgPing, msgPing, pver, Mainnet, 24},
-		{msgPong, msgPong, pver, Mainnet, 24},
-		{msgGetBlockLocator, msgGetBlockLocator, pver, Mainnet, 80},
-		{msgBlockLocator, msgBlockLocator, pver, Mainnet, 17},
-		{msgFeeFilter, msgFeeFilter, pver, Mainnet, 24},
-		{msgFilterAdd, msgFilterAdd, pver, Mainnet, 18},
-		{msgFilterClear, msgFilterClear, pver, Mainnet, 16},
-		{msgFilterLoad, msgFilterLoad, pver, Mainnet, 27},
-		{msgMerkleBlock, msgMerkleBlock, pver, Mainnet, 207},
-		{msgReject, msgReject, pver, Mainnet, 69},
+		{msgVersion, pver, Mainnet, 209},
+		{msgVerack, pver, Mainnet, 16},
+		{msgGetAddresses, pver, Mainnet, 18},
+		{msgAddresses, pver, Mainnet, 19},
+		{msgGetBlockInvs, pver, Mainnet, 80},
+		{msgBlock, pver, Mainnet, 364},
+		{msgInv, pver, Mainnet, 17},
+		{msgGetData, pver, Mainnet, 17},
+		{msgNotFound, pver, Mainnet, 17},
+		{msgTx, pver, Mainnet, 50},
+		{msgPing, pver, Mainnet, 24},
+		{msgPong, pver, Mainnet, 24},
+		{msgGetBlockLocator, pver, Mainnet, 80},
+		{msgBlockLocator, pver, Mainnet, 17},
+		{msgFeeFilter, pver, Mainnet, 24},
+		{msgFilterAdd, pver, Mainnet, 18},
+		{msgFilterClear, pver, Mainnet, 16},
+		{msgFilterLoad, pver, Mainnet, 27},
+		{msgMerkleBlock, pver, Mainnet, 207},
+		{msgReject, pver, Mainnet, 69},
 	}
 
 	t.Logf("Running %d tests", len(tests))
 	for i, test := range tests {
 		// Encode to wire format.
 		var buf bytes.Buffer
-		nw, err := WriteMessageN(&buf, test.in, test.pver, test.kaspaNet)
+		nw, err := WriteMessageN(&buf, test.msg, test.pver, test.kaspaNet)
 		if err != nil {
-			t.Errorf("WriteMessage #%d error %v", i, err)
+			t.Errorf("WriteMessageN #%d error %v", i, err)
 			continue
 		}
 
 		// Ensure the number of bytes written match the expected value.
 		if nw != test.bytes {
-			t.Errorf("WriteMessage #%d unexpected num bytes "+
+			t.Errorf("WriteMessageN #%d unexpected num bytes "+
 				"written - got %d, want %d", i, nw, test.bytes)
 		}
 
 		// Decode from wire format.
-		rbuf := bytes.NewReader(buf.Bytes())
+		serializedMessage := buf.Bytes()
+		rbuf := bytes.NewReader(serializedMessage)
 		nr, msg, _, err := ReadMessageN(rbuf, test.pver, test.kaspaNet)
 		if err != nil {
 			t.Errorf("ReadMessage #%d error %v, msg %+v", i, err,
 				spew.Sdump(msg))
-			continue
-		}
-		if !reflect.DeepEqual(msg, test.out) {
-			t.Errorf("ReadMessage #%d\n got: %v want: %v", i,
-				spew.Sdump(msg), spew.Sdump(test.out))
 			continue
 		}
 
@@ -138,6 +139,22 @@ func TestMessage(t *testing.T) {
 		if nr != test.bytes {
 			t.Errorf("ReadMessage #%d unexpected num bytes read - "+
 				"got %d, want %d", i, nr, test.bytes)
+		}
+
+		buf.Reset()
+		nw, err = WriteMessageN(&buf, test.msg, test.pver, test.kaspaNet)
+		if err != nil {
+			t.Errorf("WriteMessage #%d error %v", i, err)
+			continue
+		}
+
+		if nw != test.bytes {
+			t.Errorf("WriteMessageN #%d unexpected num bytes "+
+				"written - got %d, want %d", i, nw, test.bytes)
+		}
+
+		if !bytes.Equal(serializedMessage, buf.Bytes()) {
+			t.Errorf("WriteMessageN #%d serialization is not deterministic", i)
 		}
 	}
 
@@ -147,24 +164,31 @@ func TestMessage(t *testing.T) {
 	for i, test := range tests {
 		// Encode to wire format.
 		var buf bytes.Buffer
-		err := WriteMessage(&buf, test.in, test.pver, test.kaspaNet)
+		err := WriteMessage(&buf, test.msg, test.pver, test.kaspaNet)
 		if err != nil {
 			t.Errorf("WriteMessage #%d error %v", i, err)
 			continue
 		}
 
 		// Decode from wire format.
-		rbuf := bytes.NewReader(buf.Bytes())
+		serializedMessage := buf.Bytes()
+		rbuf := bytes.NewReader(serializedMessage)
 		msg, _, err := ReadMessage(rbuf, test.pver, test.kaspaNet)
 		if err != nil {
 			t.Errorf("ReadMessage #%d error %v, msg %v", i, err,
 				spew.Sdump(msg))
 			continue
 		}
-		if !reflect.DeepEqual(msg, test.out) {
-			t.Errorf("ReadMessage #%d\n got: %v want: %v", i,
-				spew.Sdump(msg), spew.Sdump(test.out))
+
+		buf.Reset()
+		err = WriteMessage(&buf, test.msg, test.pver, test.kaspaNet)
+		if err != nil {
+			t.Errorf("WriteMessage #%d error %v", i, err)
 			continue
+		}
+
+		if !bytes.Equal(serializedMessage, buf.Bytes()) {
+			t.Errorf("WriteMessage #%d serialization is not deterministic", i)
 		}
 	}
 }
