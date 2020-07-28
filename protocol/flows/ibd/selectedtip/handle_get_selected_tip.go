@@ -1,7 +1,7 @@
 package selectedtip
 
 import (
-	"github.com/kaspanet/kaspad/blockdag"
+	"github.com/kaspanet/kaspad/concensus/blockdag"
 	"github.com/kaspanet/kaspad/netadapter/router"
 	"github.com/kaspanet/kaspad/wire"
 	"github.com/pkg/errors"

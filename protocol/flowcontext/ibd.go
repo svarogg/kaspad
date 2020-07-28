@@ -1,7 +1,7 @@
 package flowcontext
 
 import (
-	"github.com/kaspanet/kaspad/blockdag"
+	"github.com/kaspanet/kaspad/concensus/blockdag"
 	peerpkg "github.com/kaspanet/kaspad/protocol/peer"
 	"sync/atomic"
 	"time"

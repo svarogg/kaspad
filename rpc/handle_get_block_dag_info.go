@@ -2,7 +2,7 @@ package rpc
 
 import (
 	"fmt"
-	"github.com/kaspanet/kaspad/blockdag"
+	"github.com/kaspanet/kaspad/concensus/blockdag"
 	"github.com/kaspanet/kaspad/dagconfig"
 	"github.com/kaspanet/kaspad/rpc/model"
 	"github.com/kaspanet/kaspad/util/daghash"

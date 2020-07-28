@@ -8,7 +8,7 @@ Package indexers implements optional block DAG indexes.
 package indexers
 
 import (
-	"github.com/kaspanet/kaspad/blockdag"
+	"github.com/kaspanet/kaspad/concensus/blockdag"
 	"github.com/kaspanet/kaspad/dbaccess"
 	"github.com/kaspanet/kaspad/util/daghash"
 )
