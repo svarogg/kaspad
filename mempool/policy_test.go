@@ -6,7 +6,7 @@ package mempool
 
 import (
 	"bytes"
-	"github.com/kaspanet/kaspad/txscript"
+	"github.com/kaspanet/kaspad/concensus/txscript"
 	"github.com/kaspanet/kaspad/util"
 	"github.com/kaspanet/kaspad/util/daghash"
 	"github.com/kaspanet/kaspad/util/mstime"

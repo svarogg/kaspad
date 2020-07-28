@@ -3,8 +3,8 @@ package rpc
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/kaspanet/kaspad/concensus/txscript"
 	"github.com/kaspanet/kaspad/rpc/model"
-	"github.com/kaspanet/kaspad/txscript"
 	"github.com/kaspanet/kaspad/util"
 	"github.com/kaspanet/kaspad/util/daghash"
 	"github.com/kaspanet/kaspad/util/pointers"
