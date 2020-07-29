@@ -6,6 +6,7 @@ package blockdag
 
 import (
 	"fmt"
+	"github.com/kaspanet/kaspad/concensus/blockstatus"
 	"math"
 
 	"github.com/kaspanet/kaspad/dagconfig"
@@ -64,7 +65,7 @@ type blockNode struct {
 	// status field, unlike the other fields, may be written to and so should
 	// only be accessed using the concurrent-safe NodeStatus method on
 	// blockIndex once the node has been added to the global index.
-	status blockStatus
+	status blockstatus.BlockStatus
 
 	// isFinalized determines whether the node is below the finality point.
 	isFinalized bool

@@ -2,6 +2,7 @@ package blockdag
 
 import (
 	"errors"
+	"github.com/kaspanet/kaspad/concensus/blockstatus"
 	"path/filepath"
 	"testing"
 
@@ -67,7 +68,7 @@ func TestMaybeAcceptBlockErrors(t *testing.T) {
 	if !ok {
 		t.Fatalf("block %s does not exist in the DAG", block1.Hash())
 	}
-	dag.index.SetStatusFlags(blockNode1, statusValidateFailed)
+	dag.index.SetStatusFlags(blockNode1, blockstatus.StatusValidateFailed)
 
 	block2 := blocks[2]
 	err = dag.maybeAcceptBlock(block2, BFNone)
@@ -84,7 +85,7 @@ func TestMaybeAcceptBlockErrors(t *testing.T) {
 	}
 
 	// Set block1's status back to valid for next tests
-	dag.index.UnsetStatusFlags(blockNode1, statusValidateFailed)
+	dag.index.UnsetStatusFlags(blockNode1, blockstatus.StatusValidateFailed)
 
 	// Test rejecting the block due to bad context
 	originalBits := block2.MsgBlock().Header.Bits

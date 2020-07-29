@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"github.com/kaspanet/kaspad/concensus/blockstatus"
 	"io"
 
 	"github.com/kaspanet/kaspad/dagconfig"
@@ -280,7 +281,7 @@ func (dag *BlockDAG) initBlockIndex() (unprocessedBlockNodes []*blockNode, err e
 
 		// Check to see if this node had been stored in the the block DB
 		// but not yet accepted. If so, add it to a slice to be processed later.
-		if node.status == statusDataStored {
+		if node.status == blockstatus.StatusDataStored {
 			unprocessedBlockNodes = append(unprocessedBlockNodes, node)
 			continue
 		}
@@ -443,7 +444,7 @@ func (dag *BlockDAG) deserializeBlockNode(blockRow []byte) (*blockNode, error) {
 	if err != nil {
 		return nil, err
 	}
-	node.status = blockStatus(statusByte)
+	node.status = blockstatus.BlockStatus(statusByte)
 
 	selectedParentHash := &daghash.Hash{}
 	if _, err := io.ReadFull(buffer, selectedParentHash[:]); err != nil {

@@ -6,6 +6,7 @@ package blockdag
 
 import (
 	"fmt"
+	"github.com/kaspanet/kaspad/concensus/blockstatus"
 	"math"
 	"os"
 	"path/filepath"
@@ -632,7 +633,7 @@ func TestAcceptingInInit(t *testing.T) {
 		t.Fatalf("genesis block does not exist in the DAG")
 	}
 	testNode, _ := dag.newBlockNode(&testBlock.MsgBlock().Header, BlockSetFromSlice(genesisNode))
-	testNode.status = statusDataStored
+	testNode.status = blockstatus.StatusDataStored
 
 	// Manually add the test block to the database
 	dbTx, err := databaseContext.NewTx()
@@ -673,7 +674,7 @@ func TestAcceptingInInit(t *testing.T) {
 		t.Fatalf("block %s does not exist in the DAG", testBlock.Hash())
 	}
 
-	if testNode.status&statusValid == 0 {
+	if testNode.status&blockstatus.StatusValid == 0 {
 		t.Fatalf("testNode is unexpectedly invalid")
 	}
 }
@@ -1062,8 +1063,8 @@ func TestDAGIndexFailedStatus(t *testing.T) {
 	if !ok {
 		t.Fatalf("invalidBlockNode wasn't added to the block index as expected")
 	}
-	if invalidBlockNode.status&statusValidateFailed != statusValidateFailed {
-		t.Fatalf("invalidBlockNode status to have %b flags raised (got: %b)", statusValidateFailed, invalidBlockNode.status)
+	if invalidBlockNode.status&blockstatus.StatusValidateFailed != blockstatus.StatusValidateFailed {
+		t.Fatalf("invalidBlockNode status to have %b flags raised (got: %b)", blockstatus.StatusValidateFailed, invalidBlockNode.status)
 	}
 
 	invalidMsgBlockChild := wire.NewMsgBlock(
@@ -1091,8 +1092,8 @@ func TestDAGIndexFailedStatus(t *testing.T) {
 	if !ok {
 		t.Fatalf("invalidBlockChild wasn't added to the block index as expected")
 	}
-	if invalidBlockChildNode.status&statusInvalidAncestor != statusInvalidAncestor {
-		t.Fatalf("invalidBlockNode status to have %b flags raised (got %b)", statusInvalidAncestor, invalidBlockChildNode.status)
+	if invalidBlockChildNode.status&blockstatus.StatusInvalidAncestor != blockstatus.StatusInvalidAncestor {
+		t.Fatalf("invalidBlockNode status to have %b flags raised (got %b)", blockstatus.StatusInvalidAncestor, invalidBlockChildNode.status)
 	}
 
 	invalidMsgBlockGrandChild := wire.NewMsgBlock(
@@ -1119,8 +1120,8 @@ func TestDAGIndexFailedStatus(t *testing.T) {
 	if !ok {
 		t.Fatalf("invalidBlockGrandChild wasn't added to the block index as expected")
 	}
-	if invalidBlockGrandChildNode.status&statusInvalidAncestor != statusInvalidAncestor {
-		t.Fatalf("invalidBlockGrandChildNode status to have %b flags raised (got %b)", statusInvalidAncestor, invalidBlockGrandChildNode.status)
+	if invalidBlockGrandChildNode.status&blockstatus.StatusInvalidAncestor != blockstatus.StatusInvalidAncestor {
+		t.Fatalf("invalidBlockGrandChildNode status to have %b flags raised (got %b)", blockstatus.StatusInvalidAncestor, invalidBlockGrandChildNode.status)
 	}
 }
 

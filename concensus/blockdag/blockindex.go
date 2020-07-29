@@ -5,6 +5,7 @@
 package blockdag
 
 import (
+	"github.com/kaspanet/kaspad/concensus/blockstatus"
 	"github.com/kaspanet/kaspad/dbaccess"
 	"sync"
 
@@ -79,7 +80,7 @@ func (bi *blockIndex) addNode(node *blockNode) {
 // NodeStatus provides concurrent-safe access to the status field of a node.
 //
 // This function is safe for concurrent access.
-func (bi *blockIndex) NodeStatus(node *blockNode) blockStatus {
+func (bi *blockIndex) NodeStatus(node *blockNode) blockstatus.BlockStatus {
 	bi.RLock()
 	defer bi.RUnlock()
 	status := node.status
@@ -91,7 +92,7 @@ func (bi *blockIndex) NodeStatus(node *blockNode) blockStatus {
 // flags currently on.
 //
 // This function is safe for concurrent access.
-func (bi *blockIndex) SetStatusFlags(node *blockNode, flags blockStatus) {
+func (bi *blockIndex) SetStatusFlags(node *blockNode, flags blockstatus.BlockStatus) {
 	bi.Lock()
 	defer bi.Unlock()
 	node.status |= flags
@@ -102,7 +103,7 @@ func (bi *blockIndex) SetStatusFlags(node *blockNode, flags blockStatus) {
 // regardless of whether they were on or off previously.
 //
 // This function is safe for concurrent access.
-func (bi *blockIndex) UnsetStatusFlags(node *blockNode, flags blockStatus) {
+func (bi *blockIndex) UnsetStatusFlags(node *blockNode, flags blockstatus.BlockStatus) {
 	bi.Lock()
 	defer bi.Unlock()
 	node.status &^= flags

@@ -6,6 +6,7 @@ package blockdag
 
 import (
 	"fmt"
+	"github.com/kaspanet/kaspad/concensus/blockstatus"
 
 	"github.com/kaspanet/kaspad/dbaccess"
 	"github.com/kaspanet/kaspad/util"
@@ -15,7 +16,7 @@ import (
 func (dag *BlockDAG) addNodeToIndexWithInvalidAncestor(block *util.Block) error {
 	blockHeader := &block.MsgBlock().Header
 	newNode, _ := dag.newBlockNode(blockHeader, NewBlockSet())
-	newNode.status = statusInvalidAncestor
+	newNode.status = blockstatus.StatusInvalidAncestor
 	dag.index.AddNode(newNode)
 
 	dbTx, err := dag.databaseContext.NewTx()
@@ -61,7 +62,7 @@ func (dag *BlockDAG) maybeAcceptBlock(block *util.Block, flags BehaviorFlags) er
 
 	// Create a new block node for the block and add it to the node index.
 	newNode, selectedParentAnticone := dag.newBlockNode(&block.MsgBlock().Header, parents)
-	newNode.status = statusDataStored
+	newNode.status = blockstatus.StatusDataStored
 	dag.index.AddNode(newNode)
 
 	// Insert the block into the database if it's not already there. Even
