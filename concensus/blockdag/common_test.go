@@ -118,7 +118,7 @@ func newTestDAG(params *dagconfig.Params) *BlockDAG {
 
 // newTestNode creates a block node connected to the passed parent with the
 // provided fields populated and fake values for the other fields.
-func newTestNode(dag *BlockDAG, parents BlockNodeSet, blockVersion int32, bits uint32, timestamp mstime.Time) *blockNode {
+func newTestNode(dag *BlockDAG, parents BlockNodeSet, blockVersion int32, bits uint32, timestamp mstime.Time) *BlockNode {
 	// Make up a header and create a block node from it.
 	header := &wire.BlockHeader{
 		Version:              blockVersion,
@@ -133,7 +133,7 @@ func newTestNode(dag *BlockDAG, parents BlockNodeSet, blockVersion int32, bits u
 	return node
 }
 
-func addNodeAsChildToParents(node *blockNode) {
+func addNodeAsChildToParents(node *BlockNode) {
 	for parent := range node.parents {
 		parent.children.Add(node)
 	}
@@ -176,7 +176,7 @@ func prepareAndProcessBlockByParentMsgBlocks(t *testing.T, dag *BlockDAG, parent
 	return PrepareAndProcessBlockForTest(t, dag, parentHashes, nil)
 }
 
-func nodeByMsgBlock(t *testing.T, dag *BlockDAG, block *wire.MsgBlock) *blockNode {
+func nodeByMsgBlock(t *testing.T, dag *BlockDAG, block *wire.MsgBlock) *BlockNode {
 	node, ok := dag.index.LookupNode(block.BlockHash())
 	if !ok {
 		t.Fatalf("couldn't find block node with hash %s", block.BlockHash())

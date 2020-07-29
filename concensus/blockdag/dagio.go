@@ -263,7 +263,7 @@ func (dag *BlockDAG) validateLocalSubnetworkID(state *dagState) error {
 	return nil
 }
 
-func (dag *BlockDAG) initBlockIndex() (unprocessedBlockNodes []*blockNode, err error) {
+func (dag *BlockDAG) initBlockIndex() (unprocessedBlockNodes []*BlockNode, err error) {
 	blockIndexCursor, err := dbaccess.BlockIndexCursor(dag.databaseContext)
 	if err != nil {
 		return nil, err
@@ -308,7 +308,7 @@ func (dag *BlockDAG) initBlockIndex() (unprocessedBlockNodes []*blockNode, err e
 
 		// Add the node to its parents children, connect it,
 		// and add it to the block index.
-		node.updateParentsChildren()
+		node.UpdateParentsChildren()
 		dag.index.addNode(node)
 
 		dag.blockCount++
@@ -365,7 +365,7 @@ func (dag *BlockDAG) initVirtualBlockTips(state *dagState) error {
 	return nil
 }
 
-func (dag *BlockDAG) processUnprocessedBlockNodes(unprocessedBlockNodes []*blockNode) error {
+func (dag *BlockDAG) processUnprocessedBlockNodes(unprocessedBlockNodes []*BlockNode) error {
 	for _, node := range unprocessedBlockNodes {
 		// Check to see if the block exists in the block DB. If it
 		// doesn't, the database has certainly been corrupted.
@@ -408,7 +408,7 @@ func (dag *BlockDAG) processUnprocessedBlockNodes(unprocessedBlockNodes []*block
 }
 
 // deserializeBlockNode parses a value in the block index bucket and returns a block node.
-func (dag *BlockDAG) deserializeBlockNode(blockRow []byte) (*blockNode, error) {
+func (dag *BlockDAG) deserializeBlockNode(blockRow []byte) (*BlockNode, error) {
 	buffer := bytes.NewReader(blockRow)
 
 	var header wire.BlockHeader
@@ -417,7 +417,7 @@ func (dag *BlockDAG) deserializeBlockNode(blockRow []byte) (*blockNode, error) {
 		return nil, err
 	}
 
-	node := &blockNode{
+	node := &BlockNode{
 		hash:                 header.BlockHash(),
 		version:              header.Version,
 		bits:                 header.Bits,
@@ -470,7 +470,7 @@ func (dag *BlockDAG) deserializeBlockNode(blockRow []byte) (*blockNode, error) {
 		return nil, err
 	}
 
-	node.blues = make([]*blockNode, bluesCount)
+	node.blues = make([]*BlockNode, bluesCount)
 	for i := uint64(0); i < bluesCount; i++ {
 		hash := &daghash.Hash{}
 		if _, err := io.ReadFull(buffer, hash[:]); err != nil {
@@ -489,7 +489,7 @@ func (dag *BlockDAG) deserializeBlockNode(blockRow []byte) (*blockNode, error) {
 		return nil, err
 	}
 
-	node.bluesAnticoneSizes = make(map[*blockNode]dagconfig.KType)
+	node.bluesAnticoneSizes = make(map[*BlockNode]dagconfig.KType)
 	for i := uint64(0); i < bluesAnticoneSizesLen; i++ {
 		hash := &daghash.Hash{}
 		if _, err := io.ReadFull(buffer, hash[:]); err != nil {
@@ -527,7 +527,7 @@ func storeBlock(dbContext *dbaccess.TxContext, block *util.Block) error {
 	return dbaccess.StoreBlock(dbContext, block.Hash(), blockBytes)
 }
 
-func serializeBlockNode(node *blockNode) ([]byte, error) {
+func serializeBlockNode(node *BlockNode) ([]byte, error) {
 	w := bytes.NewBuffer(make([]byte, 0, wire.MaxBlockHeaderPayload+1))
 	header := node.Header()
 	err := header.Serialize(w)

@@ -208,7 +208,7 @@ func (ri *reachabilityInterval) String() string {
 // case, and so reindexing should always succeed unless more than
 // 2^64 blocks are added to the DAG/tree.
 type reachabilityTreeNode struct {
-	blockNode *blockNode
+	blockNode *BlockNode
 
 	children []*reachabilityTreeNode
 	parent   *reachabilityTreeNode
@@ -218,7 +218,7 @@ type reachabilityTreeNode struct {
 	interval *reachabilityInterval
 }
 
-func newReachabilityTreeNode(blockNode *blockNode) *reachabilityTreeNode {
+func newReachabilityTreeNode(blockNode *BlockNode) *reachabilityTreeNode {
 	// Please see the comment above reachabilityTreeNode to understand why
 	// we use these initial values.
 	interval := newReachabilityInterval(1, math.MaxUint64-1)
@@ -809,12 +809,12 @@ func (fb futureCoveringTreeNodeSet) String() string {
 	return intervalsString
 }
 
-func (rt *reachabilityTree) addBlock(node *blockNode, selectedParentAnticone []*blockNode) error {
+func (rt *reachabilityTree) addBlock(node *BlockNode, selectedParentAnticone []*BlockNode) error {
 	// Allocate a new reachability tree node
 	newTreeNode := newReachabilityTreeNode(node)
 
 	// If this is the genesis node, simply initialize it and return
-	if node.isGenesis() {
+	if node.IsGenesis() {
 		rt.store.setTreeNode(newTreeNode)
 		rt.reindexRoot = newTreeNode
 		return nil
@@ -1157,7 +1157,7 @@ func (rt *reachabilityTree) propagateChildIntervals(interval *reachabilityInterv
 // isInPast returns true if `this` is in the past (exclusive) of `other`
 // in the DAG.
 // The complexity of this method is O(log(|this.futureCoveringTreeNodeSet|))
-func (rt *reachabilityTree) isInPast(this *blockNode, other *blockNode) (bool, error) {
+func (rt *reachabilityTree) isInPast(this *BlockNode, other *BlockNode) (bool, error) {
 	// By definition, a node is not in the past of itself.
 	if this == other {
 		return false, nil
@@ -1187,7 +1187,7 @@ func (rt *reachabilityTree) isInPast(this *blockNode, other *blockNode) (bool, e
 }
 
 // isReachabilityTreeAncestorOf returns whether `this` is in the selected parent chain of `other`.
-func (rt *reachabilityTree) isReachabilityTreeAncestorOf(this *blockNode, other *blockNode) (bool, error) {
+func (rt *reachabilityTree) isReachabilityTreeAncestorOf(this *BlockNode, other *BlockNode) (bool, error) {
 	thisTreeNode, err := rt.store.treeNodeByBlockNode(this)
 	if err != nil {
 		return false, err

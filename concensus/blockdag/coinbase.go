@@ -75,8 +75,8 @@ func (cfr *compactFeeIterator) next() (uint64, error) {
 // The following functions relate to storing and retrieving fee data from the database
 
 // getBluesFeeData returns the compactFeeData for all nodes's blues,
-// used to calculate the fees this blockNode needs to pay
-func (dag *BlockDAG) getBluesFeeData(node *blockNode) (map[daghash.Hash]compactFeeData, error) {
+// used to calculate the fees this BlockNode needs to pay
+func (dag *BlockDAG) getBluesFeeData(node *BlockNode) (map[daghash.Hash]compactFeeData, error) {
 	bluesFeeData := make(map[daghash.Hash]compactFeeData)
 
 	for _, blueBlock := range node.blues {
@@ -93,8 +93,8 @@ func (dag *BlockDAG) getBluesFeeData(node *blockNode) (map[daghash.Hash]compactF
 
 // The following functions deal with building and validating the coinbase transaction
 
-func (node *blockNode) validateCoinbaseTransaction(dag *BlockDAG, block *util.Block, txsAcceptanceData MultiBlockTxsAcceptanceData) error {
-	if node.isGenesis() {
+func (node *BlockNode) validateCoinbaseTransaction(dag *BlockDAG, block *util.Block, txsAcceptanceData MultiBlockTxsAcceptanceData) error {
+	if node.IsGenesis() {
 		return nil
 	}
 	blockCoinbaseTx := block.CoinbaseTransaction().MsgTx()
@@ -118,7 +118,7 @@ func (node *blockNode) validateCoinbaseTransaction(dag *BlockDAG, block *util.Bl
 }
 
 // expectedCoinbaseTransaction returns the coinbase transaction for the current block
-func (node *blockNode) expectedCoinbaseTransaction(dag *BlockDAG, txsAcceptanceData MultiBlockTxsAcceptanceData, scriptPubKey []byte, extraData []byte) (*util.Tx, error) {
+func (node *BlockNode) expectedCoinbaseTransaction(dag *BlockDAG, txsAcceptanceData MultiBlockTxsAcceptanceData, scriptPubKey []byte, extraData []byte) (*util.Tx, error) {
 	bluesFeeData, err := dag.getBluesFeeData(node)
 	if err != nil {
 		return nil, err
@@ -147,7 +147,7 @@ func (node *blockNode) expectedCoinbaseTransaction(dag *BlockDAG, txsAcceptanceD
 
 // coinbaseOutputForBlueBlock calculates the output that should go into the coinbase transaction of blueBlock
 // If blueBlock gets no fee - returns nil for txOut
-func coinbaseOutputForBlueBlock(dag *BlockDAG, blueBlock *blockNode,
+func coinbaseOutputForBlueBlock(dag *BlockDAG, blueBlock *BlockNode,
 	txsAcceptanceData MultiBlockTxsAcceptanceData, feeData map[daghash.Hash]compactFeeData) (*wire.TxOut, error) {
 
 	blockTxsAcceptanceData, ok := txsAcceptanceData.FindAcceptanceData(blueBlock.hash)

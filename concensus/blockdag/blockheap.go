@@ -5,13 +5,13 @@ import (
 )
 
 // baseHeap is an implementation for heap.Interface that sorts blocks by their height
-type baseHeap []*blockNode
+type baseHeap []*BlockNode
 
 func (h baseHeap) Len() int      { return len(h) }
 func (h baseHeap) Swap(i, j int) { h[i], h[j] = h[j], h[i] }
 
 func (h *baseHeap) Push(x interface{}) {
-	*h = append(*h, x.(*blockNode))
+	*h = append(*h, x.(*BlockNode))
 }
 
 func (h *baseHeap) Pop() interface{} {
@@ -26,14 +26,14 @@ func (h *baseHeap) Pop() interface{} {
 type upHeap struct{ baseHeap }
 
 func (h upHeap) Less(i, j int) bool {
-	return h.baseHeap[i].less(h.baseHeap[j])
+	return h.baseHeap[i].Less(h.baseHeap[j])
 }
 
 // downHeap extends baseHeap to include Less operation that traverses from top to bottom
 type downHeap struct{ baseHeap }
 
 func (h downHeap) Less(i, j int) bool {
-	return !h.baseHeap[i].less(h.baseHeap[j])
+	return !h.baseHeap[i].Less(h.baseHeap[j])
 }
 
 // blockHeap represents a mutable heap of Blocks, sorted by their height
@@ -56,12 +56,12 @@ func newUpHeap() blockHeap {
 }
 
 // pop removes the block with lowest height from this heap and returns it
-func (bh blockHeap) pop() *blockNode {
-	return heap.Pop(bh.impl).(*blockNode)
+func (bh blockHeap) pop() *BlockNode {
+	return heap.Pop(bh.impl).(*BlockNode)
 }
 
 // Push pushes the block onto the heap
-func (bh blockHeap) Push(block *blockNode) {
+func (bh blockHeap) Push(block *BlockNode) {
 	heap.Push(bh.impl, block)
 }
 

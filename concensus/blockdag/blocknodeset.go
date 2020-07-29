@@ -7,15 +7,15 @@ import (
 )
 
 // BlockNodeSet implements a basic unsorted set of blocks
-type BlockNodeSet map[*blockNode]struct{}
+type BlockNodeSet map[*BlockNode]struct{}
 
 // NewBlockNodeSet creates a new, empty BlockNodeSet
 func NewBlockNodeSet() BlockNodeSet {
-	return map[*blockNode]struct{}{}
+	return map[*BlockNode]struct{}{}
 }
 
 // BlockNodeSetFromSlice converts a slice of blockNodes into an unordered set represented as map
-func BlockNodeSetFromSlice(nodes ...*blockNode) BlockNodeSet {
+func BlockNodeSetFromSlice(nodes ...*BlockNode) BlockNodeSet {
 	set := NewBlockNodeSet()
 	for _, node := range nodes {
 		set.Add(node)
@@ -23,14 +23,14 @@ func BlockNodeSetFromSlice(nodes ...*blockNode) BlockNodeSet {
 	return set
 }
 
-// Add adds a blockNode to this BlockNodeSet
-func (bs BlockNodeSet) Add(node *blockNode) {
+// Add adds a BlockNode to this BlockNodeSet
+func (bs BlockNodeSet) Add(node *BlockNode) {
 	bs[node] = struct{}{}
 }
 
-// Remove removes a blockNode from this BlockNodeSet, if exists
-// Does nothing if this set does not contain the blockNode
-func (bs BlockNodeSet) Remove(node *blockNode) {
+// Remove removes a BlockNode from this BlockNodeSet, if exists
+// Does nothing if this set does not contain the BlockNode
+func (bs BlockNodeSet) Remove(node *BlockNode) {
 	delete(bs, node)
 }
 
@@ -62,7 +62,7 @@ func (bs BlockNodeSet) AddSet(other BlockNodeSet) {
 }
 
 // AddSlice adds provided slice to this set
-func (bs BlockNodeSet) AddSlice(slice []*blockNode) {
+func (bs BlockNodeSet) AddSlice(slice []*BlockNode) {
 	for _, node := range slice {
 		bs.Add(node)
 	}
@@ -79,7 +79,7 @@ func (bs BlockNodeSet) Union(other BlockNodeSet) BlockNodeSet {
 }
 
 // Contains returns true iff this set contains node
-func (bs BlockNodeSet) Contains(node *blockNode) bool {
+func (bs BlockNodeSet) Contains(node *BlockNode) bool {
 	_, ok := bs[node]
 	return ok
 }
@@ -102,8 +102,8 @@ func (bs BlockNodeSet) String() string {
 	return strings.Join(nodeStrs, ",")
 }
 
-func (bs BlockNodeSet) Bluest() *blockNode {
-	var bluestNode *blockNode
+func (bs BlockNodeSet) Bluest() *BlockNode {
+	var bluestNode *BlockNode
 	var maxScore uint64
 	for node := range bs {
 		if bluestNode == nil ||

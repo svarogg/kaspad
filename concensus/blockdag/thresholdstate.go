@@ -88,7 +88,7 @@ type thresholdConditionChecker interface {
 	// has been met. This typically involves checking whether or not the
 	// bit associated with the condition is set, but can be more complex as
 	// needed.
-	Condition(*blockNode) (bool, error)
+	Condition(*BlockNode) (bool, error)
 }
 
 // thresholdStateCache provides a type to cache the threshold states of each
@@ -127,7 +127,7 @@ func newThresholdCaches(numCaches uint32) []thresholdStateCache {
 // threshold states for previous windows are only calculated once.
 //
 // This function MUST be called with the DAG state lock held (for writes).
-func (dag *BlockDAG) thresholdState(prevNode *blockNode, checker thresholdConditionChecker, cache *thresholdStateCache) (ThresholdState, error) {
+func (dag *BlockDAG) thresholdState(prevNode *BlockNode, checker thresholdConditionChecker, cache *thresholdStateCache) (ThresholdState, error) {
 	// The threshold state for the window that contains the genesis block is
 	// defined by definition.
 	confirmationWindow := checker.MinerConfirmationWindow()
@@ -143,7 +143,7 @@ func (dag *BlockDAG) thresholdState(prevNode *blockNode, checker thresholdCondit
 
 	// Iterate backwards through each of the previous confirmation windows
 	// to find the most recently cached threshold state.
-	var neededStates []*blockNode
+	var neededStates []*BlockNode
 	for prevNode != nil {
 		// Nothing more to do if the state of the block is already
 		// cached.
@@ -220,7 +220,7 @@ func (dag *BlockDAG) thresholdState(prevNode *blockNode, checker thresholdCondit
 			// on by the miners, so iterate backwards through the
 			// confirmation window to count all of the votes in it.
 			var count uint64
-			windowNodes := make([]*blockNode, 0, confirmationWindow)
+			windowNodes := make([]*BlockNode, 0, confirmationWindow)
 			windowNodes = append(windowNodes, prevNode)
 			windowNodes = append(windowNodes, blueBlockWindow(prevNode, confirmationWindow-1)...)
 			for _, current := range windowNodes {
@@ -296,7 +296,7 @@ func (dag *BlockDAG) IsDeploymentActive(deploymentID uint32) (bool, error) {
 // AFTER the passed node.
 //
 // This function MUST be called with the DAG state lock held (for writes).
-func (dag *BlockDAG) deploymentState(prevNode *blockNode, deploymentID uint32) (ThresholdState, error) {
+func (dag *BlockDAG) deploymentState(prevNode *BlockNode, deploymentID uint32) (ThresholdState, error) {
 	if deploymentID > uint32(len(dag.Params.Deployments)) {
 		return ThresholdFailed, errors.Errorf("deployment ID %d does not exist", deploymentID)
 	}

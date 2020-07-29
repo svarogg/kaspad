@@ -42,7 +42,7 @@ func TestCheckBlockScripts(t *testing.T) {
 		return
 	}
 
-	node := &blockNode{
+	node := &BlockNode{
 		hash: blocks[0].Hash(),
 	}
 

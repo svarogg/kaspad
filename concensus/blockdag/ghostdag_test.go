@@ -186,8 +186,8 @@ func TestGHOSTDAG(t *testing.T) {
 			defer teardownFunc()
 
 			genesisNode := dag.genesis
-			blockByIDMap := make(map[string]*blockNode)
-			idByBlockMap := make(map[*blockNode]string)
+			blockByIDMap := make(map[string]*BlockNode)
+			idByBlockMap := make(map[*BlockNode]string)
 			blockByIDMap["A"] = genesisNode
 			idByBlockMap[genesisNode] = "A"
 
@@ -251,7 +251,7 @@ func TestGHOSTDAG(t *testing.T) {
 				reds[id] = true
 			}
 
-			for tip := &dag.virtual.blockNode; tip.selectedParent != nil; tip = tip.selectedParent {
+			for tip := &dag.virtual.BlockNode; tip.selectedParent != nil; tip = tip.selectedParent {
 				tipID := idByBlockMap[tip]
 				delete(reds, tipID)
 				for _, blue := range tip.blues {

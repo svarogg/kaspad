@@ -10,26 +10,26 @@ import (
 
 type blockUTXODiffData struct {
 	diff      *UTXODiff
-	diffChild *blockNode
+	diffChild *BlockNode
 }
 
 type utxoDiffStore struct {
 	dag    *BlockDAG
-	dirty  map[*blockNode]struct{}
-	loaded map[*blockNode]*blockUTXODiffData
+	dirty  map[*BlockNode]struct{}
+	loaded map[*BlockNode]*blockUTXODiffData
 	mtx    *locks.PriorityMutex
 }
 
 func newUTXODiffStore(dag *BlockDAG) *utxoDiffStore {
 	return &utxoDiffStore{
 		dag:    dag,
-		dirty:  make(map[*blockNode]struct{}),
-		loaded: make(map[*blockNode]*blockUTXODiffData),
+		dirty:  make(map[*BlockNode]struct{}),
+		loaded: make(map[*BlockNode]*blockUTXODiffData),
 		mtx:    locks.NewPriorityMutex(),
 	}
 }
 
-func (diffStore *utxoDiffStore) setBlockDiff(node *blockNode, diff *UTXODiff) error {
+func (diffStore *utxoDiffStore) setBlockDiff(node *BlockNode, diff *UTXODiff) error {
 	diffStore.mtx.HighPriorityWriteLock()
 	defer diffStore.mtx.HighPriorityWriteUnlock()
 	// load the diff data from DB to diffStore.loaded
@@ -45,7 +45,7 @@ func (diffStore *utxoDiffStore) setBlockDiff(node *blockNode, diff *UTXODiff) er
 	return nil
 }
 
-func (diffStore *utxoDiffStore) setBlockDiffChild(node *blockNode, diffChild *blockNode) error {
+func (diffStore *utxoDiffStore) setBlockDiffChild(node *BlockNode, diffChild *BlockNode) error {
 	diffStore.mtx.HighPriorityWriteLock()
 	defer diffStore.mtx.HighPriorityWriteUnlock()
 	// load the diff data from DB to diffStore.loaded
@@ -59,7 +59,7 @@ func (diffStore *utxoDiffStore) setBlockDiffChild(node *blockNode, diffChild *bl
 	return nil
 }
 
-func (diffStore *utxoDiffStore) removeBlocksDiffData(dbContext dbaccess.Context, nodes []*blockNode) error {
+func (diffStore *utxoDiffStore) removeBlocksDiffData(dbContext dbaccess.Context, nodes []*BlockNode) error {
 	for _, node := range nodes {
 		err := diffStore.removeBlockDiffData(dbContext, node)
 		if err != nil {
@@ -69,7 +69,7 @@ func (diffStore *utxoDiffStore) removeBlocksDiffData(dbContext dbaccess.Context,
 	return nil
 }
 
-func (diffStore *utxoDiffStore) removeBlockDiffData(dbContext dbaccess.Context, node *blockNode) error {
+func (diffStore *utxoDiffStore) removeBlockDiffData(dbContext dbaccess.Context, node *BlockNode) error {
 	diffStore.mtx.LowPriorityWriteLock()
 	defer diffStore.mtx.LowPriorityWriteUnlock()
 	delete(diffStore.loaded, node)
@@ -80,11 +80,11 @@ func (diffStore *utxoDiffStore) removeBlockDiffData(dbContext dbaccess.Context, 
 	return nil
 }
 
-func (diffStore *utxoDiffStore) setBlockAsDirty(node *blockNode) {
+func (diffStore *utxoDiffStore) setBlockAsDirty(node *BlockNode) {
 	diffStore.dirty[node] = struct{}{}
 }
 
-func (diffStore *utxoDiffStore) diffDataByBlockNode(node *blockNode) (*blockUTXODiffData, error) {
+func (diffStore *utxoDiffStore) diffDataByBlockNode(node *BlockNode) (*blockUTXODiffData, error) {
 	if diffData, ok := diffStore.loaded[node]; ok {
 		return diffData, nil
 	}
@@ -96,7 +96,7 @@ func (diffStore *utxoDiffStore) diffDataByBlockNode(node *blockNode) (*blockUTXO
 	return diffData, nil
 }
 
-func (diffStore *utxoDiffStore) diffByNode(node *blockNode) (*UTXODiff, error) {
+func (diffStore *utxoDiffStore) diffByNode(node *BlockNode) (*UTXODiff, error) {
 	diffStore.mtx.HighPriorityReadLock()
 	defer diffStore.mtx.HighPriorityReadUnlock()
 	diffData, err := diffStore.diffDataByBlockNode(node)
@@ -106,7 +106,7 @@ func (diffStore *utxoDiffStore) diffByNode(node *blockNode) (*UTXODiff, error) {
 	return diffData.diff, nil
 }
 
-func (diffStore *utxoDiffStore) diffChildByNode(node *blockNode) (*blockNode, error) {
+func (diffStore *utxoDiffStore) diffChildByNode(node *BlockNode) (*BlockNode, error) {
 	diffStore.mtx.HighPriorityReadLock()
 	defer diffStore.mtx.HighPriorityReadUnlock()
 	diffData, err := diffStore.diffDataByBlockNode(node)
@@ -148,11 +148,11 @@ func (diffStore *utxoDiffStore) flushToDB(dbContext *dbaccess.TxContext) error {
 }
 
 func (diffStore *utxoDiffStore) clearDirtyEntries() {
-	diffStore.dirty = make(map[*blockNode]struct{})
+	diffStore.dirty = make(map[*BlockNode]struct{})
 }
 
 // maxBlueScoreDifferenceToKeepLoaded is the maximum difference
-// between the virtual's blueScore and a blockNode's blueScore
+// between the virtual's blueScore and a BlockNode's blueScore
 // under which to keep diff data loaded in memory.
 var maxBlueScoreDifferenceToKeepLoaded uint64 = 100
 
@@ -172,7 +172,7 @@ func (diffStore *utxoDiffStore) clearOldEntries() {
 
 	tips := diffStore.dag.virtual.tips()
 
-	toRemove := make(map[*blockNode]struct{})
+	toRemove := make(map[*BlockNode]struct{})
 	for node := range diffStore.loaded {
 		if node.blueScore < minBlueScore && !tips.Contains(node) {
 			toRemove[node] = struct{}{}

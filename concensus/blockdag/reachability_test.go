@@ -12,13 +12,13 @@ func TestAddChild(t *testing.T) {
 	// Scenario 1: test addChild in a chain
 	//             root -> a -> b -> c...
 	// Create the root node of a new reachability tree
-	root := newReachabilityTreeNode(&blockNode{})
+	root := newReachabilityTreeNode(&BlockNode{})
 	root.interval = newReachabilityInterval(1, 100)
 
 	// Add a chain of child nodes just before a reindex occurs (2^6=64 < 100)
 	currentTip := root
 	for i := 0; i < 6; i++ {
-		node := newReachabilityTreeNode(&blockNode{})
+		node := newReachabilityTreeNode(&BlockNode{})
 		modifiedNodes := newModifiedTreeNodes()
 		err := currentTip.addChild(node, root, modifiedNodes)
 		if err != nil {
@@ -36,7 +36,7 @@ func TestAddChild(t *testing.T) {
 	}
 
 	// Add another node to the tip of the chain to trigger a reindex (100 < 2^7=128)
-	lastChild := newReachabilityTreeNode(&blockNode{})
+	lastChild := newReachabilityTreeNode(&BlockNode{})
 	modifiedNodes := newModifiedTreeNodes()
 	err := currentTip.addChild(lastChild, root, modifiedNodes)
 	if err != nil {
@@ -75,13 +75,13 @@ func TestAddChild(t *testing.T) {
 	// Scenario 2: test addChild where all nodes are direct descendants of root
 	//             root -> a, b, c...
 	// Create the root node of a new reachability tree
-	root = newReachabilityTreeNode(&blockNode{})
+	root = newReachabilityTreeNode(&BlockNode{})
 	root.interval = newReachabilityInterval(1, 100)
 
 	// Add child nodes to root just before a reindex occurs (2^6=64 < 100)
 	childNodes := make([]*reachabilityTreeNode, 6)
 	for i := 0; i < len(childNodes); i++ {
-		childNodes[i] = newReachabilityTreeNode(&blockNode{})
+		childNodes[i] = newReachabilityTreeNode(&BlockNode{})
 		modifiedNodes := newModifiedTreeNodes()
 		err := root.addChild(childNodes[i], root, modifiedNodes)
 		if err != nil {
@@ -97,7 +97,7 @@ func TestAddChild(t *testing.T) {
 	}
 
 	// Add another node to the root to trigger a reindex (100 < 2^7=128)
-	lastChild = newReachabilityTreeNode(&blockNode{})
+	lastChild = newReachabilityTreeNode(&BlockNode{})
 	modifiedNodes = newModifiedTreeNodes()
 	err = root.addChild(lastChild, root, modifiedNodes)
 	if err != nil {
@@ -133,12 +133,12 @@ func TestAddChild(t *testing.T) {
 }
 
 func TestReachabilityTreeNodeIsAncestorOf(t *testing.T) {
-	root := newReachabilityTreeNode(&blockNode{})
+	root := newReachabilityTreeNode(&BlockNode{})
 	currentTip := root
 	const numberOfDescendants = 6
 	descendants := make([]*reachabilityTreeNode, numberOfDescendants)
 	for i := 0; i < numberOfDescendants; i++ {
-		node := newReachabilityTreeNode(&blockNode{})
+		node := newReachabilityTreeNode(&BlockNode{})
 		err := currentTip.addChild(node, root, newModifiedTreeNodes())
 		if err != nil {
 			t.Fatalf("TestReachabilityTreeNodeIsAncestorOf: addChild failed: %s", err)
@@ -678,14 +678,14 @@ func TestSplitWithExponentialBiasErrors(t *testing.T) {
 
 func TestReindexIntervalErrors(t *testing.T) {
 	// Create a treeNode and give it size = 100
-	treeNode := newReachabilityTreeNode(&blockNode{})
+	treeNode := newReachabilityTreeNode(&BlockNode{})
 	treeNode.interval = newReachabilityInterval(0, 99)
 
 	// Add a chain of 100 child treeNodes to treeNode
 	var err error
 	currentTreeNode := treeNode
 	for i := 0; i < 100; i++ {
-		childTreeNode := newReachabilityTreeNode(&blockNode{})
+		childTreeNode := newReachabilityTreeNode(&BlockNode{})
 		err = currentTreeNode.addChild(childTreeNode, treeNode, newModifiedTreeNodes())
 		if err != nil {
 			break
@@ -711,7 +711,7 @@ func TestReindexIntervalErrors(t *testing.T) {
 func BenchmarkReindexInterval(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
-		root := newReachabilityTreeNode(&blockNode{})
+		root := newReachabilityTreeNode(&BlockNode{})
 
 		const subTreeSize = 70000
 		// We set the interval of the root to subTreeSize*2 because
@@ -722,7 +722,7 @@ func BenchmarkReindexInterval(b *testing.B) {
 
 		currentTreeNode := root
 		for i := 0; i < subTreeSize; i++ {
-			childTreeNode := newReachabilityTreeNode(&blockNode{})
+			childTreeNode := newReachabilityTreeNode(&BlockNode{})
 			err := currentTreeNode.addChild(childTreeNode, root, newModifiedTreeNodes())
 			if err != nil {
 				b.Fatalf("addChild: %s", err)
@@ -734,7 +734,7 @@ func BenchmarkReindexInterval(b *testing.B) {
 		originalRemainingInterval := *root.remainingIntervalAfter()
 		// After we added subTreeSize nodes, adding the next
 		// node should lead to a reindex from root.
-		fullReindexTriggeringNode := newReachabilityTreeNode(&blockNode{})
+		fullReindexTriggeringNode := newReachabilityTreeNode(&BlockNode{})
 		b.StartTimer()
 		err := currentTreeNode.addChild(fullReindexTriggeringNode, root, newModifiedTreeNodes())
 		b.StopTimer()
@@ -749,9 +749,9 @@ func BenchmarkReindexInterval(b *testing.B) {
 }
 
 func TestFutureCoveringTreeNodeSetString(t *testing.T) {
-	treeNodeA := newReachabilityTreeNode(&blockNode{})
+	treeNodeA := newReachabilityTreeNode(&BlockNode{})
 	treeNodeA.interval = newReachabilityInterval(123, 456)
-	treeNodeB := newReachabilityTreeNode(&blockNode{})
+	treeNodeB := newReachabilityTreeNode(&BlockNode{})
 	treeNodeB.interval = newReachabilityInterval(457, 789)
 	futureCoveringSet := futureCoveringTreeNodeSet{treeNodeA, treeNodeB}
 
@@ -764,13 +764,13 @@ func TestFutureCoveringTreeNodeSetString(t *testing.T) {
 }
 
 func TestReachabilityTreeNodeString(t *testing.T) {
-	treeNodeA := newReachabilityTreeNode(&blockNode{})
+	treeNodeA := newReachabilityTreeNode(&BlockNode{})
 	treeNodeA.interval = newReachabilityInterval(100, 199)
-	treeNodeB1 := newReachabilityTreeNode(&blockNode{})
+	treeNodeB1 := newReachabilityTreeNode(&BlockNode{})
 	treeNodeB1.interval = newReachabilityInterval(100, 150)
-	treeNodeB2 := newReachabilityTreeNode(&blockNode{})
+	treeNodeB2 := newReachabilityTreeNode(&BlockNode{})
 	treeNodeB2.interval = newReachabilityInterval(150, 199)
-	treeNodeC := newReachabilityTreeNode(&blockNode{})
+	treeNodeC := newReachabilityTreeNode(&BlockNode{})
 	treeNodeC.interval = newReachabilityInterval(100, 149)
 	treeNodeA.children = []*reachabilityTreeNode{treeNodeB1, treeNodeB2}
 	treeNodeB2.children = []*reachabilityTreeNode{treeNodeC}

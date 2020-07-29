@@ -9,16 +9,16 @@ import (
 
 func TestHashes(t *testing.T) {
 	bs := BlockNodeSetFromSlice(
-		&blockNode{
+		&BlockNode{
 			hash: &daghash.Hash{3},
 		},
-		&blockNode{
+		&BlockNode{
 			hash: &daghash.Hash{1},
 		},
-		&blockNode{
+		&BlockNode{
 			hash: &daghash.Hash{0},
 		},
-		&blockNode{
+		&BlockNode{
 			hash: &daghash.Hash{2},
 		},
 	)
@@ -37,9 +37,9 @@ func TestHashes(t *testing.T) {
 }
 
 func TestBlockSetSubtract(t *testing.T) {
-	node1 := &blockNode{hash: &daghash.Hash{10}}
-	node2 := &blockNode{hash: &daghash.Hash{20}}
-	node3 := &blockNode{hash: &daghash.Hash{30}}
+	node1 := &BlockNode{hash: &daghash.Hash{10}}
+	node2 := &BlockNode{hash: &daghash.Hash{20}}
+	node3 := &BlockNode{hash: &daghash.Hash{30}}
 
 	tests := []struct {
 		name           string
@@ -89,9 +89,9 @@ func TestBlockSetSubtract(t *testing.T) {
 }
 
 func TestBlockSetAddSet(t *testing.T) {
-	node1 := &blockNode{hash: &daghash.Hash{10}}
-	node2 := &blockNode{hash: &daghash.Hash{20}}
-	node3 := &blockNode{hash: &daghash.Hash{30}}
+	node1 := &BlockNode{hash: &daghash.Hash{10}}
+	node2 := &BlockNode{hash: &daghash.Hash{20}}
+	node3 := &BlockNode{hash: &daghash.Hash{30}}
 
 	tests := []struct {
 		name           string
@@ -141,44 +141,44 @@ func TestBlockSetAddSet(t *testing.T) {
 }
 
 func TestBlockSetAddSlice(t *testing.T) {
-	node1 := &blockNode{hash: &daghash.Hash{10}}
-	node2 := &blockNode{hash: &daghash.Hash{20}}
-	node3 := &blockNode{hash: &daghash.Hash{30}}
+	node1 := &BlockNode{hash: &daghash.Hash{10}}
+	node2 := &BlockNode{hash: &daghash.Hash{20}}
+	node3 := &BlockNode{hash: &daghash.Hash{30}}
 
 	tests := []struct {
 		name           string
 		set            BlockNodeSet
-		slice          []*blockNode
+		slice          []*BlockNode
 		expectedResult BlockNodeSet
 	}{
 		{
 			name:           "add empty slice to empty set",
 			set:            BlockNodeSetFromSlice(),
-			slice:          []*blockNode{},
+			slice:          []*BlockNode{},
 			expectedResult: BlockNodeSetFromSlice(),
 		},
 		{
 			name:           "add an empty slice",
 			set:            BlockNodeSetFromSlice(node1),
-			slice:          []*blockNode{},
+			slice:          []*BlockNode{},
 			expectedResult: BlockNodeSetFromSlice(node1),
 		},
 		{
 			name:           "add to empty set",
 			set:            BlockNodeSetFromSlice(),
-			slice:          []*blockNode{node1},
+			slice:          []*BlockNode{node1},
 			expectedResult: BlockNodeSetFromSlice(node1),
 		},
 		{
 			name:           "add already added member",
 			set:            BlockNodeSetFromSlice(node1, node2),
-			slice:          []*blockNode{node1},
+			slice:          []*BlockNode{node1},
 			expectedResult: BlockNodeSetFromSlice(node1, node2),
 		},
 		{
 			name:           "typical case",
 			set:            BlockNodeSetFromSlice(node1, node2),
-			slice:          []*blockNode{node2, node3},
+			slice:          []*BlockNode{node2, node3},
 			expectedResult: BlockNodeSetFromSlice(node1, node2, node3),
 		},
 	}
@@ -193,9 +193,9 @@ func TestBlockSetAddSlice(t *testing.T) {
 }
 
 func TestBlockSetUnion(t *testing.T) {
-	node1 := &blockNode{hash: &daghash.Hash{10}}
-	node2 := &blockNode{hash: &daghash.Hash{20}}
-	node3 := &blockNode{hash: &daghash.Hash{30}}
+	node1 := &BlockNode{hash: &daghash.Hash{10}}
+	node2 := &BlockNode{hash: &daghash.Hash{20}}
+	node3 := &BlockNode{hash: &daghash.Hash{30}}
 
 	tests := []struct {
 		name           string

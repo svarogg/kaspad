@@ -510,7 +510,7 @@ func TestCalcPastMedianTime(t *testing.T) {
 
 	dag := newTestDAG(netParams)
 	numBlocks := uint32(300)
-	nodes := make([]*blockNode, numBlocks)
+	nodes := make([]*BlockNode, numBlocks)
 	nodes[0] = dag.genesis
 	blockTime := dag.genesis.Header().Timestamp
 	for i := uint32(1); i < numBlocks; i++ {
@@ -627,7 +627,7 @@ func TestAcceptingInInit(t *testing.T) {
 	genesisBlock := blocks[0]
 	testBlock := blocks[1]
 
-	// Create a test blockNode with an unvalidated status
+	// Create a test BlockNode with an unvalidated status
 	genesisNode, ok := dag.index.LookupNode(genesisBlock.Hash())
 	if !ok {
 		t.Fatalf("genesis block does not exist in the DAG")
@@ -648,7 +648,7 @@ func TestAcceptingInInit(t *testing.T) {
 	}
 	dbTestNode, err := serializeBlockNode(testNode)
 	if err != nil {
-		t.Fatalf("Failed to serialize blockNode: %s", err)
+		t.Fatalf("Failed to serialize BlockNode: %s", err)
 	}
 	key := blockIndexKey(testNode.hash, testNode.blueScore)
 	err = dbaccess.StoreIndexBlock(dbTx, key, dbTestNode)
@@ -795,7 +795,7 @@ func TestAcceptingBlock(t *testing.T) {
 	defer teardownFunc()
 	dag.TestSetCoinbaseMaturity(0)
 
-	acceptingBlockByMsgBlock := func(block *wire.MsgBlock) (*blockNode, error) {
+	acceptingBlockByMsgBlock := func(block *wire.MsgBlock) (*BlockNode, error) {
 		node := nodeByMsgBlock(t, dag, block)
 		return dag.acceptingBlock(node)
 	}
@@ -944,10 +944,10 @@ func testFinalizeNodesBelowFinalityPoint(t *testing.T, deleteDiffData bool) {
 		}
 	}
 
-	addNode := func(parent *blockNode) *blockNode {
+	addNode := func(parent *BlockNode) *BlockNode {
 		blockTime = blockTime.Add(time.Second)
 		node := newTestNode(dag, BlockNodeSetFromSlice(parent), blockVersion, 0, blockTime)
-		node.updateParentsChildren()
+		node.UpdateParentsChildren()
 		dag.index.AddNode(node)
 
 		// Put dummy diff data in dag.utxoDiffStore
@@ -959,7 +959,7 @@ func testFinalizeNodesBelowFinalityPoint(t *testing.T, deleteDiffData bool) {
 		return node
 	}
 	finalityInterval := dag.FinalityInterval()
-	nodes := make([]*blockNode, 0, finalityInterval)
+	nodes := make([]*BlockNode, 0, finalityInterval)
 	currentNode := dag.genesis
 	nodes = append(nodes, currentNode)
 	for i := uint64(0); i <= finalityInterval*2; i++ {
@@ -1328,7 +1328,7 @@ func TestUTXOCommitment(t *testing.T) {
 	// Get the pastUTXO of blockD
 	blockNodeD, ok := dag.index.LookupNode(blockD.BlockHash())
 	if !ok {
-		t.Fatalf("TestUTXOCommitment: blockNode for block D not found")
+		t.Fatalf("TestUTXOCommitment: BlockNode for block D not found")
 	}
 	blockDPastUTXO, _, _, _ := dag.pastUTXO(blockNodeD)
 	blockDPastDiffUTXOSet := blockDPastUTXO.(*DiffUTXOSet)
@@ -1388,7 +1388,7 @@ func TestPastUTXOMultiSet(t *testing.T) {
 	// Take blockC's selectedParentMultiset
 	blockNodeC, ok := dag.index.LookupNode(blockC.BlockHash())
 	if !ok {
-		t.Fatalf("TestPastUTXOMultiSet: blockNode for blockC not found")
+		t.Fatalf("TestPastUTXOMultiSet: BlockNode for blockC not found")
 	}
 	blockCSelectedParentMultiset, err := blockNodeC.selectedParentMultiset(dag)
 	if err != nil {

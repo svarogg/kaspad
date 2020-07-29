@@ -22,8 +22,8 @@ type blockIndex struct {
 	dagParams *dagconfig.Params
 
 	sync.RWMutex
-	index map[daghash.Hash]*blockNode
-	dirty map[*blockNode]struct{}
+	index map[daghash.Hash]*BlockNode
+	dirty map[*BlockNode]struct{}
 }
 
 // newBlockIndex returns a new empty instance of a block index. The index will
@@ -32,8 +32,8 @@ type blockIndex struct {
 func newBlockIndex(dagParams *dagconfig.Params) *blockIndex {
 	return &blockIndex{
 		dagParams: dagParams,
-		index:     make(map[daghash.Hash]*blockNode),
-		dirty:     make(map[*blockNode]struct{}),
+		index:     make(map[daghash.Hash]*BlockNode),
+		dirty:     make(map[*BlockNode]struct{}),
 	}
 }
 
@@ -51,7 +51,7 @@ func (bi *blockIndex) HaveBlock(hash *daghash.Hash) bool {
 // return nil if there is no entry for the hash.
 //
 // This function is safe for concurrent access.
-func (bi *blockIndex) LookupNode(hash *daghash.Hash) (*blockNode, bool) {
+func (bi *blockIndex) LookupNode(hash *daghash.Hash) (*BlockNode, bool) {
 	bi.RLock()
 	defer bi.RUnlock()
 	node, ok := bi.index[*hash]
@@ -62,7 +62,7 @@ func (bi *blockIndex) LookupNode(hash *daghash.Hash) (*blockNode, bool) {
 // Duplicate entries are not checked so it is up to caller to avoid adding them.
 //
 // This function is safe for concurrent access.
-func (bi *blockIndex) AddNode(node *blockNode) {
+func (bi *blockIndex) AddNode(node *BlockNode) {
 	bi.Lock()
 	defer bi.Unlock()
 	bi.addNode(node)
@@ -73,14 +73,14 @@ func (bi *blockIndex) AddNode(node *blockNode) {
 // dirty. This can be used while initializing the block index.
 //
 // This function is NOT safe for concurrent access.
-func (bi *blockIndex) addNode(node *blockNode) {
+func (bi *blockIndex) addNode(node *BlockNode) {
 	bi.index[*node.hash] = node
 }
 
 // NodeStatus provides concurrent-safe access to the status field of a node.
 //
 // This function is safe for concurrent access.
-func (bi *blockIndex) NodeStatus(node *blockNode) blockstatus.BlockStatus {
+func (bi *blockIndex) NodeStatus(node *BlockNode) blockstatus.BlockStatus {
 	bi.RLock()
 	defer bi.RUnlock()
 	status := node.status
@@ -92,7 +92,7 @@ func (bi *blockIndex) NodeStatus(node *blockNode) blockstatus.BlockStatus {
 // flags currently on.
 //
 // This function is safe for concurrent access.
-func (bi *blockIndex) SetStatusFlags(node *blockNode, flags blockstatus.BlockStatus) {
+func (bi *blockIndex) SetStatusFlags(node *BlockNode, flags blockstatus.BlockStatus) {
 	bi.Lock()
 	defer bi.Unlock()
 	node.status |= flags
@@ -103,7 +103,7 @@ func (bi *blockIndex) SetStatusFlags(node *blockNode, flags blockstatus.BlockSta
 // regardless of whether they were on or off previously.
 //
 // This function is safe for concurrent access.
-func (bi *blockIndex) UnsetStatusFlags(node *blockNode, flags blockstatus.BlockStatus) {
+func (bi *blockIndex) UnsetStatusFlags(node *BlockNode, flags blockstatus.BlockStatus) {
 	bi.Lock()
 	defer bi.Unlock()
 	node.status &^= flags
@@ -133,5 +133,5 @@ func (bi *blockIndex) flushToDB(dbContext *dbaccess.TxContext) error {
 }
 
 func (bi *blockIndex) clearDirtyEntries() {
-	bi.dirty = make(map[*blockNode]struct{})
+	bi.dirty = make(map[*BlockNode]struct{})
 }

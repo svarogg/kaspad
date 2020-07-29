@@ -99,7 +99,7 @@ func (c bitConditionChecker) MinerConfirmationWindow() uint64 {
 // This function MUST be called with the DAG state lock held (for writes).
 //
 // This is part of the thresholdConditionChecker interface implementation.
-func (c bitConditionChecker) Condition(node *blockNode) (bool, error) {
+func (c bitConditionChecker) Condition(node *BlockNode) (bool, error) {
 	conditionMask := uint32(1) << c.bit
 	version := uint32(node.version)
 	if version&vbTopMask != vbTopBits {
@@ -177,7 +177,7 @@ func (c deploymentChecker) MinerConfirmationWindow() uint64 {
 // associated with the checker is set.
 //
 // This is part of the thresholdConditionChecker interface implementation.
-func (c deploymentChecker) Condition(node *blockNode) (bool, error) {
+func (c deploymentChecker) Condition(node *BlockNode) (bool, error) {
 	conditionMask := uint32(1) << c.deployment.BitNumber
 	version := uint32(node.version)
 	return (version&vbTopMask == vbTopBits) && (version&conditionMask != 0),
@@ -193,7 +193,7 @@ func (c deploymentChecker) Condition(node *blockNode) (bool, error) {
 // while this function accepts any block node.
 //
 // This function MUST be called with the DAG state lock held (for writes).
-func (dag *BlockDAG) calcNextBlockVersion(prevNode *blockNode) (int32, error) {
+func (dag *BlockDAG) calcNextBlockVersion(prevNode *BlockNode) (int32, error) {
 	// Set the appropriate bits for each actively defined rule deployment
 	// that is either in the process of being voted on, or locked in for the
 	// activation at the next threshold window change.
@@ -229,7 +229,7 @@ func (dag *BlockDAG) CalcNextBlockVersion() (int32, error) {
 // activated.
 //
 // This function MUST be called with the DAG state lock held (for writes)
-func (dag *BlockDAG) warnUnknownRuleActivations(node *blockNode) error {
+func (dag *BlockDAG) warnUnknownRuleActivations(node *BlockNode) error {
 	// Warn if any unknown new rules are either about to activate or have
 	// already been activated.
 	for bit := uint32(0); bit < vbNumBits; bit++ {
@@ -263,7 +263,7 @@ func (dag *BlockDAG) warnUnknownRuleActivations(node *blockNode) error {
 // blocks have unexpected versions.
 //
 // This function MUST be called with the DAG state lock held (for writes)
-func (dag *BlockDAG) warnUnknownVersions(node *blockNode) error {
+func (dag *BlockDAG) warnUnknownVersions(node *BlockNode) error {
 	// Nothing to do if already warned.
 	if dag.unknownVersionsWarned {
 		return nil

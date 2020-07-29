@@ -24,7 +24,7 @@ func newMultisetStore(dag *BlockDAG) *multisetStore {
 	}
 }
 
-func (store *multisetStore) setMultiset(node *blockNode, ms *secp256k1.MultiSet) {
+func (store *multisetStore) setMultiset(node *BlockNode, ms *secp256k1.MultiSet) {
 	store.loaded[*node.hash] = *ms
 	store.addToNewBlocks(node.hash)
 }
@@ -37,7 +37,7 @@ func multisetNotFoundError(blockHash *daghash.Hash) error {
 	return errors.Errorf("Couldn't find multiset data for block %s", blockHash)
 }
 
-func (store *multisetStore) multisetByBlockNode(node *blockNode) (*secp256k1.MultiSet, error) {
+func (store *multisetStore) multisetByBlockNode(node *BlockNode) (*secp256k1.MultiSet, error) {
 	ms, exists := store.multisetByBlockHash(node.hash)
 	if !exists {
 		return nil, multisetNotFoundError(node.hash)

@@ -21,9 +21,9 @@ func TestUTXODiffStore(t *testing.T) {
 	defer teardownFunc()
 
 	nodeCounter := byte(0)
-	createNode := func() *blockNode {
+	createNode := func() *BlockNode {
 		nodeCounter++
-		node := &blockNode{hash: &daghash.Hash{nodeCounter}}
+		node := &BlockNode{hash: &daghash.Hash{nodeCounter}}
 		dag.index.AddNode(node)
 		return node
 	}
@@ -111,13 +111,13 @@ func TestClearOldEntries(t *testing.T) {
 	defer func() { maxBlueScoreDifferenceToKeepLoaded = currentDifference }()
 
 	// Add 10 blocks
-	blockNodes := make([]*blockNode, 10)
+	blockNodes := make([]*BlockNode, 10)
 	for i := 0; i < 10; i++ {
 		processedBlock := PrepareAndProcessBlockForTest(t, dag, dag.TipHashes(), nil)
 
 		node, ok := dag.index.LookupNode(processedBlock.BlockHash())
 		if !ok {
-			t.Fatalf("TestClearOldEntries: missing blockNode for hash %s", processedBlock.BlockHash())
+			t.Fatalf("TestClearOldEntries: missing BlockNode for hash %s", processedBlock.BlockHash())
 		}
 		blockNodes[i] = node
 	}
@@ -147,7 +147,7 @@ func TestClearOldEntries(t *testing.T) {
 	processedBlock := PrepareAndProcessBlockForTest(t, dag, []*daghash.Hash{dag.genesis.hash}, nil)
 	node, ok := dag.index.LookupNode(processedBlock.BlockHash())
 	if !ok {
-		t.Fatalf("TestClearOldEntries: missing blockNode for hash %s", processedBlock.BlockHash())
+		t.Fatalf("TestClearOldEntries: missing BlockNode for hash %s", processedBlock.BlockHash())
 	}
 
 	// Make sure that the child-of-genesis node is in the loaded set, since it

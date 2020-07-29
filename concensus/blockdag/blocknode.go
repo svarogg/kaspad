@@ -13,9 +13,9 @@ import (
 	"github.com/kaspanet/kaspad/wire"
 )
 
-// blockNode represents a block within the block DAG. The DAG is stored into
+// BlockNode represents a block within the block DAG. The DAG is stored into
 // the block database.
-type blockNode struct {
+type BlockNode struct {
 	// NOTE: Additions, deletions, or modifications to the order of the
 	// definitions in this struct should not be changed without considering
 	// how it affects alignment on 64-bit platforms. The current order is
@@ -28,20 +28,20 @@ type blockNode struct {
 
 	// selectedParent is the selected parent for this node.
 	// The selected parent is the parent that if chosen will maximize the blue score of this block
-	selectedParent *blockNode
+	selectedParent *BlockNode
 
 	// children are all the blocks that refer to this block as a parent
 	children BlockNodeSet
 
 	// blues are all blue blocks in this block's worldview that are in its selected parent anticone
-	blues []*blockNode
+	blues []*BlockNode
 
 	// blueScore is the count of all the blue blocks in this block's past
 	blueScore uint64
 
 	// bluesAnticoneSizes is a map holding the set of blues affected by this block and their
 	// modified blue anticone size.
-	bluesAnticoneSizes map[*blockNode]dagconfig.KType
+	bluesAnticoneSizes map[*BlockNode]dagconfig.KType
 
 	// hash is the double sha 256 of the block.
 	hash *daghash.Hash
@@ -67,14 +67,14 @@ type blockNode struct {
 	isFinalized bool
 }
 
-// updateParentsChildren updates the node's parents to point to new node
-func (node *blockNode) updateParentsChildren() {
+// UpdateParentsChildren updates the node's parents to point to new node
+func (node *BlockNode) UpdateParentsChildren() {
 	for parent := range node.parents {
 		parent.children.Add(node)
 	}
 }
 
-func (node *blockNode) less(other *blockNode) bool {
+func (node *BlockNode) Less(other *BlockNode) bool {
 	if node.blueScore == other.blueScore {
 		return daghash.Less(node.hash, other.hash)
 	}
@@ -85,7 +85,7 @@ func (node *blockNode) less(other *blockNode) bool {
 // Header constructs a block header from the node and returns it.
 //
 // This function is safe for concurrent access.
-func (node *blockNode) Header() *wire.BlockHeader {
+func (node *BlockNode) Header() *wire.BlockHeader {
 	// No lock is needed because all accessed fields are immutable.
 	return &wire.BlockHeader{
 		Version:              node.version,
@@ -93,7 +93,7 @@ func (node *blockNode) Header() *wire.BlockHeader {
 		HashMerkleRoot:       node.hashMerkleRoot,
 		AcceptedIDMerkleRoot: node.acceptedIDMerkleRoot,
 		UTXOCommitment:       node.utxoCommitment,
-		Timestamp:            node.time(),
+		Timestamp:            node.Time(),
 		Bits:                 node.bits,
 		Nonce:                node.nonce,
 	}
@@ -104,7 +104,7 @@ func (node *blockNode) Header() *wire.BlockHeader {
 // blue score is requested that is higher than the blue score of the passed node.
 //
 // This function is safe for concurrent access.
-func (node *blockNode) SelectedAncestor(blueScore uint64) *blockNode {
+func (node *BlockNode) SelectedAncestor(blueScore uint64) *BlockNode {
 	if blueScore > node.blueScore {
 		return nil
 	}
@@ -122,7 +122,7 @@ func (node *blockNode) SelectedAncestor(blueScore uint64) *blockNode {
 // the node's blue score minus provided distance.
 //
 // This function is safe for concurrent access.
-func (node *blockNode) RelativeAncestor(distance uint64) *blockNode {
+func (node *BlockNode) RelativeAncestor(distance uint64) *BlockNode {
 	return node.SelectedAncestor(node.blueScore - distance)
 }
 
@@ -130,7 +130,7 @@ func (node *blockNode) RelativeAncestor(distance uint64) *blockNode {
 // prior to, and including, the block node.
 //
 // This function is safe for concurrent access.
-func (node *blockNode) PastMedianTime(dag *BlockDAG) mstime.Time {
+func (node *BlockNode) PastMedianTime(dag *BlockDAG) mstime.Time {
 	window := blueBlockWindow(node, 2*dag.TimestampDeviationTolerance-1)
 	medianTimestamp, err := window.medianTimestamp()
 	if err != nil {
@@ -139,24 +139,24 @@ func (node *blockNode) PastMedianTime(dag *BlockDAG) mstime.Time {
 	return mstime.UnixMilliseconds(medianTimestamp)
 }
 
-func (node *blockNode) ParentHashes() []*daghash.Hash {
+func (node *BlockNode) ParentHashes() []*daghash.Hash {
 	return node.parents.Hashes()
 }
 
-// isGenesis returns if the current block is the genesis block
-func (node *blockNode) isGenesis() bool {
+// IsGenesis returns if the current block is the genesis block
+func (node *BlockNode) IsGenesis() bool {
 	return len(node.parents) == 0
 }
 
-func (node *blockNode) finalityScore(dag *BlockDAG) uint64 {
-	return node.blueScore / uint64(dag.FinalityInterval())
+func (node *BlockNode) FinalityScore(dag *BlockDAG) uint64 {
+	return node.blueScore / dag.FinalityInterval()
 }
 
 // String returns a string that contains the block hash.
-func (node blockNode) String() string {
+func (node BlockNode) String() string {
 	return node.hash.String()
 }
 
-func (node *blockNode) time() mstime.Time {
+func (node *BlockNode) Time() mstime.Time {
 	return mstime.UnixMilliseconds(node.timestamp)
 }

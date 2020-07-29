@@ -71,7 +71,7 @@ type BlockDAG struct {
 	timeSource      TimeSource
 	sigCache        *txscript.SigCache
 	indexManager    IndexManager
-	genesis         *blockNode
+	genesis         *BlockNode
 
 	// The following fields are calculated based upon the provided DAG
 	// parameters. They are also set when the instance is created and
@@ -154,7 +154,7 @@ type BlockDAG struct {
 	notificationsLock sync.RWMutex
 	notifications     []NotificationCallback
 
-	lastFinalityPoint *blockNode
+	lastFinalityPoint *BlockNode
 
 	utxoDiffStore *utxoDiffStore
 	multisetStore *multisetStore
@@ -478,7 +478,7 @@ func (dag *BlockDAG) CalcSequenceLockNoLock(tx *util.Tx, utxoSet UTXOSet, mempoo
 // transaction. See the exported version, CalcSequenceLock for further details.
 //
 // This function MUST be called with the DAG state lock held (for writes).
-func (dag *BlockDAG) calcSequenceLock(node *blockNode, utxoSet UTXOSet, tx *util.Tx, mempool bool) (*SequenceLock, error) {
+func (dag *BlockDAG) calcSequenceLock(node *BlockNode, utxoSet UTXOSet, tx *util.Tx, mempool bool) (*SequenceLock, error) {
 	// A value of -1 for each relative lock type represents a relative time
 	// lock value that will allow a transaction to be included in a block
 	// at any given height or time.
@@ -583,8 +583,8 @@ func LockTimeToSequence(isMilliseconds bool, locktime uint64) uint64 {
 //  - BFFastAdd: Avoids several expensive transaction validation operations.
 //
 // This function MUST be called with the DAG state lock held (for writes).
-func (dag *BlockDAG) addBlock(node *blockNode,
-	block *util.Block, selectedParentAnticone []*blockNode, flags BehaviorFlags) (*chainUpdates, error) {
+func (dag *BlockDAG) addBlock(node *BlockNode,
+	block *util.Block, selectedParentAnticone []*BlockNode, flags BehaviorFlags) (*chainUpdates, error) {
 	// Skip checks if node has already been fully validated.
 	fastAdd := flags&BFFastAdd == BFFastAdd || dag.index.NodeStatus(node).KnownValid()
 
@@ -632,8 +632,8 @@ func calculateAcceptedIDMerkleRoot(multiBlockTxsAcceptanceData MultiBlockTxsAcce
 	return acceptedIDMerkleTree.Root()
 }
 
-func (node *blockNode) validateAcceptedIDMerkleRoot(dag *BlockDAG, txsAcceptanceData MultiBlockTxsAcceptanceData) error {
-	if node.isGenesis() {
+func (node *BlockNode) validateAcceptedIDMerkleRoot(dag *BlockDAG, txsAcceptanceData MultiBlockTxsAcceptanceData) error {
+	if node.IsGenesis() {
 		return nil
 	}
 
@@ -651,8 +651,8 @@ func (node *blockNode) validateAcceptedIDMerkleRoot(dag *BlockDAG, txsAcceptance
 // connectBlock handles connecting the passed node/block to the DAG.
 //
 // This function MUST be called with the DAG state lock held (for writes).
-func (dag *BlockDAG) connectBlock(node *blockNode,
-	block *util.Block, selectedParentAnticone []*blockNode, fastAdd bool) (*chainUpdates, error) {
+func (dag *BlockDAG) connectBlock(node *BlockNode,
+	block *util.Block, selectedParentAnticone []*BlockNode, fastAdd bool) (*chainUpdates, error) {
 	// No warnings about unknown rules or versions until the DAG is
 	// synced.
 	if dag.isSynced() {
@@ -708,13 +708,13 @@ func (dag *BlockDAG) connectBlock(node *blockNode,
 }
 
 // calcMultiset returns the multiset of the past UTXO of the given block.
-func (node *blockNode) calcMultiset(dag *BlockDAG, acceptanceData MultiBlockTxsAcceptanceData,
+func (node *BlockNode) calcMultiset(dag *BlockDAG, acceptanceData MultiBlockTxsAcceptanceData,
 	selectedParentPastUTXO UTXOSet) (*secp256k1.MultiSet, error) {
 
 	return node.pastUTXOMultiSet(dag, acceptanceData, selectedParentPastUTXO)
 }
 
-func (node *blockNode) pastUTXOMultiSet(dag *BlockDAG, acceptanceData MultiBlockTxsAcceptanceData,
+func (node *BlockNode) pastUTXOMultiSet(dag *BlockDAG, acceptanceData MultiBlockTxsAcceptanceData,
 	selectedParentPastUTXO UTXOSet) (*secp256k1.MultiSet, error) {
 
 	ms, err := node.selectedParentMultiset(dag)
@@ -741,10 +741,10 @@ func (node *blockNode) pastUTXOMultiSet(dag *BlockDAG, acceptanceData MultiBlock
 }
 
 // selectedParentMultiset returns the multiset of the node's selected
-// parent. If the node is the genesis blockNode then it does not have
+// parent. If the node is the genesis BlockNode then it does not have
 // a selected parent, in which case return a new, empty multiset.
-func (node *blockNode) selectedParentMultiset(dag *BlockDAG) (*secp256k1.MultiSet, error) {
-	if node.isGenesis() {
+func (node *BlockNode) selectedParentMultiset(dag *BlockDAG) (*secp256k1.MultiSet, error) {
+	if node.IsGenesis() {
 		return secp256k1.NewMultiset(), nil
 	}
 
@@ -920,7 +920,7 @@ func (dag *BlockDAG) LastFinalityPointHash() *daghash.Hash {
 }
 
 // isInSelectedParentChainOf returns whether `node` is in the selected parent chain of `other`.
-func (dag *BlockDAG) isInSelectedParentChainOf(node *blockNode, other *blockNode) (bool, error) {
+func (dag *BlockDAG) isInSelectedParentChainOf(node *BlockNode, other *BlockNode) (bool, error) {
 	// By definition, a node is not in the selected parent chain of itself.
 	if node == other {
 		return false, nil
@@ -936,9 +936,9 @@ func (dag *BlockDAG) FinalityInterval() uint64 {
 
 // checkFinalityViolation checks the new block does not violate the finality rules
 // specifically - the new block selectedParent chain should contain the old finality point.
-func (dag *BlockDAG) checkFinalityViolation(newNode *blockNode) error {
+func (dag *BlockDAG) checkFinalityViolation(newNode *BlockNode) error {
 	// the genesis block can not violate finality rules
-	if newNode.isGenesis() {
+	if newNode.IsGenesis() {
 		return nil
 	}
 
@@ -966,20 +966,20 @@ func (dag *BlockDAG) checkFinalityViolation(newNode *blockNode) error {
 func (dag *BlockDAG) updateFinalityPoint() {
 	selectedTip := dag.selectedTip()
 	// if the selected tip is the genesis block - it should be the new finality point
-	if selectedTip.isGenesis() {
+	if selectedTip.IsGenesis() {
 		dag.lastFinalityPoint = selectedTip
 		return
 	}
 	// We are looking for a new finality point only if the new block's finality score is higher
 	// by 2 than the existing finality point's
-	if selectedTip.finalityScore(dag) < dag.lastFinalityPoint.finalityScore(dag)+2 {
+	if selectedTip.FinalityScore(dag) < dag.lastFinalityPoint.FinalityScore(dag)+2 {
 		return
 	}
 
-	var currentNode *blockNode
+	var currentNode *BlockNode
 	for currentNode = selectedTip.selectedParent; ; currentNode = currentNode.selectedParent {
 		// We look for the first node in the selected parent chain that has a higher finality score than the last finality point.
-		if currentNode.selectedParent.finalityScore(dag) == dag.lastFinalityPoint.finalityScore(dag) {
+		if currentNode.selectedParent.FinalityScore(dag) == dag.lastFinalityPoint.FinalityScore(dag) {
 			break
 		}
 	}
@@ -990,16 +990,16 @@ func (dag *BlockDAG) updateFinalityPoint() {
 }
 
 func (dag *BlockDAG) finalizeNodesBelowFinalityPoint(deleteDiffData bool) {
-	queue := make([]*blockNode, 0, len(dag.lastFinalityPoint.parents))
+	queue := make([]*BlockNode, 0, len(dag.lastFinalityPoint.parents))
 	for parent := range dag.lastFinalityPoint.parents {
 		queue = append(queue, parent)
 	}
-	var nodesToDelete []*blockNode
+	var nodesToDelete []*BlockNode
 	if deleteDiffData {
-		nodesToDelete = make([]*blockNode, 0, dag.FinalityInterval())
+		nodesToDelete = make([]*BlockNode, 0, dag.FinalityInterval())
 	}
 	for len(queue) > 0 {
-		var current *blockNode
+		var current *BlockNode
 		current, queue = queue[0], queue[1:]
 		if !current.isFinalized {
 			current.isFinalized = true
@@ -1046,7 +1046,7 @@ func (dag *BlockDAG) NextBlockCoinbaseTransactionNoLock(scriptPubKey []byte, ext
 	if err != nil {
 		return nil, err
 	}
-	return dag.virtual.blockNode.expectedCoinbaseTransaction(dag, txsAcceptanceData, scriptPubKey, extraData)
+	return dag.virtual.BlockNode.expectedCoinbaseTransaction(dag, txsAcceptanceData, scriptPubKey, extraData)
 }
 
 // NextAcceptedIDMerkleRootNoLock prepares the acceptedIDMerkleRoot for the next mined block
@@ -1065,7 +1065,7 @@ func (dag *BlockDAG) NextAcceptedIDMerkleRootNoLock() (*daghash.Hash, error) {
 //
 // This function MUST be called with the DAG read-lock held
 func (dag *BlockDAG) TxsAcceptedByVirtual() (MultiBlockTxsAcceptanceData, error) {
-	_, _, txsAcceptanceData, err := dag.pastUTXO(&dag.virtual.blockNode)
+	_, _, txsAcceptanceData, err := dag.pastUTXO(&dag.virtual.BlockNode)
 	return txsAcceptanceData, err
 }
 
@@ -1094,8 +1094,8 @@ func (dag *BlockDAG) TxsAcceptedByBlockHash(blockHash *daghash.Hash) (MultiBlock
 // It returns the diff in the virtual block's UTXO set.
 //
 // This function MUST be called with the DAG state lock held (for writes).
-func (dag *BlockDAG) applyDAGChanges(node *blockNode, newBlockPastUTXO UTXOSet,
-	newBlockMultiset *secp256k1.MultiSet, selectedParentAnticone []*blockNode) (
+func (dag *BlockDAG) applyDAGChanges(node *BlockNode, newBlockPastUTXO UTXOSet,
+	newBlockMultiset *secp256k1.MultiSet, selectedParentAnticone []*BlockNode) (
 	virtualUTXODiff *UTXODiff, chainUpdates *chainUpdates, err error) {
 
 	// Add the block to the reachability tree
@@ -1114,7 +1114,7 @@ func (dag *BlockDAG) applyDAGChanges(node *blockNode, newBlockPastUTXO UTXOSet,
 	chainUpdates = dag.virtual.AddTip(node)
 
 	// Build a UTXO set for the new virtual block
-	newVirtualUTXO, _, _, err := dag.pastUTXO(&dag.virtual.blockNode)
+	newVirtualUTXO, _, _, err := dag.pastUTXO(&dag.virtual.BlockNode)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not restore past UTXO for virtual")
 	}
@@ -1169,7 +1169,7 @@ func checkDoubleSpendsWithBlockPast(pastUTXO UTXOSet, blockTransactions []*util.
 // verifyAndBuildUTXO verifies all transactions in the given block and builds its UTXO
 // to save extra traversals it returns the transactions acceptance data, the compactFeeData
 // for the new block and its multiset.
-func (node *blockNode) verifyAndBuildUTXO(dag *BlockDAG, transactions []*util.Tx, fastAdd bool) (
+func (node *BlockNode) verifyAndBuildUTXO(dag *BlockDAG, transactions []*util.Tx, fastAdd bool) (
 	newBlockUTXO UTXOSet, txsAcceptanceData MultiBlockTxsAcceptanceData, newBlockFeeData compactFeeData, multiset *secp256k1.MultiSet, err error) {
 
 	pastUTXO, selectedParentPastUTXO, txsAcceptanceData, err := dag.pastUTXO(node)
@@ -1243,7 +1243,7 @@ func genesisPastUTXO(virtual *virtualBlock) UTXOSet {
 	return genesisPastUTXO
 }
 
-func (dag *BlockDAG) fetchBlueBlocks(node *blockNode) ([]*util.Block, error) {
+func (dag *BlockDAG) fetchBlueBlocks(node *BlockNode) ([]*util.Block, error) {
 	blueBlocks := make([]*util.Block, len(node.blues))
 	for i, blueBlockNode := range node.blues {
 		blueBlock, err := dag.fetchBlockByHash(blueBlockNode.hash)
@@ -1259,7 +1259,7 @@ func (dag *BlockDAG) fetchBlueBlocks(node *blockNode) ([]*util.Block, error) {
 // applyBlueBlocks adds all transactions in the blue blocks to the selectedParent's past UTXO set
 // Purposefully ignoring failures - these are just unaccepted transactions
 // Writing down which transactions were accepted or not in txsAcceptanceData
-func (node *blockNode) applyBlueBlocks(selectedParentPastUTXO UTXOSet, blueBlocks []*util.Block) (
+func (node *BlockNode) applyBlueBlocks(selectedParentPastUTXO UTXOSet, blueBlocks []*util.Block) (
 	pastUTXO UTXOSet, multiBlockTxsAcceptanceData MultiBlockTxsAcceptanceData, err error) {
 
 	pastUTXO = selectedParentPastUTXO.(*DiffUTXOSet).cloneWithoutBase()
@@ -1300,13 +1300,13 @@ func (node *blockNode) applyBlueBlocks(selectedParentPastUTXO UTXOSet, blueBlock
 
 // updateParents adds this block to the children sets of its parents
 // and updates the diff of any parent whose DiffChild is this block
-func (node *blockNode) updateParents(dag *BlockDAG, newBlockUTXO UTXOSet) error {
-	node.updateParentsChildren()
+func (node *BlockNode) updateParents(dag *BlockDAG, newBlockUTXO UTXOSet) error {
+	node.UpdateParentsChildren()
 	return node.updateParentsDiffs(dag, newBlockUTXO)
 }
 
 // updateParentsDiffs updates the diff of any parent whose DiffChild is this block
-func (node *blockNode) updateParentsDiffs(dag *BlockDAG, newBlockUTXO UTXOSet) error {
+func (node *BlockNode) updateParentsDiffs(dag *BlockDAG, newBlockUTXO UTXOSet) error {
 	virtualDiffFromNewBlock, err := dag.virtual.utxoSet.diffFrom(newBlockUTXO)
 	if err != nil {
 		return err
@@ -1348,10 +1348,10 @@ func (node *blockNode) updateParentsDiffs(dag *BlockDAG, newBlockUTXO UTXOSet) e
 // pastUTXO returns the UTXO of a given block's past
 // To save traversals over the blue blocks, it also returns the transaction acceptance data for
 // all blue blocks
-func (dag *BlockDAG) pastUTXO(node *blockNode) (
+func (dag *BlockDAG) pastUTXO(node *BlockNode) (
 	pastUTXO, selectedParentPastUTXO UTXOSet, bluesTxsAcceptanceData MultiBlockTxsAcceptanceData, err error) {
 
-	if node.isGenesis() {
+	if node.IsGenesis() {
 		return genesisPastUTXO(dag.virtual), nil, MultiBlockTxsAcceptanceData{}, nil
 	}
 
@@ -1374,8 +1374,8 @@ func (dag *BlockDAG) pastUTXO(node *blockNode) (
 }
 
 // restorePastUTXO restores the UTXO of a given block from its diff
-func (dag *BlockDAG) restorePastUTXO(node *blockNode) (UTXOSet, error) {
-	stack := []*blockNode{}
+func (dag *BlockDAG) restorePastUTXO(node *BlockNode) (UTXOSet, error) {
+	stack := []*BlockNode{}
 
 	// Iterate over the chain of diff-childs from node till virtual and add them
 	// all into a stack
@@ -1478,7 +1478,7 @@ func (dag *BlockDAG) IsSynced() bool {
 
 // selectedTip returns the current selected tip for the DAG.
 // It will return nil if there is no tip.
-func (dag *BlockDAG) selectedTip() *blockNode {
+func (dag *BlockDAG) selectedTip() *BlockNode {
 	return dag.virtual.selectedParent
 }
 
@@ -1601,7 +1601,7 @@ func (dag *BlockDAG) UTXOConfirmations(outpoint *wire.Outpoint) (uint64, bool) {
 // * If the node is in the selected tip red set	-> 0
 // * If the node is the selected tip			-> 1
 // * Otherwise									-> selectedTip.blueScore - acceptingBlock.blueScore + 2
-func (dag *BlockDAG) blockConfirmations(node *blockNode) (uint64, error) {
+func (dag *BlockDAG) blockConfirmations(node *BlockNode) (uint64, error) {
 	acceptingBlock, err := dag.acceptingBlock(node)
 	if err != nil {
 		return 0, err
@@ -1617,9 +1617,9 @@ func (dag *BlockDAG) blockConfirmations(node *blockNode) (uint64, error) {
 
 // acceptingBlock finds the node in the selected-parent chain that had accepted
 // the given node
-func (dag *BlockDAG) acceptingBlock(node *blockNode) (*blockNode, error) {
+func (dag *BlockDAG) acceptingBlock(node *BlockNode) (*BlockNode, error) {
 	// Return an error if the node is the virtual block
-	if node == &dag.virtual.blockNode {
+	if node == &dag.virtual.BlockNode {
 		return nil, errors.New("cannot get acceptingBlock for virtual")
 	}
 
@@ -1670,7 +1670,7 @@ func (dag *BlockDAG) acceptingBlock(node *blockNode) (*blockNode, error) {
 
 // oldestChainBlockWithBlueScoreGreaterThan finds the oldest chain block with a blue score
 // greater than blueScore. If no such block exists, this method returns nil
-func (dag *BlockDAG) oldestChainBlockWithBlueScoreGreaterThan(blueScore uint64) *blockNode {
+func (dag *BlockDAG) oldestChainBlockWithBlueScoreGreaterThan(blueScore uint64) *BlockNode {
 	chainBlockIndex, ok := util.SearchSlice(len(dag.virtual.selectedParentChainSlice), func(i int) bool {
 		selectedPathNode := dag.virtual.selectedParentChainSlice[i]
 		return selectedPathNode.blueScore > blueScore
@@ -1849,7 +1849,7 @@ func (dag *BlockDAG) antiPastHashesBetween(lowHash, highHash *daghash.Hash, maxH
 // and highHash's antiPast, or up to the provided max number of blocks.
 //
 // This function MUST be called with the DAG state lock held (for reads).
-func (dag *BlockDAG) antiPastBetween(lowHash, highHash *daghash.Hash, maxEntries uint64) ([]*blockNode, error) {
+func (dag *BlockDAG) antiPastBetween(lowHash, highHash *daghash.Hash, maxEntries uint64) ([]*BlockNode, error) {
 	lowNode, ok := dag.index.LookupNode(lowHash)
 	if !ok {
 		return nil, errors.Errorf("Couldn't find low hash %s", lowHash)
@@ -1907,14 +1907,14 @@ func (dag *BlockDAG) antiPastBetween(lowHash, highHash *daghash.Hash, maxEntries
 	if candidateNodes.Len() < nodesLen {
 		nodesLen = candidateNodes.Len()
 	}
-	nodes := make([]*blockNode, nodesLen)
+	nodes := make([]*BlockNode, nodesLen)
 	for i := 0; i < nodesLen; i++ {
 		nodes[i] = candidateNodes.pop()
 	}
 	return nodes, nil
 }
 
-func (dag *BlockDAG) isInPast(this *blockNode, other *blockNode) (bool, error) {
+func (dag *BlockDAG) isInPast(this *BlockNode, other *BlockNode) (bool, error) {
 	return dag.reachabilityTree.isInPast(this, other)
 }
 
@@ -1952,7 +1952,7 @@ func (dag *BlockDAG) antiPastHeadersBetween(lowHash, highHash *daghash.Hash, max
 
 // GetTopHeaders returns the top wire.MaxBlockHeadersPerMsg block headers ordered by blue score.
 func (dag *BlockDAG) GetTopHeaders(highHash *daghash.Hash, maxHeaders uint64) ([]*wire.BlockHeader, error) {
-	highNode := &dag.virtual.blockNode
+	highNode := &dag.virtual.BlockNode
 	if highHash != nil {
 		var ok bool
 		highNode, ok = dag.index.LookupNode(highHash)
@@ -2147,13 +2147,13 @@ func (dag *BlockDAG) isKnownDelayedBlock(hash *daghash.Hash) bool {
 // anticone of its selected parent (parent with highest blue score).
 // selectedParentAnticone is used to update reachability data we store for future reachability queries.
 // This function is NOT safe for concurrent access.
-func (dag *BlockDAG) newBlockNode(blockHeader *wire.BlockHeader, parents BlockNodeSet) (node *blockNode, selectedParentAnticone []*blockNode) {
-	node = &blockNode{
+func (dag *BlockDAG) newBlockNode(blockHeader *wire.BlockHeader, parents BlockNodeSet) (node *BlockNode, selectedParentAnticone []*BlockNode) {
+	node = &BlockNode{
 		parents:            parents,
 		children:           make(BlockNodeSet),
 		blueScore:          math.MaxUint64, // Initialized to the max value to avoid collisions with the genesis block
 		timestamp:          dag.Now().UnixMilliseconds(),
-		bluesAnticoneSizes: make(map[*blockNode]dagconfig.KType),
+		bluesAnticoneSizes: make(map[*BlockNode]dagconfig.KType),
 	}
 
 	// blockHeader is nil only for the virtual block

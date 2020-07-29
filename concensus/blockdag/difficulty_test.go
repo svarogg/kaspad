@@ -92,10 +92,10 @@ func TestDifficulty(t *testing.T) {
 	defer teardownFunc()
 
 	zeroTime := mstime.Time{}
-	addNode := func(parents BlockNodeSet, blockTime mstime.Time) *blockNode {
+	addNode := func(parents BlockNodeSet, blockTime mstime.Time) *BlockNode {
 		bluestParent := parents.Bluest()
 		if blockTime.IsZero() {
-			blockTime = bluestParent.time()
+			blockTime = bluestParent.Time()
 			blockTime = blockTime.Add(params.TargetTimePerBlock)
 		}
 		block, err := PrepareBlockForTest(dag, parents.Hashes(), nil)
@@ -175,7 +175,7 @@ func TestDifficulty(t *testing.T) {
 			sameBitsCount = 0
 		}
 	}
-	slowBlockTime := tip.time()
+	slowBlockTime := tip.Time()
 	slowBlockTime = slowBlockTime.Add(params.TargetTimePerBlock + time.Second)
 	slowNode := addNode(BlockNodeSetFromSlice(tip), slowBlockTime)
 	if slowNode.bits != tip.bits {

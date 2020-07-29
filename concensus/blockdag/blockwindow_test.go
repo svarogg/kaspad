@@ -25,8 +25,8 @@ func TestBlueBlockWindow(t *testing.T) {
 	windowSize := uint64(10)
 	genesisNode := dag.genesis
 	blockTime := genesisNode.Header().Timestamp
-	blockByIDMap := make(map[string]*blockNode)
-	idByBlockMap := make(map[*blockNode]string)
+	blockByIDMap := make(map[string]*BlockNode)
+	idByBlockMap := make(map[*BlockNode]string)
 	blockByIDMap["A"] = genesisNode
 	idByBlockMap[genesisNode] = "A"
 
@@ -148,7 +148,7 @@ func TestBlueBlockWindow(t *testing.T) {
 	}
 }
 
-func checkWindowIDs(window []*blockNode, expectedIDs []string, idByBlockMap map[*blockNode]string) error {
+func checkWindowIDs(window []*BlockNode, expectedIDs []string, idByBlockMap map[*BlockNode]string) error {
 	ids := make([]string, len(window))
 	for i, node := range window {
 		ids[i] = idByBlockMap[node]

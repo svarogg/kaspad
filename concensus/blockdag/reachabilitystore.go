@@ -41,7 +41,7 @@ func (store *reachabilityStore) setTreeNode(treeNode *reachabilityTreeNode) {
 	store.setBlockAsDirty(node.hash)
 }
 
-func (store *reachabilityStore) setFutureCoveringSet(node *blockNode, futureCoveringSet futureCoveringTreeNodeSet) error {
+func (store *reachabilityStore) setFutureCoveringSet(node *BlockNode, futureCoveringSet futureCoveringTreeNodeSet) error {
 	// load the reachability data from DB to store.loaded
 	_, exists := store.reachabilityDataByHash(node.hash)
 	if !exists {
@@ -69,11 +69,11 @@ func (store *reachabilityStore) treeNodeByBlockHash(hash *daghash.Hash) (*reacha
 	return reachabilityData.treeNode, nil
 }
 
-func (store *reachabilityStore) treeNodeByBlockNode(node *blockNode) (*reachabilityTreeNode, error) {
+func (store *reachabilityStore) treeNodeByBlockNode(node *BlockNode) (*reachabilityTreeNode, error) {
 	return store.treeNodeByBlockHash(node.hash)
 }
 
-func (store *reachabilityStore) futureCoveringSetByBlockNode(node *blockNode) (futureCoveringTreeNodeSet, error) {
+func (store *reachabilityStore) futureCoveringSetByBlockNode(node *BlockNode) (futureCoveringTreeNodeSet, error) {
 	reachabilityData, exists := store.reachabilityDataByHash(node.hash)
 	if !exists {
 		return nil, reachabilityNotFoundError(node.hash)
@@ -179,7 +179,7 @@ func (store *reachabilityStore) loadReachabilityDataFromCursor(cursor database.C
 		return err
 	}
 
-	// Connect the treeNode with its blockNode
+	// Connect the treeNode with its BlockNode
 	reachabilityData.treeNode.blockNode, ok = store.dag.index.LookupNode(hash)
 	if !ok {
 		return errors.Errorf("block %s does not exist in the DAG", hash)

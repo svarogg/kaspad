@@ -14,7 +14,7 @@ type virtualBlock struct {
 	mtx     sync.Mutex
 	dag     *BlockDAG
 	utxoSet *FullUTXOSet
-	blockNode
+	BlockNode
 
 	// selectedParentChainSet is a block set that includes all the blocks
 	// that belong to the chain of selected parents from the virtual block.
@@ -23,7 +23,7 @@ type virtualBlock struct {
 	// selectedParentChainSlice is an ordered slice that includes all the
 	// blocks that belong the the chain of selected parents from the
 	// virtual block.
-	selectedParentChainSlice []*blockNode
+	selectedParentChainSlice []*BlockNode
 }
 
 // newVirtualBlock creates and returns a new VirtualBlock.
@@ -47,7 +47,7 @@ func newVirtualBlock(dag *BlockDAG, tips BlockNodeSet) *virtualBlock {
 func (v *virtualBlock) setTips(tips BlockNodeSet) *chainUpdates {
 	oldSelectedParent := v.selectedParent
 	node, _ := v.dag.newBlockNode(nil, tips)
-	v.blockNode = *node
+	v.BlockNode = *node
 	return v.updateSelectedParentSet(oldSelectedParent)
 }
 
@@ -59,10 +59,10 @@ func (v *virtualBlock) setTips(tips BlockNodeSet) *chainUpdates {
 // parent and are not selected ancestors of the new one, and adding
 // blocks that are selected ancestors of the new selected parent
 // and aren't selected ancestors of the old one.
-func (v *virtualBlock) updateSelectedParentSet(oldSelectedParent *blockNode) *chainUpdates {
-	var intersectionNode *blockNode
-	nodesToAdd := make([]*blockNode, 0)
-	for node := v.blockNode.selectedParent; intersectionNode == nil && node != nil; node = node.selectedParent {
+func (v *virtualBlock) updateSelectedParentSet(oldSelectedParent *BlockNode) *chainUpdates {
+	var intersectionNode *BlockNode
+	nodesToAdd := make([]*BlockNode, 0)
+	for node := v.BlockNode.selectedParent; intersectionNode == nil && node != nil; node = node.selectedParent {
 		if v.selectedParentChainSet.Contains(node) {
 			intersectionNode = node
 		} else {
@@ -123,7 +123,7 @@ func (v *virtualBlock) SetTips(tips BlockNodeSet) {
 // is up to the caller to ensure the lock is held.
 //
 // This function MUST be called with the view mutex locked (for writes).
-func (v *virtualBlock) addTip(newTip *blockNode) *chainUpdates {
+func (v *virtualBlock) addTip(newTip *BlockNode) *chainUpdates {
 	updatedTips := v.tips().Clone()
 	for parent := range newTip.parents {
 		updatedTips.Remove(parent)
@@ -138,7 +138,7 @@ func (v *virtualBlock) addTip(newTip *blockNode) *chainUpdates {
 // from the set.
 //
 // This function is safe for concurrent access.
-func (v *virtualBlock) AddTip(newTip *blockNode) *chainUpdates {
+func (v *virtualBlock) AddTip(newTip *BlockNode) *chainUpdates {
 	v.mtx.Lock()
 	defer v.mtx.Unlock()
 	return v.addTip(newTip)

@@ -631,7 +631,7 @@ func (dag *BlockDAG) checkBlockDoubleSpends(block *util.Block) error {
 //  - BFFastAdd: No checks are performed.
 //
 // This function MUST be called with the dag state lock held (for writes).
-func (dag *BlockDAG) checkBlockHeaderContext(header *wire.BlockHeader, bluestParent *blockNode, fastAdd bool) error {
+func (dag *BlockDAG) checkBlockHeaderContext(header *wire.BlockHeader, bluestParent *BlockNode, fastAdd bool) error {
 	if !fastAdd {
 		if err := dag.validateDifficulty(header, bluestParent); err != nil {
 			return err
@@ -644,7 +644,7 @@ func (dag *BlockDAG) checkBlockHeaderContext(header *wire.BlockHeader, bluestPar
 	return nil
 }
 
-func validateMedianTime(dag *BlockDAG, header *wire.BlockHeader, bluestParent *blockNode) error {
+func validateMedianTime(dag *BlockDAG, header *wire.BlockHeader, bluestParent *BlockNode) error {
 	if !header.IsGenesis() {
 		// Ensure the timestamp for the block header is not before the
 		// median time of the last several blocks (medianTimeBlocks).
@@ -658,7 +658,7 @@ func validateMedianTime(dag *BlockDAG, header *wire.BlockHeader, bluestParent *b
 	return nil
 }
 
-func (dag *BlockDAG) validateDifficulty(header *wire.BlockHeader, bluestParent *blockNode) error {
+func (dag *BlockDAG) validateDifficulty(header *wire.BlockHeader, bluestParent *BlockNode) error {
 	// Ensure the difficulty specified in the block header matches
 	// the calculated difficulty based on the previous block and
 	// difficulty retarget rules.
@@ -735,7 +735,7 @@ func (dag *BlockDAG) checkBlockContext(block *util.Block, parents BlockNodeSet, 
 	return nil
 }
 
-func (dag *BlockDAG) validateAllTxsFinalized(block *util.Block, node *blockNode, bluestParent *blockNode) error {
+func (dag *BlockDAG) validateAllTxsFinalized(block *util.Block, node *BlockNode, bluestParent *BlockNode) error {
 	blockTime := block.MsgBlock().Header.Timestamp
 	if !block.IsGenesis() {
 		blockTime = bluestParent.PastMedianTime(dag)
@@ -905,7 +905,7 @@ func validateCoinbaseMaturity(dagParams *dagconfig.Params, entry *UTXOEntry, txB
 // It also returns the feeAccumulator for this block.
 //
 // This function MUST be called with the dag state lock held (for writes).
-func (dag *BlockDAG) checkConnectToPastUTXO(block *blockNode, pastUTXO UTXOSet,
+func (dag *BlockDAG) checkConnectToPastUTXO(block *BlockNode, pastUTXO UTXOSet,
 	transactions []*util.Tx, fastAdd bool) (compactFeeData, error) {
 
 	if !fastAdd {
@@ -968,7 +968,7 @@ func (dag *BlockDAG) checkConnectToPastUTXO(block *blockNode, pastUTXO UTXOSet,
 		// We obtain the MTP of the *previous* block (unless it's genesis block)
 		// in order to determine if transactions in the current block are final.
 		medianTime := block.Header().Timestamp
-		if !block.isGenesis() {
+		if !block.IsGenesis() {
 			medianTime = block.selectedParent.PastMedianTime(dag)
 		}
 

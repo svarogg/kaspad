@@ -13,7 +13,7 @@ import (
 
 // requiredDifficulty calculates the required difficulty for a
 // block given its bluest parent.
-func (dag *BlockDAG) requiredDifficulty(bluestParent *blockNode, newBlockTime mstime.Time) uint32 {
+func (dag *BlockDAG) requiredDifficulty(bluestParent *BlockNode, newBlockTime mstime.Time) uint32 {
 	// Genesis block.
 	if bluestParent == nil || bluestParent.blueScore < dag.difficultyAdjustmentWindowSize+1 {
 		return dag.powMaxBits
