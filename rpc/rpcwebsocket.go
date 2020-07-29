@@ -25,7 +25,7 @@ import (
 	"golang.org/x/crypto/ripemd160"
 
 	"github.com/btcsuite/websocket"
-	"github.com/kaspanet/kaspad/concensus/txscript"
+	"github.com/kaspanet/kaspad/consensus/txscript"
 	"github.com/kaspanet/kaspad/dagconfig"
 	"github.com/kaspanet/kaspad/rpc/model"
 	"github.com/kaspanet/kaspad/util"

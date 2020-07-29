@@ -8,7 +8,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/kaspanet/kaspad/concensus/txscript"
+	"github.com/kaspanet/kaspad/consensus/txscript"
 	"github.com/kaspanet/kaspad/dagconfig"
 	"github.com/kaspanet/kaspad/util"
 )

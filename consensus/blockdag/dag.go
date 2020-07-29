@@ -6,7 +6,7 @@ package blockdag
 
 import (
 	"fmt"
-	"github.com/kaspanet/kaspad/concensus/blockstatus"
+	"github.com/kaspanet/kaspad/consensus/blockstatus"
 	"math"
 	"sort"
 	"sync"
@@ -21,7 +21,7 @@ import (
 	"github.com/kaspanet/kaspad/util/subnetworkid"
 
 	"github.com/kaspanet/go-secp256k1"
-	"github.com/kaspanet/kaspad/concensus/txscript"
+	"github.com/kaspanet/kaspad/consensus/txscript"
 	"github.com/kaspanet/kaspad/dagconfig"
 	"github.com/kaspanet/kaspad/util"
 	"github.com/kaspanet/kaspad/util/daghash"

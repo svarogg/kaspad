@@ -5,7 +5,7 @@
 package indexers
 
 import (
-	"github.com/kaspanet/kaspad/concensus/blockdag"
+	"github.com/kaspanet/kaspad/consensus/blockdag"
 	"github.com/kaspanet/kaspad/dbaccess"
 	"github.com/kaspanet/kaspad/util/daghash"
 )

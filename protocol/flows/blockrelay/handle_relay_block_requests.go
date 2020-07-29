@@ -1,7 +1,7 @@
 package blockrelay
 
 import (
-	"github.com/kaspanet/kaspad/concensus/blockdag"
+	"github.com/kaspanet/kaspad/consensus/blockdag"
 	"github.com/kaspanet/kaspad/netadapter/router"
 	peerpkg "github.com/kaspanet/kaspad/protocol/peer"
 	"github.com/kaspanet/kaspad/protocol/protocolerrors"

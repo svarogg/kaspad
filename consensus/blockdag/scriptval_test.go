@@ -10,7 +10,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/kaspanet/kaspad/concensus/txscript"
+	"github.com/kaspanet/kaspad/consensus/txscript"
 )
 
 // TestCheckBlockScripts ensures that validating the all of the scripts in a

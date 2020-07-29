@@ -29,8 +29,8 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/btcsuite/websocket"
-	"github.com/kaspanet/kaspad/concensus/blockdag"
 	"github.com/kaspanet/kaspad/config"
+	"github.com/kaspanet/kaspad/consensus/blockdag"
 	"github.com/kaspanet/kaspad/indexers"
 	"github.com/kaspanet/kaspad/mempool"
 	"github.com/kaspanet/kaspad/mining"

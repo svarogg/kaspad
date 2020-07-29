@@ -13,8 +13,8 @@ import (
 	"github.com/kaspanet/kaspad/util/daghash"
 	"github.com/kaspanet/kaspad/util/testtools"
 
-	"github.com/kaspanet/kaspad/concensus/blockdag"
-	"github.com/kaspanet/kaspad/concensus/txscript"
+	"github.com/kaspanet/kaspad/consensus/blockdag"
+	"github.com/kaspanet/kaspad/consensus/txscript"
 	"github.com/kaspanet/kaspad/dagconfig"
 	"github.com/kaspanet/kaspad/mining"
 	"github.com/kaspanet/kaspad/util"

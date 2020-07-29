@@ -3,7 +3,7 @@ package flowcontext
 import (
 	"sync/atomic"
 
-	"github.com/kaspanet/kaspad/concensus/blockdag"
+	"github.com/kaspanet/kaspad/consensus/blockdag"
 	"github.com/kaspanet/kaspad/protocol/flows/blockrelay"
 	"github.com/kaspanet/kaspad/util"
 	"github.com/kaspanet/kaspad/util/daghash"

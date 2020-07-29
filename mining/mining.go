@@ -9,8 +9,8 @@ import (
 	"github.com/pkg/errors"
 	"time"
 
-	"github.com/kaspanet/kaspad/concensus/blockdag"
-	"github.com/kaspanet/kaspad/concensus/txscript"
+	"github.com/kaspanet/kaspad/consensus/blockdag"
+	"github.com/kaspanet/kaspad/consensus/txscript"
 	"github.com/kaspanet/kaspad/util"
 	"github.com/kaspanet/kaspad/util/daghash"
 	"github.com/kaspanet/kaspad/wire"

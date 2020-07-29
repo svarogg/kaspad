@@ -6,7 +6,7 @@ package blockdag
 
 import (
 	"fmt"
-	"github.com/kaspanet/kaspad/concensus/blockstatus"
+	"github.com/kaspanet/kaspad/consensus/blockstatus"
 	"github.com/kaspanet/kaspad/dagconfig"
 	"github.com/kaspanet/kaspad/util/daghash"
 	"github.com/kaspanet/kaspad/util/mstime"

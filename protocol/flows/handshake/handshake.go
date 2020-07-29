@@ -7,8 +7,8 @@ import (
 	"github.com/kaspanet/kaspad/protocol/common"
 	"github.com/kaspanet/kaspad/protocol/protocolerrors"
 
-	"github.com/kaspanet/kaspad/concensus/blockdag"
 	"github.com/kaspanet/kaspad/config"
+	"github.com/kaspanet/kaspad/consensus/blockdag"
 	"github.com/kaspanet/kaspad/netadapter"
 
 	routerpkg "github.com/kaspanet/kaspad/netadapter/router"

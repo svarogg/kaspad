@@ -9,7 +9,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/kaspanet/kaspad/concensus/blockstatus"
+	"github.com/kaspanet/kaspad/consensus/blockstatus"
 	"io"
 
 	"github.com/kaspanet/kaspad/dagconfig"

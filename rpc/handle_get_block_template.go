@@ -11,8 +11,8 @@ import (
 
 	"github.com/kaspanet/kaspad/util/mstime"
 
-	"github.com/kaspanet/kaspad/concensus/blockdag"
-	"github.com/kaspanet/kaspad/concensus/txscript"
+	"github.com/kaspanet/kaspad/consensus/blockdag"
+	"github.com/kaspanet/kaspad/consensus/txscript"
 	"github.com/kaspanet/kaspad/mining"
 	"github.com/kaspanet/kaspad/rpc/model"
 	"github.com/kaspanet/kaspad/util"
