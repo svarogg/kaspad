@@ -632,7 +632,7 @@ func TestAcceptingInInit(t *testing.T) {
 	if !ok {
 		t.Fatalf("genesis block does not exist in the DAG")
 	}
-	testNode, _ := dag.newBlockNode(&testBlock.MsgBlock().Header, BlockNodeSetFromSlice(genesisNode))
+	testNode, _ := dag.initBlockNode(&testBlock.MsgBlock().Header, BlockNodeSetFromSlice(genesisNode))
 	testNode.status = blockstatus.StatusDataStored
 
 	// Manually add the test block to the database

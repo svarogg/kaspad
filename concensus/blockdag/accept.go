@@ -15,7 +15,7 @@ import (
 
 func (dag *BlockDAG) addNodeToIndexWithInvalidAncestor(block *util.Block) error {
 	blockHeader := &block.MsgBlock().Header
-	newNode, _ := dag.newBlockNode(blockHeader, NewBlockNodeSet())
+	newNode, _ := dag.initBlockNode(blockHeader, NewBlockNodeSet())
 	newNode.status = blockstatus.StatusInvalidAncestor
 	dag.index.AddNode(newNode)
 
@@ -61,7 +61,7 @@ func (dag *BlockDAG) maybeAcceptBlock(block *util.Block, flags BehaviorFlags) er
 	}
 
 	// Create a new block node for the block and add it to the node index.
-	newNode, selectedParentAnticone := dag.newBlockNode(&block.MsgBlock().Header, parents)
+	newNode, selectedParentAnticone := dag.initBlockNode(&block.MsgBlock().Header, parents)
 	newNode.status = blockstatus.StatusDataStored
 	dag.index.AddNode(newNode)
 

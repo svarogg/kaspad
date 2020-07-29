@@ -46,7 +46,7 @@ func newVirtualBlock(dag *BlockDAG, tips BlockNodeSet) *virtualBlock {
 // This function MUST be called with the view mutex locked (for writes).
 func (v *virtualBlock) setTips(tips BlockNodeSet) *chainUpdates {
 	oldSelectedParent := v.selectedParent
-	node, _ := v.dag.newBlockNode(nil, tips)
+	node, _ := v.dag.initBlockNode(nil, tips)
 	v.BlockNode = *node
 	return v.updateSelectedParentSet(oldSelectedParent)
 }

@@ -2143,34 +2143,14 @@ func (dag *BlockDAG) isKnownDelayedBlock(hash *daghash.Hash) bool {
 	return exists
 }
 
-// newBlockNode returns a new block node for the given block header and parents, and the
+// initBlockNode returns a new block node for the given block header and parents, and the
 // anticone of its selected parent (parent with highest blue score).
 // selectedParentAnticone is used to update reachability data we store for future reachability queries.
 // This function is NOT safe for concurrent access.
-func (dag *BlockDAG) newBlockNode(blockHeader *wire.BlockHeader, parents BlockNodeSet) (node *BlockNode, selectedParentAnticone []*BlockNode) {
-	node = &BlockNode{
-		parents:            parents,
-		children:           make(BlockNodeSet),
-		blueScore:          math.MaxUint64, // Initialized to the max value to avoid collisions with the genesis block
-		timestamp:          dag.Now().UnixMilliseconds(),
-		bluesAnticoneSizes: make(map[*BlockNode]dagconfig.KType),
-	}
+func (dag *BlockDAG) initBlockNode(blockHeader *wire.BlockHeader, parents BlockNodeSet) (node *BlockNode, selectedParentAnticone []*BlockNode) {
+	node = NewBlockNode(blockHeader, parents, dag.Now())
 
-	// blockHeader is nil only for the virtual block
-	if blockHeader != nil {
-		node.hash = blockHeader.BlockHash()
-		node.version = blockHeader.Version
-		node.bits = blockHeader.Bits
-		node.nonce = blockHeader.Nonce
-		node.timestamp = blockHeader.Timestamp.UnixMilliseconds()
-		node.hashMerkleRoot = blockHeader.HashMerkleRoot
-		node.acceptedIDMerkleRoot = blockHeader.AcceptedIDMerkleRoot
-		node.utxoCommitment = blockHeader.UTXOCommitment
-	} else {
-		node.hash = &daghash.ZeroHash
-	}
-
-	if len(parents) == 0 {
+	if len(node.parents) == 0 {
 		// The genesis block is defined to have a blueScore of 0
 		node.blueScore = 0
 		return node, nil

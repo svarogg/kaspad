@@ -11,6 +11,7 @@ import (
 	"github.com/kaspanet/kaspad/util/daghash"
 	"github.com/kaspanet/kaspad/util/mstime"
 	"github.com/kaspanet/kaspad/wire"
+	"math"
 )
 
 // BlockNode represents a block within the block DAG. The DAG is stored into
@@ -65,6 +66,32 @@ type BlockNode struct {
 
 	// isFinalized determines whether the node is below the finality point.
 	isFinalized bool
+}
+
+func NewBlockNode(blockHeader *wire.BlockHeader, parents BlockNodeSet, timestamp mstime.Time) *BlockNode {
+	node := &BlockNode{
+		parents:            parents,
+		children:           make(BlockNodeSet),
+		blueScore:          math.MaxUint64, // Initialized to the max value to avoid collisions with the genesis block
+		timestamp:          timestamp.UnixMilliseconds(),
+		bluesAnticoneSizes: make(map[*BlockNode]dagconfig.KType),
+	}
+
+	// blockHeader is nil only for the virtual block
+	if blockHeader != nil {
+		node.hash = blockHeader.BlockHash()
+		node.version = blockHeader.Version
+		node.bits = blockHeader.Bits
+		node.nonce = blockHeader.Nonce
+		node.timestamp = blockHeader.Timestamp.UnixMilliseconds()
+		node.hashMerkleRoot = blockHeader.HashMerkleRoot
+		node.acceptedIDMerkleRoot = blockHeader.AcceptedIDMerkleRoot
+		node.utxoCommitment = blockHeader.UTXOCommitment
+	} else {
+		node.hash = &daghash.ZeroHash
+	}
+
+	return node
 }
 
 // UpdateParentsChildren updates the node's parents to point to new node
