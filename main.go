@@ -15,8 +15,8 @@ import (
 
 	"github.com/kaspanet/kaspad/dbaccess"
 
-	"github.com/kaspanet/kaspad/concensus/blockdag/indexers"
 	"github.com/kaspanet/kaspad/config"
+	"github.com/kaspanet/kaspad/indexers"
 	"github.com/kaspanet/kaspad/limits"
 	"github.com/kaspanet/kaspad/signal"
 	"github.com/kaspanet/kaspad/util/panics"

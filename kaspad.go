@@ -17,9 +17,9 @@ import (
 	"github.com/kaspanet/kaspad/util/panics"
 
 	"github.com/kaspanet/kaspad/concensus/blockdag"
-	"github.com/kaspanet/kaspad/concensus/blockdag/indexers"
 	"github.com/kaspanet/kaspad/concensus/txscript"
 	"github.com/kaspanet/kaspad/config"
+	"github.com/kaspanet/kaspad/indexers"
 	"github.com/kaspanet/kaspad/mempool"
 	"github.com/kaspanet/kaspad/mining"
 	"github.com/kaspanet/kaspad/protocol"

@@ -24,7 +24,7 @@ func TestProcessOrphans(t *testing.T) {
 	dag.TestSetCoinbaseMaturity(0)
 
 	blocksFile := "blk_0_to_4.dat"
-	blocks, err := LoadBlocks(filepath.Join("testdata/", blocksFile))
+	blocks, err := LoadBlocks(filepath.Join("../../testdata/", blocksFile))
 	if err != nil {
 		t.Fatalf("TestProcessOrphans: "+
 			"Error loading file '%s': %s\n", blocksFile, err)

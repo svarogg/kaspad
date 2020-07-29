@@ -6,7 +6,7 @@ package main
 
 import (
 	"encoding/binary"
-	"github.com/kaspanet/kaspad/concensus/blockdag/indexers"
+	"github.com/kaspanet/kaspad/indexers"
 	"github.com/kaspanet/kaspad/util/mstime"
 	"github.com/pkg/errors"
 	"io"
