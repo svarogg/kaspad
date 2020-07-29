@@ -109,13 +109,13 @@ func TestBlueBlockWindow(t *testing.T) {
 
 	for _, blockData := range blocksData {
 		blockTime = blockTime.Add(time.Second)
-		parents := blockSet{}
+		parents := BlockSet{}
 		for _, parentID := range blockData.parents {
 			parent := blockByIDMap[parentID]
-			parents.add(parent)
+			parents.Add(parent)
 		}
 
-		block, err := PrepareBlockForTest(dag, parents.hashes(), nil)
+		block, err := PrepareBlockForTest(dag, parents.Hashes(), nil)
 		if err != nil {
 			t.Fatalf("block %v got unexpected error from PrepareBlockForTest: %v", blockData.id, err)
 		}

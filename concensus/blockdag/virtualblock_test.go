@@ -11,8 +11,8 @@ import (
 	"testing"
 )
 
-func buildNode(t *testing.T, dag *BlockDAG, parents blockSet) *blockNode {
-	block, err := PrepareBlockForTest(dag, parents.hashes(), nil)
+func buildNode(t *testing.T, dag *BlockDAG, parents BlockSet) *blockNode {
+	block, err := PrepareBlockForTest(dag, parents.Hashes(), nil)
 	if err != nil {
 		t.Fatalf("error in PrepareBlockForTest: %s", err)
 	}
@@ -52,12 +52,12 @@ func TestVirtualBlock(t *testing.T) {
 	//  \    X
 	//   <- 4 <- 6
 	node0 := dag.genesis
-	node1 := buildNode(t, dag, blockSetFromSlice(node0))
-	node2 := buildNode(t, dag, blockSetFromSlice(node1))
-	node3 := buildNode(t, dag, blockSetFromSlice(node0))
-	node4 := buildNode(t, dag, blockSetFromSlice(node0))
-	node5 := buildNode(t, dag, blockSetFromSlice(node3, node4))
-	node6 := buildNode(t, dag, blockSetFromSlice(node3, node4))
+	node1 := buildNode(t, dag, BlockSetFromSlice(node0))
+	node2 := buildNode(t, dag, BlockSetFromSlice(node1))
+	node3 := buildNode(t, dag, BlockSetFromSlice(node0))
+	node4 := buildNode(t, dag, BlockSetFromSlice(node0))
+	node5 := buildNode(t, dag, BlockSetFromSlice(node3, node4))
+	node6 := buildNode(t, dag, BlockSetFromSlice(node3, node4))
 
 	// Given an empty VirtualBlock, each of the following test cases will:
 	// Set its tips to tipsToSet
@@ -68,35 +68,35 @@ func TestVirtualBlock(t *testing.T) {
 		name                   string
 		tipsToSet              []*blockNode
 		tipsToAdd              []*blockNode
-		expectedTips           blockSet
+		expectedTips           BlockSet
 		expectedSelectedParent *blockNode
 	}{
 		{
 			name:                   "empty virtual",
 			tipsToSet:              []*blockNode{},
 			tipsToAdd:              []*blockNode{},
-			expectedTips:           newBlockSet(),
+			expectedTips:           NewBlockSet(),
 			expectedSelectedParent: nil,
 		},
 		{
 			name:                   "virtual with genesis tip",
 			tipsToSet:              []*blockNode{node0},
 			tipsToAdd:              []*blockNode{},
-			expectedTips:           blockSetFromSlice(node0),
+			expectedTips:           BlockSetFromSlice(node0),
 			expectedSelectedParent: node0,
 		},
 		{
 			name:                   "virtual with genesis tip, add child of genesis",
 			tipsToSet:              []*blockNode{node0},
 			tipsToAdd:              []*blockNode{node1},
-			expectedTips:           blockSetFromSlice(node1),
+			expectedTips:           BlockSetFromSlice(node1),
 			expectedSelectedParent: node1,
 		},
 		{
 			name:                   "empty virtual, add a full DAG",
 			tipsToSet:              []*blockNode{},
 			tipsToAdd:              []*blockNode{node0, node1, node2, node3, node4, node5, node6},
-			expectedTips:           blockSetFromSlice(node2, node5, node6),
+			expectedTips:           BlockSetFromSlice(node2, node5, node6),
 			expectedSelectedParent: node5,
 		},
 	}
@@ -106,7 +106,7 @@ func TestVirtualBlock(t *testing.T) {
 		virtual := newVirtualBlock(dag, nil)
 
 		// Set the tips. This will be the initial state
-		virtual.SetTips(blockSetFromSlice(test.tipsToSet...))
+		virtual.SetTips(BlockSetFromSlice(test.tipsToSet...))
 
 		// Add all blockNodes in tipsToAdd in order
 		for _, tipToAdd := range test.tipsToAdd {
@@ -147,18 +147,18 @@ func TestSelectedPath(t *testing.T) {
 
 	tip := dag.genesis
 	virtual.AddTip(tip)
-	initialPath := blockSetFromSlice(tip)
+	initialPath := BlockSetFromSlice(tip)
 	for i := 0; i < 5; i++ {
-		tip = buildNode(t, dag, blockSetFromSlice(tip))
-		initialPath.add(tip)
+		tip = buildNode(t, dag, BlockSetFromSlice(tip))
+		initialPath.Add(tip)
 		virtual.AddTip(tip)
 	}
 	initialTip := tip
 
-	firstPath := initialPath.clone()
+	firstPath := initialPath.Clone()
 	for i := 0; i < 5; i++ {
-		tip = buildNode(t, dag, blockSetFromSlice(tip))
-		firstPath.add(tip)
+		tip = buildNode(t, dag, BlockSetFromSlice(tip))
+		firstPath.Add(tip)
 		virtual.AddTip(tip)
 	}
 	// For now we don't have any DAG, just chain, the selected path should include all the blocks on the chain.
@@ -172,11 +172,11 @@ func TestSelectedPath(t *testing.T) {
 		t.Fatalf("TestSelectedPath: selectedParentChainSlice doesn't have the expected length. got %d, want %d", gotLen, wantLen)
 	}
 
-	secondPath := initialPath.clone()
+	secondPath := initialPath.Clone()
 	tip = initialTip
 	for i := 0; i < 100; i++ {
-		tip = buildNode(t, dag, blockSetFromSlice(tip))
-		secondPath.add(tip)
+		tip = buildNode(t, dag, BlockSetFromSlice(tip))
+		secondPath.Add(tip)
 		virtual.AddTip(tip)
 	}
 	// Because we added a chain that is much longer than the previous chain, the selected path should be re-organized.
@@ -193,7 +193,7 @@ func TestSelectedPath(t *testing.T) {
 
 	tip = initialTip
 	for i := 0; i < 3; i++ {
-		tip = buildNode(t, dag, blockSetFromSlice(tip))
+		tip = buildNode(t, dag, BlockSetFromSlice(tip))
 		virtual.AddTip(tip)
 	}
 	// Because we added a very short chain, the selected path should not be affected.
@@ -215,7 +215,7 @@ func TestSelectedPath(t *testing.T) {
 			t.Fatalf("updateSelectedParentSet didn't panic")
 		}
 	}()
-	virtual2.updateSelectedParentSet(buildNode(t, dag, blockSetFromSlice()))
+	virtual2.updateSelectedParentSet(buildNode(t, dag, BlockSetFromSlice()))
 }
 
 func TestChainUpdates(t *testing.T) {
@@ -236,23 +236,23 @@ func TestChainUpdates(t *testing.T) {
 	var toBeRemovedNodes []*blockNode
 	toBeRemovedTip := genesis
 	for i := 0; i < 5; i++ {
-		toBeRemovedTip = buildNode(t, dag, blockSetFromSlice(toBeRemovedTip))
+		toBeRemovedTip = buildNode(t, dag, BlockSetFromSlice(toBeRemovedTip))
 		toBeRemovedNodes = append(toBeRemovedNodes, toBeRemovedTip)
 	}
 
 	// Create a VirtualBlock with the toBeRemoved chain
-	virtual := newVirtualBlock(dag, blockSetFromSlice(toBeRemovedNodes...))
+	virtual := newVirtualBlock(dag, BlockSetFromSlice(toBeRemovedNodes...))
 
 	// Create a chain to be added
 	var toBeAddedNodes []*blockNode
 	toBeAddedTip := genesis
 	for i := 0; i < 8; i++ {
-		toBeAddedTip = buildNode(t, dag, blockSetFromSlice(toBeAddedTip))
+		toBeAddedTip = buildNode(t, dag, BlockSetFromSlice(toBeAddedTip))
 		toBeAddedNodes = append(toBeAddedNodes, toBeAddedTip)
 	}
 
 	// Set the virtual tip to be the tip of the toBeAdded chain
-	chainUpdates := virtual.setTips(blockSetFromSlice(toBeAddedTip))
+	chainUpdates := virtual.setTips(BlockSetFromSlice(toBeAddedTip))
 
 	// Make sure that the removed blocks are as expected (in reverse order)
 	if len(chainUpdates.removedChainBlockHashes) != len(toBeRemovedNodes) {

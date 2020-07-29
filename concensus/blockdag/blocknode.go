@@ -27,14 +27,14 @@ type blockNode struct {
 	// padding adds up.
 
 	// parents is the parent blocks for this node.
-	parents blockSet
+	parents BlockSet
 
 	// selectedParent is the selected parent for this node.
 	// The selected parent is the parent that if chosen will maximize the blue score of this block
 	selectedParent *blockNode
 
 	// children are all the blocks that refer to this block as a parent
-	children blockSet
+	children BlockSet
 
 	// blues are all blue blocks in this block's worldview that are in its selected parent anticone
 	blues []*blockNode
@@ -74,10 +74,10 @@ type blockNode struct {
 // anticone of its selected parent (parent with highest blue score).
 // selectedParentAnticone is used to update reachability data we store for future reachability queries.
 // This function is NOT safe for concurrent access.
-func (dag *BlockDAG) newBlockNode(blockHeader *wire.BlockHeader, parents blockSet) (node *blockNode, selectedParentAnticone []*blockNode) {
+func (dag *BlockDAG) newBlockNode(blockHeader *wire.BlockHeader, parents BlockSet) (node *blockNode, selectedParentAnticone []*blockNode) {
 	node = &blockNode{
 		parents:            parents,
-		children:           make(blockSet),
+		children:           make(BlockSet),
 		blueScore:          math.MaxUint64, // Initialized to the max value to avoid collisions with the genesis block
 		timestamp:          dag.Now().UnixMilliseconds(),
 		bluesAnticoneSizes: make(map[*blockNode]dagconfig.KType),
@@ -113,7 +113,7 @@ func (dag *BlockDAG) newBlockNode(blockHeader *wire.BlockHeader, parents blockSe
 // updateParentsChildren updates the node's parents to point to new node
 func (node *blockNode) updateParentsChildren() {
 	for parent := range node.parents {
-		parent.children.add(node)
+		parent.children.Add(node)
 	}
 }
 
@@ -183,7 +183,7 @@ func (node *blockNode) PastMedianTime(dag *BlockDAG) mstime.Time {
 }
 
 func (node *blockNode) ParentHashes() []*daghash.Hash {
-	return node.parents.hashes()
+	return node.parents.Hashes()
 }
 
 // isGenesis returns if the current block is the genesis block

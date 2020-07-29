@@ -351,14 +351,14 @@ func (dag *BlockDAG) initUTXOSet() (fullUTXOCollection utxoCollection, err error
 }
 
 func (dag *BlockDAG) initVirtualBlockTips(state *dagState) error {
-	tips := newBlockSet()
+	tips := NewBlockSet()
 	for _, tipHash := range state.TipHashes {
 		tip, ok := dag.index.LookupNode(tipHash)
 		if !ok {
 			return errors.Errorf("cannot find "+
 				"DAG tip %s in block index", state.TipHashes)
 		}
-		tips.add(tip)
+		tips.Add(tip)
 	}
 	dag.virtual.SetTips(tips)
 	return nil
@@ -427,8 +427,8 @@ func (dag *BlockDAG) deserializeBlockNode(blockRow []byte) (*blockNode, error) {
 		utxoCommitment:       header.UTXOCommitment,
 	}
 
-	node.children = newBlockSet()
-	node.parents = newBlockSet()
+	node.children = NewBlockSet()
+	node.parents = NewBlockSet()
 
 	for _, hash := range header.ParentHashes {
 		parent, ok := dag.index.LookupNode(hash)
@@ -436,7 +436,7 @@ func (dag *BlockDAG) deserializeBlockNode(blockRow []byte) (*blockNode, error) {
 			return nil, errors.Errorf("deserializeBlockNode: Could "+
 				"not find parent %s for block %s", hash, header.BlockHash())
 		}
-		node.parents.add(parent)
+		node.parents.Add(parent)
 	}
 
 	statusByte, err := buffer.ReadByte()

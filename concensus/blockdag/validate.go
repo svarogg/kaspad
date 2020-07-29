@@ -674,7 +674,7 @@ func (dag *BlockDAG) validateDifficulty(header *wire.BlockHeader, bluestParent *
 }
 
 // validateParents validates that no parent is an ancestor of another parent, and no parent is finalized
-func (dag *BlockDAG) validateParents(blockHeader *wire.BlockHeader, parents blockSet) error {
+func (dag *BlockDAG) validateParents(blockHeader *wire.BlockHeader, parents BlockSet) error {
 	for parentA := range parents {
 		// isFinalized might be false-negative because node finality status is
 		// updated in a separate goroutine. This is why later the block is
@@ -717,8 +717,8 @@ func (dag *BlockDAG) validateParents(blockHeader *wire.BlockHeader, parents bloc
 // for how the flags modify its behavior.
 //
 // This function MUST be called with the dag state lock held (for writes).
-func (dag *BlockDAG) checkBlockContext(block *util.Block, parents blockSet, flags BehaviorFlags) error {
-	bluestParent := parents.bluest()
+func (dag *BlockDAG) checkBlockContext(block *util.Block, parents BlockSet, flags BehaviorFlags) error {
+	bluestParent := parents.Bluest()
 	fastAdd := flags&BFFastAdd == BFFastAdd
 
 	err := dag.validateParents(&block.MsgBlock().Header, parents)

@@ -14,7 +14,7 @@ import (
 
 func (dag *BlockDAG) addNodeToIndexWithInvalidAncestor(block *util.Block) error {
 	blockHeader := &block.MsgBlock().Header
-	newNode, _ := dag.newBlockNode(blockHeader, newBlockSet())
+	newNode, _ := dag.newBlockNode(blockHeader, NewBlockSet())
 	newNode.status = statusInvalidAncestor
 	dag.index.AddNode(newNode)
 
@@ -99,7 +99,7 @@ func (dag *BlockDAG) maybeAcceptBlock(block *util.Block, flags BehaviorFlags) er
 
 	// Make sure that all the block's transactions are finalized
 	fastAdd := flags&BFFastAdd == BFFastAdd
-	bluestParent := parents.bluest()
+	bluestParent := parents.Bluest()
 	if !fastAdd {
 		if err := dag.validateAllTxsFinalized(block, newNode, bluestParent); err != nil {
 			return err
@@ -132,11 +132,11 @@ func (dag *BlockDAG) maybeAcceptBlock(block *util.Block, flags BehaviorFlags) er
 	return nil
 }
 
-func lookupParentNodes(block *util.Block, dag *BlockDAG) (blockSet, error) {
+func lookupParentNodes(block *util.Block, dag *BlockDAG) (BlockSet, error) {
 	header := block.MsgBlock().Header
 	parentHashes := header.ParentHashes
 
-	nodes := newBlockSet()
+	nodes := NewBlockSet()
 	for _, parentHash := range parentHashes {
 		node, ok := dag.index.LookupNode(parentHash)
 		if !ok {
@@ -147,7 +147,7 @@ func lookupParentNodes(block *util.Block, dag *BlockDAG) (blockSet, error) {
 			return nil, ruleError(ErrInvalidAncestorBlock, str)
 		}
 
-		nodes.add(node)
+		nodes.Add(node)
 	}
 
 	return nodes, nil

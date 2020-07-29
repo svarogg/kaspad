@@ -1514,7 +1514,7 @@ func (dag *BlockDAG) UTXOSet() *FullUTXOSet {
 
 // CalcPastMedianTime returns the past median time of the DAG.
 func (dag *BlockDAG) CalcPastMedianTime() mstime.Time {
-	return dag.virtual.tips().bluest().PastMedianTime(dag)
+	return dag.virtual.tips().Bluest().PastMedianTime(dag)
 }
 
 // GetUTXOEntry returns the requested unspent transaction output. The returned
@@ -1691,7 +1691,7 @@ func (dag *BlockDAG) IsInSelectedParentChain(blockHash *daghash.Hash) (bool, err
 		str := fmt.Sprintf("block %s is not in the DAG", blockHash)
 		return false, ErrNotInDAG(str)
 	}
-	return dag.virtual.selectedParentChainSet.contains(blockNode), nil
+	return dag.virtual.selectedParentChainSet.Contains(blockNode), nil
 }
 
 // SelectedParentChain returns the selected parent chain starting from blockHash (exclusive)
@@ -1767,7 +1767,7 @@ func (dag *BlockDAG) BlockCount() uint64 {
 
 // TipHashes returns the hashes of the DAG's tips
 func (dag *BlockDAG) TipHashes() []*daghash.Hash {
-	return dag.virtual.tips().hashes()
+	return dag.virtual.tips().Hashes()
 }
 
 // CurrentBits returns the bits of the tip with the lowest bits, which also means it has highest difficulty.
@@ -1806,7 +1806,7 @@ func (dag *BlockDAG) ChildHashesByHash(hash *daghash.Hash) ([]*daghash.Hash, err
 
 	}
 
-	return node.children.hashes(), nil
+	return node.children.Hashes(), nil
 }
 
 // SelectedParentHash returns the selected parent hash of the block with the given hash in the
@@ -1877,16 +1877,16 @@ func (dag *BlockDAG) antiPastBetween(lowHash, highHash *daghash.Hash, maxEntries
 	// Collect every node in highNode's past (including itself) but
 	// NOT in the lowNode's past (excluding itself) into an up-heap
 	// (a heap sorted by blueScore from lowest to greatest).
-	visited := newBlockSet()
+	visited := NewBlockSet()
 	candidateNodes := newUpHeap()
 	queue := newDownHeap()
 	queue.Push(highNode)
 	for queue.Len() > 0 {
 		current := queue.pop()
-		if visited.contains(current) {
+		if visited.Contains(current) {
 			continue
 		}
-		visited.add(current)
+		visited.Add(current)
 		isCurrentAncestorOfLowNode, err := dag.isInPast(current, lowNode)
 		if err != nil {
 			return nil, err
@@ -1963,11 +1963,11 @@ func (dag *BlockDAG) GetTopHeaders(highHash *daghash.Hash, maxHeaders uint64) ([
 	queue := newDownHeap()
 	queue.pushSet(highNode.parents)
 
-	visited := newBlockSet()
+	visited := NewBlockSet()
 	for i := uint32(0); queue.Len() > 0 && uint64(len(headers)) < maxHeaders; i++ {
 		current := queue.pop()
-		if !visited.contains(current) {
-			visited.add(current)
+		if !visited.Contains(current) {
+			visited.Add(current)
 			headers = append(headers, current.Header())
 			queue.pushSet(current.parents)
 		}

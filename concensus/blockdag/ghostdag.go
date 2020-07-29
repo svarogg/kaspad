@@ -26,7 +26,7 @@ import (
 //
 // For further details see the article https://eprint.iacr.org/2018/104.pdf
 func (dag *BlockDAG) ghostdag(newNode *blockNode) (selectedParentAnticone []*blockNode, err error) {
-	newNode.selectedParent = newNode.parents.bluest()
+	newNode.selectedParent = newNode.parents.Bluest()
 	newNode.bluesAnticoneSizes[newNode.selectedParent] = 0
 	newNode.blues = []*blockNode{newNode.selectedParent}
 	selectedParentAnticone, err = dag.selectedParentAnticone(newNode)
@@ -126,16 +126,16 @@ func (dag *BlockDAG) ghostdag(newNode *blockNode) (selectedParentAnticone []*blo
 //   we check whether it is in the past of the selected parent.
 //   If not, we add the node to the resulting anticone-set and queue it for processing.
 func (dag *BlockDAG) selectedParentAnticone(node *blockNode) ([]*blockNode, error) {
-	anticoneSet := newBlockSet()
+	anticoneSet := NewBlockSet()
 	var anticoneSlice []*blockNode
-	selectedParentPast := newBlockSet()
+	selectedParentPast := NewBlockSet()
 	var queue []*blockNode
 	// Queueing all parents (other than the selected parent itself) for processing.
 	for parent := range node.parents {
 		if parent == node.selectedParent {
 			continue
 		}
-		anticoneSet.add(parent)
+		anticoneSet.Add(parent)
 		anticoneSlice = append(anticoneSlice, parent)
 		queue = append(queue, parent)
 	}
@@ -145,7 +145,7 @@ func (dag *BlockDAG) selectedParentAnticone(node *blockNode) ([]*blockNode, erro
 		// For each parent of a the current node we check whether it is in the past of the selected parent. If not,
 		// we add the it to the resulting anticone-set and queue it for further processing.
 		for parent := range current.parents {
-			if anticoneSet.contains(parent) || selectedParentPast.contains(parent) {
+			if anticoneSet.Contains(parent) || selectedParentPast.Contains(parent) {
 				continue
 			}
 			isAncestorOfSelectedParent, err := dag.isInPast(parent, node.selectedParent)
@@ -153,10 +153,10 @@ func (dag *BlockDAG) selectedParentAnticone(node *blockNode) ([]*blockNode, erro
 				return nil, err
 			}
 			if isAncestorOfSelectedParent {
-				selectedParentPast.add(parent)
+				selectedParentPast.Add(parent)
 				continue
 			}
-			anticoneSet.add(parent)
+			anticoneSet.Add(parent)
 			anticoneSlice = append(anticoneSlice, parent)
 			queue = append(queue, parent)
 		}

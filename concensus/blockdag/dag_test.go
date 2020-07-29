@@ -247,9 +247,9 @@ func TestCalcSequenceLock(t *testing.T) {
 	numBlocksToGenerate := 5
 	for i := 0; i < numBlocksToGenerate; i++ {
 		blockTime = blockTime.Add(time.Second)
-		node = newTestNode(dag, blockSetFromSlice(node), blockVersion, 0, blockTime)
+		node = newTestNode(dag, BlockSetFromSlice(node), blockVersion, 0, blockTime)
 		dag.index.AddNode(node)
-		dag.virtual.SetTips(blockSetFromSlice(node))
+		dag.virtual.SetTips(BlockSetFromSlice(node))
 	}
 
 	// Create a utxo view with a fake utxo for the inputs used in the
@@ -514,7 +514,7 @@ func TestCalcPastMedianTime(t *testing.T) {
 	blockTime := dag.genesis.Header().Timestamp
 	for i := uint32(1); i < numBlocks; i++ {
 		blockTime = blockTime.Add(time.Second)
-		nodes[i] = newTestNode(dag, blockSetFromSlice(nodes[i-1]), blockVersion, 0, blockTime)
+		nodes[i] = newTestNode(dag, BlockSetFromSlice(nodes[i-1]), blockVersion, 0, blockTime)
 		dag.index.AddNode(nodes[i])
 	}
 
@@ -631,7 +631,7 @@ func TestAcceptingInInit(t *testing.T) {
 	if !ok {
 		t.Fatalf("genesis block does not exist in the DAG")
 	}
-	testNode, _ := dag.newBlockNode(&testBlock.MsgBlock().Header, blockSetFromSlice(genesisNode))
+	testNode, _ := dag.newBlockNode(&testBlock.MsgBlock().Header, BlockSetFromSlice(genesisNode))
 	testNode.status = statusDataStored
 
 	// Manually add the test block to the database
@@ -945,7 +945,7 @@ func testFinalizeNodesBelowFinalityPoint(t *testing.T, deleteDiffData bool) {
 
 	addNode := func(parent *blockNode) *blockNode {
 		blockTime = blockTime.Add(time.Second)
-		node := newTestNode(dag, blockSetFromSlice(parent), blockVersion, 0, blockTime)
+		node := newTestNode(dag, BlockSetFromSlice(parent), blockVersion, 0, blockTime)
 		node.updateParentsChildren()
 		dag.index.AddNode(node)
 

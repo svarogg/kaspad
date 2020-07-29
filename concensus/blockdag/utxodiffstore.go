@@ -174,7 +174,7 @@ func (diffStore *utxoDiffStore) clearOldEntries() {
 
 	toRemove := make(map[*blockNode]struct{})
 	for node := range diffStore.loaded {
-		if node.blueScore < minBlueScore && !tips.contains(node) {
+		if node.blueScore < minBlueScore && !tips.Contains(node) {
 			toRemove[node] = struct{}{}
 		}
 	}

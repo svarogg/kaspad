@@ -56,6 +56,6 @@ func (dag *BlockDAG) requiredDifficulty(bluestParent *blockNode, newBlockTime ms
 //
 // This function is safe for concurrent access.
 func (dag *BlockDAG) NextRequiredDifficulty(timestamp mstime.Time) uint32 {
-	difficulty := dag.requiredDifficulty(dag.virtual.parents.bluest(), timestamp)
+	difficulty := dag.requiredDifficulty(dag.virtual.parents.Bluest(), timestamp)
 	return difficulty
 }
