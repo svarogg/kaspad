@@ -352,7 +352,7 @@ func (dag *BlockDAG) initUTXOSet() (fullUTXOCollection utxoCollection, err error
 }
 
 func (dag *BlockDAG) initVirtualBlockTips(state *dagState) error {
-	tips := NewBlockSet()
+	tips := NewBlockNodeSet()
 	for _, tipHash := range state.TipHashes {
 		tip, ok := dag.index.LookupNode(tipHash)
 		if !ok {
@@ -428,8 +428,8 @@ func (dag *BlockDAG) deserializeBlockNode(blockRow []byte) (*blockNode, error) {
 		utxoCommitment:       header.UTXOCommitment,
 	}
 
-	node.children = NewBlockSet()
-	node.parents = NewBlockSet()
+	node.children = NewBlockNodeSet()
+	node.parents = NewBlockNodeSet()
 
 	for _, hash := range header.ParentHashes {
 		parent, ok := dag.index.LookupNode(hash)

@@ -192,7 +192,7 @@ func TestGHOSTDAG(t *testing.T) {
 			idByBlockMap[genesisNode] = "A"
 
 			for _, blockData := range test.dagData {
-				parents := BlockSet{}
+				parents := BlockNodeSet{}
 				for _, parentID := range blockData.parents {
 					parent := blockByIDMap[parentID]
 					parents.Add(parent)

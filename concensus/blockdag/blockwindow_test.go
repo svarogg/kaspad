@@ -109,7 +109,7 @@ func TestBlueBlockWindow(t *testing.T) {
 
 	for _, blockData := range blocksData {
 		blockTime = blockTime.Add(time.Second)
-		parents := BlockSet{}
+		parents := BlockNodeSet{}
 		for _, parentID := range blockData.parents {
 			parent := blockByIDMap[parentID]
 			parents.Add(parent)

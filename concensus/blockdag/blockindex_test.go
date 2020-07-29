@@ -17,7 +17,7 @@ func TestAncestorErrors(t *testing.T) {
 	}
 	defer teardownFunc()
 
-	node := newTestNode(dag, NewBlockSet(), int32(0x10000000), 0, mstime.Now())
+	node := newTestNode(dag, NewBlockNodeSet(), int32(0x10000000), 0, mstime.Now())
 	node.blueScore = 2
 	ancestor := node.SelectedAncestor(3)
 	if ancestor != nil {

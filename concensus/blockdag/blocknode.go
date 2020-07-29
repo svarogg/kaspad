@@ -7,13 +7,9 @@ package blockdag
 import (
 	"fmt"
 	"github.com/kaspanet/kaspad/concensus/blockstatus"
-	"math"
-
 	"github.com/kaspanet/kaspad/dagconfig"
-	"github.com/kaspanet/kaspad/util/mstime"
-	"github.com/pkg/errors"
-
 	"github.com/kaspanet/kaspad/util/daghash"
+	"github.com/kaspanet/kaspad/util/mstime"
 	"github.com/kaspanet/kaspad/wire"
 )
 
@@ -28,14 +24,14 @@ type blockNode struct {
 	// padding adds up.
 
 	// parents is the parent blocks for this node.
-	parents BlockSet
+	parents BlockNodeSet
 
 	// selectedParent is the selected parent for this node.
 	// The selected parent is the parent that if chosen will maximize the blue score of this block
 	selectedParent *blockNode
 
 	// children are all the blocks that refer to this block as a parent
-	children BlockSet
+	children BlockNodeSet
 
 	// blues are all blue blocks in this block's worldview that are in its selected parent anticone
 	blues []*blockNode
@@ -69,46 +65,6 @@ type blockNode struct {
 
 	// isFinalized determines whether the node is below the finality point.
 	isFinalized bool
-}
-
-// newBlockNode returns a new block node for the given block header and parents, and the
-// anticone of its selected parent (parent with highest blue score).
-// selectedParentAnticone is used to update reachability data we store for future reachability queries.
-// This function is NOT safe for concurrent access.
-func (dag *BlockDAG) newBlockNode(blockHeader *wire.BlockHeader, parents BlockSet) (node *blockNode, selectedParentAnticone []*blockNode) {
-	node = &blockNode{
-		parents:            parents,
-		children:           make(BlockSet),
-		blueScore:          math.MaxUint64, // Initialized to the max value to avoid collisions with the genesis block
-		timestamp:          dag.Now().UnixMilliseconds(),
-		bluesAnticoneSizes: make(map[*blockNode]dagconfig.KType),
-	}
-
-	// blockHeader is nil only for the virtual block
-	if blockHeader != nil {
-		node.hash = blockHeader.BlockHash()
-		node.version = blockHeader.Version
-		node.bits = blockHeader.Bits
-		node.nonce = blockHeader.Nonce
-		node.timestamp = blockHeader.Timestamp.UnixMilliseconds()
-		node.hashMerkleRoot = blockHeader.HashMerkleRoot
-		node.acceptedIDMerkleRoot = blockHeader.AcceptedIDMerkleRoot
-		node.utxoCommitment = blockHeader.UTXOCommitment
-	} else {
-		node.hash = &daghash.ZeroHash
-	}
-
-	if len(parents) == 0 {
-		// The genesis block is defined to have a blueScore of 0
-		node.blueScore = 0
-		return node, nil
-	}
-
-	selectedParentAnticone, err := dag.ghostdag(node)
-	if err != nil {
-		panic(errors.Wrap(err, "unexpected error in GHOSTDAG"))
-	}
-	return node, selectedParentAnticone
 }
 
 // updateParentsChildren updates the node's parents to point to new node

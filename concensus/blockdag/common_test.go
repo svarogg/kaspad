@@ -109,16 +109,16 @@ func newTestDAG(params *dagconfig.Params) *BlockDAG {
 
 	// Create a genesis block node and block index index populated with it
 	// on the above fake DAG.
-	dag.genesis, _ = dag.newBlockNode(&params.GenesisBlock.Header, NewBlockSet())
+	dag.genesis, _ = dag.newBlockNode(&params.GenesisBlock.Header, NewBlockNodeSet())
 	index.AddNode(dag.genesis)
 
-	dag.virtual = newVirtualBlock(dag, BlockSetFromSlice(dag.genesis))
+	dag.virtual = newVirtualBlock(dag, BlockNodeSetFromSlice(dag.genesis))
 	return dag
 }
 
 // newTestNode creates a block node connected to the passed parent with the
 // provided fields populated and fake values for the other fields.
-func newTestNode(dag *BlockDAG, parents BlockSet, blockVersion int32, bits uint32, timestamp mstime.Time) *blockNode {
+func newTestNode(dag *BlockDAG, parents BlockNodeSet, blockVersion int32, bits uint32, timestamp mstime.Time) *blockNode {
 	// Make up a header and create a block node from it.
 	header := &wire.BlockHeader{
 		Version:              blockVersion,

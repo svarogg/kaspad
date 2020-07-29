@@ -92,7 +92,7 @@ func TestDifficulty(t *testing.T) {
 	defer teardownFunc()
 
 	zeroTime := mstime.Time{}
-	addNode := func(parents BlockSet, blockTime mstime.Time) *blockNode {
+	addNode := func(parents BlockNodeSet, blockTime mstime.Time) *blockNode {
 		bluestParent := parents.Bluest()
 		if blockTime.IsZero() {
 			blockTime = bluestParent.time()
@@ -123,29 +123,29 @@ func TestDifficulty(t *testing.T) {
 	}
 	tip := dag.genesis
 	for i := uint64(0); i < dag.difficultyAdjustmentWindowSize; i++ {
-		tip = addNode(BlockSetFromSlice(tip), zeroTime)
+		tip = addNode(BlockNodeSetFromSlice(tip), zeroTime)
 		if tip.bits != dag.genesis.bits {
 			t.Fatalf("As long as the bluest parent's blue score is less then the difficulty adjustment " +
 				"window size, the difficulty should be the same as genesis'")
 		}
 	}
 	for i := uint64(0); i < dag.difficultyAdjustmentWindowSize+100; i++ {
-		tip = addNode(BlockSetFromSlice(tip), zeroTime)
+		tip = addNode(BlockNodeSetFromSlice(tip), zeroTime)
 		if tip.bits != dag.genesis.bits {
 			t.Fatalf("As long as the block rate remains the same, the difficulty shouldn't change")
 		}
 	}
-	nodeInThePast := addNode(BlockSetFromSlice(tip), tip.PastMedianTime(dag))
+	nodeInThePast := addNode(BlockNodeSetFromSlice(tip), tip.PastMedianTime(dag))
 	if nodeInThePast.bits != tip.bits {
 		t.Fatalf("The difficulty should only change when nodeInThePast is in the past of a block bluest parent")
 	}
 	tip = nodeInThePast
 
-	tip = addNode(BlockSetFromSlice(tip), zeroTime)
+	tip = addNode(BlockNodeSetFromSlice(tip), zeroTime)
 	if tip.bits != nodeInThePast.bits {
 		t.Fatalf("The difficulty should only change when nodeInThePast is in the past of a block bluest parent")
 	}
-	tip = addNode(BlockSetFromSlice(tip), zeroTime)
+	tip = addNode(BlockNodeSetFromSlice(tip), zeroTime)
 	if compareBits(tip.bits, nodeInThePast.bits) >= 0 {
 		t.Fatalf("tip.bits should be smaller than nodeInThePast.bits because nodeInThePast increased the " +
 			"block rate, so the difficulty should increase as well")
@@ -157,7 +157,7 @@ func TestDifficulty(t *testing.T) {
 
 	// Increase block rate to increase difficulty
 	for i := uint64(0); i < dag.difficultyAdjustmentWindowSize; i++ {
-		tip = addNode(BlockSetFromSlice(tip), tip.PastMedianTime(dag))
+		tip = addNode(BlockNodeSetFromSlice(tip), tip.PastMedianTime(dag))
 		if compareBits(tip.bits, tip.parents.Bluest().bits) > 0 {
 			t.Fatalf("Because we're increasing the block rate, the difficulty can't decrease")
 		}
@@ -167,7 +167,7 @@ func TestDifficulty(t *testing.T) {
 	lastBits := tip.bits
 	sameBitsCount := uint64(0)
 	for sameBitsCount < dag.difficultyAdjustmentWindowSize+1 {
-		tip = addNode(BlockSetFromSlice(tip), zeroTime)
+		tip = addNode(BlockNodeSetFromSlice(tip), zeroTime)
 		if tip.bits == lastBits {
 			sameBitsCount++
 		} else {
@@ -177,36 +177,36 @@ func TestDifficulty(t *testing.T) {
 	}
 	slowBlockTime := tip.time()
 	slowBlockTime = slowBlockTime.Add(params.TargetTimePerBlock + time.Second)
-	slowNode := addNode(BlockSetFromSlice(tip), slowBlockTime)
+	slowNode := addNode(BlockNodeSetFromSlice(tip), slowBlockTime)
 	if slowNode.bits != tip.bits {
 		t.Fatalf("The difficulty should only change when slowNode is in the past of a block bluest parent")
 	}
 
 	tip = slowNode
 
-	tip = addNode(BlockSetFromSlice(tip), zeroTime)
+	tip = addNode(BlockNodeSetFromSlice(tip), zeroTime)
 	if tip.bits != slowNode.bits {
 		t.Fatalf("The difficulty should only change when slowNode is in the past of a block bluest parent")
 	}
-	tip = addNode(BlockSetFromSlice(tip), zeroTime)
+	tip = addNode(BlockNodeSetFromSlice(tip), zeroTime)
 	if compareBits(tip.bits, slowNode.bits) <= 0 {
 		t.Fatalf("tip.bits should be smaller than slowNode.bits because slowNode decreased the block" +
 			" rate, so the difficulty should decrease as well")
 	}
 
-	splitNode := addNode(BlockSetFromSlice(tip), zeroTime)
+	splitNode := addNode(BlockNodeSetFromSlice(tip), zeroTime)
 	tip = splitNode
 	for i := 0; i < 100; i++ {
-		tip = addNode(BlockSetFromSlice(tip), zeroTime)
+		tip = addNode(BlockNodeSetFromSlice(tip), zeroTime)
 	}
 	blueTip := tip
 
 	redChainTip := splitNode
 	for i := 0; i < 10; i++ {
-		redChainTip = addNode(BlockSetFromSlice(redChainTip), redChainTip.PastMedianTime(dag))
+		redChainTip = addNode(BlockNodeSetFromSlice(redChainTip), redChainTip.PastMedianTime(dag))
 	}
-	tipWithRedPast := addNode(BlockSetFromSlice(redChainTip, blueTip), zeroTime)
-	tipWithoutRedPast := addNode(BlockSetFromSlice(blueTip), zeroTime)
+	tipWithRedPast := addNode(BlockNodeSetFromSlice(redChainTip, blueTip), zeroTime)
+	tipWithoutRedPast := addNode(BlockNodeSetFromSlice(blueTip), zeroTime)
 	if tipWithoutRedPast.bits != tipWithRedPast.bits {
 		t.Fatalf("tipWithoutRedPast.bits should be the same as tipWithRedPast.bits because red blocks" +
 			" shouldn't affect the difficulty")

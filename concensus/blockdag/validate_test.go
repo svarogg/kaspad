@@ -499,14 +499,14 @@ func TestPastMedianTime(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		blockTime = blockTime.Add(time.Second)
-		tip = newTestNode(dag, BlockSetFromSlice(tip),
+		tip = newTestNode(dag, BlockNodeSetFromSlice(tip),
 			blockVersion,
 			0,
 			blockTime)
 	}
 
 	// Checks that a block is valid if it has timestamp equals to past median time
-	node := newTestNode(dag, BlockSetFromSlice(tip),
+	node := newTestNode(dag, BlockNodeSetFromSlice(tip),
 		blockVersion,
 		dag.powMaxBits,
 		tip.PastMedianTime(dag))
@@ -519,7 +519,7 @@ func TestPastMedianTime(t *testing.T) {
 	}
 
 	// Checks that a block is valid if its timestamp is after past median time
-	node = newTestNode(dag, BlockSetFromSlice(tip),
+	node = newTestNode(dag, BlockNodeSetFromSlice(tip),
 		blockVersion,
 		dag.powMaxBits,
 		tip.PastMedianTime(dag).Add(time.Second))
@@ -532,7 +532,7 @@ func TestPastMedianTime(t *testing.T) {
 	}
 
 	// Checks that a block is invalid if its timestamp is before past median time
-	node = newTestNode(dag, BlockSetFromSlice(tip),
+	node = newTestNode(dag, BlockNodeSetFromSlice(tip),
 		blockVersion,
 		0,
 		tip.PastMedianTime(dag).Add(-time.Second))
@@ -570,19 +570,19 @@ func TestValidateParents(t *testing.T) {
 	}
 
 	// Check direct parents relation
-	err = dag.validateParents(fakeBlockHeader, BlockSetFromSlice(aNode, bNode))
+	err = dag.validateParents(fakeBlockHeader, BlockNodeSetFromSlice(aNode, bNode))
 	if err == nil {
 		t.Errorf("validateParents: `a` is a parent of `b`, so an error is expected")
 	}
 
 	// Check indirect parents relation
-	err = dag.validateParents(fakeBlockHeader, BlockSetFromSlice(dag.genesis, bNode))
+	err = dag.validateParents(fakeBlockHeader, BlockNodeSetFromSlice(dag.genesis, bNode))
 	if err == nil {
 		t.Errorf("validateParents: `genesis` and `b` are indirectly related, so an error is expected")
 	}
 
 	// Check parents with no relation
-	err = dag.validateParents(fakeBlockHeader, BlockSetFromSlice(bNode, cNode))
+	err = dag.validateParents(fakeBlockHeader, BlockNodeSetFromSlice(bNode, cNode))
 	if err != nil {
 		t.Errorf("validateParents: unexpected error: %v", err)
 	}

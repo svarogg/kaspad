@@ -8,7 +8,7 @@ import (
 )
 
 func TestHashes(t *testing.T) {
-	bs := BlockSetFromSlice(
+	bs := BlockNodeSetFromSlice(
 		&blockNode{
 			hash: &daghash.Hash{3},
 		},
@@ -43,46 +43,46 @@ func TestBlockSetSubtract(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		setA           BlockSet
-		setB           BlockSet
-		expectedResult BlockSet
+		setA           BlockNodeSet
+		setB           BlockNodeSet
+		expectedResult BlockNodeSet
 	}{
 		{
 			name:           "both sets empty",
-			setA:           BlockSetFromSlice(),
-			setB:           BlockSetFromSlice(),
-			expectedResult: BlockSetFromSlice(),
+			setA:           BlockNodeSetFromSlice(),
+			setB:           BlockNodeSetFromSlice(),
+			expectedResult: BlockNodeSetFromSlice(),
 		},
 		{
 			name:           "subtract an empty set",
-			setA:           BlockSetFromSlice(node1),
-			setB:           BlockSetFromSlice(),
-			expectedResult: BlockSetFromSlice(node1),
+			setA:           BlockNodeSetFromSlice(node1),
+			setB:           BlockNodeSetFromSlice(),
+			expectedResult: BlockNodeSetFromSlice(node1),
 		},
 		{
 			name:           "subtract from empty set",
-			setA:           BlockSetFromSlice(),
-			setB:           BlockSetFromSlice(node1),
-			expectedResult: BlockSetFromSlice(),
+			setA:           BlockNodeSetFromSlice(),
+			setB:           BlockNodeSetFromSlice(node1),
+			expectedResult: BlockNodeSetFromSlice(),
 		},
 		{
 			name:           "subtract unrelated set",
-			setA:           BlockSetFromSlice(node1),
-			setB:           BlockSetFromSlice(node2),
-			expectedResult: BlockSetFromSlice(node1),
+			setA:           BlockNodeSetFromSlice(node1),
+			setB:           BlockNodeSetFromSlice(node2),
+			expectedResult: BlockNodeSetFromSlice(node1),
 		},
 		{
 			name:           "typical case",
-			setA:           BlockSetFromSlice(node1, node2),
-			setB:           BlockSetFromSlice(node2, node3),
-			expectedResult: BlockSetFromSlice(node1),
+			setA:           BlockNodeSetFromSlice(node1, node2),
+			setB:           BlockNodeSetFromSlice(node2, node3),
+			expectedResult: BlockNodeSetFromSlice(node1),
 		},
 	}
 
 	for _, test := range tests {
 		result := test.setA.Subtract(test.setB)
 		if !reflect.DeepEqual(result, test.expectedResult) {
-			t.Errorf("BlockSet.subtract: unexpected result in test '%s'. "+
+			t.Errorf("BlockNodeSet.subtract: unexpected result in test '%s'. "+
 				"Expected: %v, got: %v", test.name, test.expectedResult, result)
 		}
 	}
@@ -95,46 +95,46 @@ func TestBlockSetAddSet(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		setA           BlockSet
-		setB           BlockSet
-		expectedResult BlockSet
+		setA           BlockNodeSet
+		setB           BlockNodeSet
+		expectedResult BlockNodeSet
 	}{
 		{
 			name:           "both sets empty",
-			setA:           BlockSetFromSlice(),
-			setB:           BlockSetFromSlice(),
-			expectedResult: BlockSetFromSlice(),
+			setA:           BlockNodeSetFromSlice(),
+			setB:           BlockNodeSetFromSlice(),
+			expectedResult: BlockNodeSetFromSlice(),
 		},
 		{
 			name:           "add an empty set",
-			setA:           BlockSetFromSlice(node1),
-			setB:           BlockSetFromSlice(),
-			expectedResult: BlockSetFromSlice(node1),
+			setA:           BlockNodeSetFromSlice(node1),
+			setB:           BlockNodeSetFromSlice(),
+			expectedResult: BlockNodeSetFromSlice(node1),
 		},
 		{
 			name:           "add to empty set",
-			setA:           BlockSetFromSlice(),
-			setB:           BlockSetFromSlice(node1),
-			expectedResult: BlockSetFromSlice(node1),
+			setA:           BlockNodeSetFromSlice(),
+			setB:           BlockNodeSetFromSlice(node1),
+			expectedResult: BlockNodeSetFromSlice(node1),
 		},
 		{
 			name:           "add already added member",
-			setA:           BlockSetFromSlice(node1, node2),
-			setB:           BlockSetFromSlice(node1),
-			expectedResult: BlockSetFromSlice(node1, node2),
+			setA:           BlockNodeSetFromSlice(node1, node2),
+			setB:           BlockNodeSetFromSlice(node1),
+			expectedResult: BlockNodeSetFromSlice(node1, node2),
 		},
 		{
 			name:           "typical case",
-			setA:           BlockSetFromSlice(node1, node2),
-			setB:           BlockSetFromSlice(node2, node3),
-			expectedResult: BlockSetFromSlice(node1, node2, node3),
+			setA:           BlockNodeSetFromSlice(node1, node2),
+			setB:           BlockNodeSetFromSlice(node2, node3),
+			expectedResult: BlockNodeSetFromSlice(node1, node2, node3),
 		},
 	}
 
 	for _, test := range tests {
 		test.setA.AddSet(test.setB)
 		if !reflect.DeepEqual(test.setA, test.expectedResult) {
-			t.Errorf("BlockSet.AddSet: unexpected result in test '%s'. "+
+			t.Errorf("BlockNodeSet.AddSet: unexpected result in test '%s'. "+
 				"Expected: %v, got: %v", test.name, test.expectedResult, test.setA)
 		}
 	}
@@ -147,46 +147,46 @@ func TestBlockSetAddSlice(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		set            BlockSet
+		set            BlockNodeSet
 		slice          []*blockNode
-		expectedResult BlockSet
+		expectedResult BlockNodeSet
 	}{
 		{
 			name:           "add empty slice to empty set",
-			set:            BlockSetFromSlice(),
+			set:            BlockNodeSetFromSlice(),
 			slice:          []*blockNode{},
-			expectedResult: BlockSetFromSlice(),
+			expectedResult: BlockNodeSetFromSlice(),
 		},
 		{
 			name:           "add an empty slice",
-			set:            BlockSetFromSlice(node1),
+			set:            BlockNodeSetFromSlice(node1),
 			slice:          []*blockNode{},
-			expectedResult: BlockSetFromSlice(node1),
+			expectedResult: BlockNodeSetFromSlice(node1),
 		},
 		{
 			name:           "add to empty set",
-			set:            BlockSetFromSlice(),
+			set:            BlockNodeSetFromSlice(),
 			slice:          []*blockNode{node1},
-			expectedResult: BlockSetFromSlice(node1),
+			expectedResult: BlockNodeSetFromSlice(node1),
 		},
 		{
 			name:           "add already added member",
-			set:            BlockSetFromSlice(node1, node2),
+			set:            BlockNodeSetFromSlice(node1, node2),
 			slice:          []*blockNode{node1},
-			expectedResult: BlockSetFromSlice(node1, node2),
+			expectedResult: BlockNodeSetFromSlice(node1, node2),
 		},
 		{
 			name:           "typical case",
-			set:            BlockSetFromSlice(node1, node2),
+			set:            BlockNodeSetFromSlice(node1, node2),
 			slice:          []*blockNode{node2, node3},
-			expectedResult: BlockSetFromSlice(node1, node2, node3),
+			expectedResult: BlockNodeSetFromSlice(node1, node2, node3),
 		},
 	}
 
 	for _, test := range tests {
 		test.set.AddSlice(test.slice)
 		if !reflect.DeepEqual(test.set, test.expectedResult) {
-			t.Errorf("BlockSet.AddSlice: unexpected result in test '%s'. "+
+			t.Errorf("BlockNodeSet.AddSlice: unexpected result in test '%s'. "+
 				"Expected: %v, got: %v", test.name, test.expectedResult, test.set)
 		}
 	}
@@ -199,46 +199,46 @@ func TestBlockSetUnion(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		setA           BlockSet
-		setB           BlockSet
-		expectedResult BlockSet
+		setA           BlockNodeSet
+		setB           BlockNodeSet
+		expectedResult BlockNodeSet
 	}{
 		{
 			name:           "both sets empty",
-			setA:           BlockSetFromSlice(),
-			setB:           BlockSetFromSlice(),
-			expectedResult: BlockSetFromSlice(),
+			setA:           BlockNodeSetFromSlice(),
+			setB:           BlockNodeSetFromSlice(),
+			expectedResult: BlockNodeSetFromSlice(),
 		},
 		{
 			name:           "union against an empty set",
-			setA:           BlockSetFromSlice(node1),
-			setB:           BlockSetFromSlice(),
-			expectedResult: BlockSetFromSlice(node1),
+			setA:           BlockNodeSetFromSlice(node1),
+			setB:           BlockNodeSetFromSlice(),
+			expectedResult: BlockNodeSetFromSlice(node1),
 		},
 		{
 			name:           "union from an empty set",
-			setA:           BlockSetFromSlice(),
-			setB:           BlockSetFromSlice(node1),
-			expectedResult: BlockSetFromSlice(node1),
+			setA:           BlockNodeSetFromSlice(),
+			setB:           BlockNodeSetFromSlice(node1),
+			expectedResult: BlockNodeSetFromSlice(node1),
 		},
 		{
 			name:           "union with subset",
-			setA:           BlockSetFromSlice(node1, node2),
-			setB:           BlockSetFromSlice(node1),
-			expectedResult: BlockSetFromSlice(node1, node2),
+			setA:           BlockNodeSetFromSlice(node1, node2),
+			setB:           BlockNodeSetFromSlice(node1),
+			expectedResult: BlockNodeSetFromSlice(node1, node2),
 		},
 		{
 			name:           "typical case",
-			setA:           BlockSetFromSlice(node1, node2),
-			setB:           BlockSetFromSlice(node2, node3),
-			expectedResult: BlockSetFromSlice(node1, node2, node3),
+			setA:           BlockNodeSetFromSlice(node1, node2),
+			setB:           BlockNodeSetFromSlice(node2, node3),
+			expectedResult: BlockNodeSetFromSlice(node1, node2, node3),
 		},
 	}
 
 	for _, test := range tests {
 		result := test.setA.Union(test.setB)
 		if !reflect.DeepEqual(result, test.expectedResult) {
-			t.Errorf("BlockSet.union: unexpected result in test '%s'. "+
+			t.Errorf("BlockNodeSet.union: unexpected result in test '%s'. "+
 				"Expected: %v, got: %v", test.name, test.expectedResult, result)
 		}
 	}

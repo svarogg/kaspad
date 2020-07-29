@@ -18,7 +18,7 @@ type virtualBlock struct {
 
 	// selectedParentChainSet is a block set that includes all the blocks
 	// that belong to the chain of selected parents from the virtual block.
-	selectedParentChainSet BlockSet
+	selectedParentChainSet BlockNodeSet
 
 	// selectedParentChainSlice is an ordered slice that includes all the
 	// blocks that belong the the chain of selected parents from the
@@ -27,12 +27,12 @@ type virtualBlock struct {
 }
 
 // newVirtualBlock creates and returns a new VirtualBlock.
-func newVirtualBlock(dag *BlockDAG, tips BlockSet) *virtualBlock {
+func newVirtualBlock(dag *BlockDAG, tips BlockNodeSet) *virtualBlock {
 	// The mutex is intentionally not held since this is a constructor.
 	var virtual virtualBlock
 	virtual.dag = dag
 	virtual.utxoSet = NewFullUTXOSet()
-	virtual.selectedParentChainSet = NewBlockSet()
+	virtual.selectedParentChainSet = NewBlockNodeSet()
 	virtual.selectedParentChainSlice = nil
 	virtual.setTips(tips)
 
@@ -40,11 +40,11 @@ func newVirtualBlock(dag *BlockDAG, tips BlockSet) *virtualBlock {
 }
 
 // setTips replaces the tips of the virtual block with the blocks in the
-// given BlockSet. This only differs from the exported version in that it
+// given BlockNodeSet. This only differs from the exported version in that it
 // is up to the caller to ensure the lock is held.
 //
 // This function MUST be called with the view mutex locked (for writes).
-func (v *virtualBlock) setTips(tips BlockSet) *chainUpdates {
+func (v *virtualBlock) setTips(tips BlockNodeSet) *chainUpdates {
 	oldSelectedParent := v.selectedParent
 	node, _ := v.dag.newBlockNode(nil, tips)
 	v.blockNode = *node
@@ -108,10 +108,10 @@ func (v *virtualBlock) updateSelectedParentSet(oldSelectedParent *blockNode) *ch
 }
 
 // SetTips replaces the tips of the virtual block with the blocks in the
-// given BlockSet.
+// given BlockNodeSet.
 //
 // This function is safe for concurrent access.
-func (v *virtualBlock) SetTips(tips BlockSet) {
+func (v *virtualBlock) SetTips(tips BlockNodeSet) {
 	v.mtx.Lock()
 	defer v.mtx.Unlock()
 	v.setTips(tips)
@@ -145,9 +145,9 @@ func (v *virtualBlock) AddTip(newTip *blockNode) *chainUpdates {
 }
 
 // tips returns the current tip block nodes for the DAG. It will return
-// an empty BlockSet if there is no tip.
+// an empty BlockNodeSet if there is no tip.
 //
 // This function is safe for concurrent access.
-func (v *virtualBlock) tips() BlockSet {
+func (v *virtualBlock) tips() BlockNodeSet {
 	return v.parents
 }
