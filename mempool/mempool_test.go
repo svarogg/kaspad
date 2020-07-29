@@ -7,6 +7,7 @@ package mempool
 import (
 	"bytes"
 	"fmt"
+	"github.com/kaspanet/kaspad/consensus/common"
 	"math"
 	"reflect"
 	"runtime"
@@ -1596,23 +1597,23 @@ func TestCount(t *testing.T) {
 
 func TestExtractRejectCode(t *testing.T) {
 	tests := []struct {
-		blockdagRuleErrorCode blockdag.ErrorCode
+		blockdagRuleErrorCode common.ErrorCode
 		wireRejectCode        wire.RejectCode
 	}{
 		{
-			blockdagRuleErrorCode: blockdag.ErrDuplicateBlock,
+			blockdagRuleErrorCode: common.ErrDuplicateBlock,
 			wireRejectCode:        wire.RejectDuplicate,
 		},
 		{
-			blockdagRuleErrorCode: blockdag.ErrBlockVersionTooOld,
+			blockdagRuleErrorCode: common.ErrBlockVersionTooOld,
 			wireRejectCode:        wire.RejectObsolete,
 		},
 		{
-			blockdagRuleErrorCode: blockdag.ErrFinalityPointTimeTooOld,
+			blockdagRuleErrorCode: common.ErrFinalityPointTimeTooOld,
 			wireRejectCode:        wire.RejectFinality,
 		},
 		{
-			blockdagRuleErrorCode: blockdag.ErrDifficultyTooLow,
+			blockdagRuleErrorCode: common.ErrDifficultyTooLow,
 			wireRejectCode:        wire.RejectDifficulty,
 		},
 		{
@@ -1622,7 +1623,7 @@ func TestExtractRejectCode(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		err := blockdag.RuleError{ErrorCode: test.blockdagRuleErrorCode}
+		err := common.RuleError{ErrorCode: test.blockdagRuleErrorCode}
 		code, ok := extractRejectCode(err)
 		if !ok {
 			t.Errorf("TestExtractRejectCode: %v could not be extracted", test.blockdagRuleErrorCode)

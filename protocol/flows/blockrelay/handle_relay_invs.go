@@ -2,6 +2,7 @@ package blockrelay
 
 import (
 	"github.com/kaspanet/kaspad/consensus/blockdag"
+	common2 "github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/netadapter"
 	"github.com/kaspanet/kaspad/netadapter/router"
 	"github.com/kaspanet/kaspad/protocol/blocklogger"
@@ -182,7 +183,7 @@ func (flow *handleRelayInvsFlow) processAndRelayBlock(requestQueue *hashesQueueS
 	blockHash := block.Hash()
 	isOrphan, isDelayed, err := flow.DAG().ProcessBlock(block, blockdag.BFNone)
 	if err != nil {
-		if !errors.As(err, &blockdag.RuleError{}) {
+		if !errors.As(err, &common2.RuleError{}) {
 			return errors.Wrapf(err, "failed to process block %s", blockHash)
 		}
 		log.Infof("Rejected block %s from %s: %s", blockHash, flow.peer, err)

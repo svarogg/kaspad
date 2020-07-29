@@ -2,7 +2,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package blockdag
+package common
 
 import (
 	"fmt"
@@ -284,6 +284,6 @@ func (e RuleError) Error() string {
 	return e.Description
 }
 
-func ruleError(c ErrorCode, desc string) error {
+func NewRuleError(c ErrorCode, desc string) error {
 	return errors.WithStack(RuleError{ErrorCode: c, Description: desc})
 }

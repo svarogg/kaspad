@@ -2,6 +2,7 @@ package blockdag_test
 
 import (
 	"fmt"
+	"github.com/kaspanet/kaspad/consensus/common"
 	"math"
 	"strings"
 	"testing"
@@ -139,10 +140,10 @@ func TestFinality(t *testing.T) {
 	if err == nil {
 		t.Errorf("TestFinality: buildNodeToDag expected an error but got <nil>")
 	}
-	var ruleErr blockdag.RuleError
+	var ruleErr common.RuleError
 	if errors.As(err, &ruleErr) {
-		if ruleErr.ErrorCode != blockdag.ErrFinality {
-			t.Errorf("TestFinality: buildNodeToDag expected an error with code %v but instead got %v", blockdag.ErrFinality, ruleErr.ErrorCode)
+		if ruleErr.ErrorCode != common.ErrFinality {
+			t.Errorf("TestFinality: buildNodeToDag expected an error with code %v but instead got %v", common.ErrFinality, ruleErr.ErrorCode)
 		}
 	} else {
 		t.Errorf("TestFinality: buildNodeToDag got unexpected error: %v", err)
@@ -155,8 +156,8 @@ func TestFinality(t *testing.T) {
 		t.Errorf("TestFinality: buildNodeToDag expected an error but got <nil>")
 	}
 	if errors.As(err, &ruleErr) {
-		if ruleErr.ErrorCode != blockdag.ErrFinality {
-			t.Errorf("TestFinality: buildNodeToDag expected an error with code %v but instead got %v", blockdag.ErrFinality, ruleErr.ErrorCode)
+		if ruleErr.ErrorCode != common.ErrFinality {
+			t.Errorf("TestFinality: buildNodeToDag expected an error with code %v but instead got %v", common.ErrFinality, ruleErr.ErrorCode)
 		}
 	} else {
 		t.Errorf("TestFinality: buildNodeToDag got unexpected error: %v", ruleErr)
@@ -298,10 +299,10 @@ func TestChainedTransactions(t *testing.T) {
 	if err == nil {
 		t.Errorf("ProcessBlock expected an error")
 	} else {
-		var ruleErr blockdag.RuleError
+		var ruleErr common.RuleError
 		if ok := errors.As(err, &ruleErr); ok {
-			if ruleErr.ErrorCode != blockdag.ErrMissingTxOut {
-				t.Errorf("ProcessBlock expected an %v error code but got %v", blockdag.ErrMissingTxOut, ruleErr.ErrorCode)
+			if ruleErr.ErrorCode != common.ErrMissingTxOut {
+				t.Errorf("ProcessBlock expected an %v error code but got %v", common.ErrMissingTxOut, ruleErr.ErrorCode)
 			}
 		} else {
 			t.Errorf("ProcessBlock expected a blockdag.RuleError but got %v", err)
@@ -500,11 +501,11 @@ func TestGasLimit(t *testing.T) {
 	if err == nil {
 		t.Fatalf("ProcessBlock expected to have an error in block that exceeds gas limit")
 	}
-	var ruleErr blockdag.RuleError
+	var ruleErr common.RuleError
 	if !errors.As(err, &ruleErr) {
 		t.Fatalf("ProcessBlock expected a RuleError, but got %v", err)
-	} else if ruleErr.ErrorCode != blockdag.ErrInvalidGas {
-		t.Fatalf("ProcessBlock expected error code %s but got %s", blockdag.ErrInvalidGas, ruleErr.ErrorCode)
+	} else if ruleErr.ErrorCode != common.ErrInvalidGas {
+		t.Fatalf("ProcessBlock expected error code %s but got %s", common.ErrInvalidGas, ruleErr.ErrorCode)
 	}
 	if isDelayed {
 		t.Fatalf("ProcessBlock: overLimitBlock " +
@@ -537,8 +538,8 @@ func TestGasLimit(t *testing.T) {
 	}
 	if !errors.As(err, &ruleErr) {
 		t.Fatalf("ProcessBlock expected a RuleError, but got %v", err)
-	} else if ruleErr.ErrorCode != blockdag.ErrInvalidGas {
-		t.Fatalf("ProcessBlock expected error code %s but got %s", blockdag.ErrInvalidGas, ruleErr.ErrorCode)
+	} else if ruleErr.ErrorCode != common.ErrInvalidGas {
+		t.Fatalf("ProcessBlock expected error code %s but got %s", common.ErrInvalidGas, ruleErr.ErrorCode)
 	}
 	if isOrphan {
 		t.Fatalf("ProcessBlock: overLimitBlock got unexpectedly orphan")

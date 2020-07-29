@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"github.com/kaspanet/kaspad/consensus/common"
 	"strconv"
 	"strings"
 	"sync"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/kaspanet/kaspad/util/mstime"
 
-	"github.com/kaspanet/kaspad/consensus/blockdag"
 	"github.com/kaspanet/kaspad/consensus/txscript"
 	"github.com/kaspanet/kaspad/mining"
 	"github.com/kaspanet/kaspad/rpc/model"
@@ -302,7 +302,7 @@ func handleGetBlockTemplateProposal(s *Server, request *model.TemplateRequest) (
 	}
 
 	if err := s.dag.CheckConnectBlockTemplate(block); err != nil {
-		if !errors.As(err, &blockdag.RuleError{}) {
+		if !errors.As(err, &common.RuleError{}) {
 			errStr := fmt.Sprintf("Failed to process block proposal: %s", err)
 			log.Error(errStr)
 			return nil, &model.RPCError{
@@ -324,75 +324,75 @@ func handleGetBlockTemplateProposal(s *Server, request *model.TemplateRequest) (
 func dagErrToGBTErrString(err error) string {
 	// When the passed error is not a RuleError, just return a generic
 	// rejected string with the error text.
-	var ruleErr blockdag.RuleError
+	var ruleErr common.RuleError
 	if !errors.As(err, &ruleErr) {
 		return "rejected: " + err.Error()
 	}
 
 	switch ruleErr.ErrorCode {
-	case blockdag.ErrDuplicateBlock:
+	case common.ErrDuplicateBlock:
 		return "duplicate"
-	case blockdag.ErrBlockMassTooHigh:
+	case common.ErrBlockMassTooHigh:
 		return "bad-blk-mass"
-	case blockdag.ErrBlockVersionTooOld:
+	case common.ErrBlockVersionTooOld:
 		return "bad-version"
-	case blockdag.ErrTimeTooOld:
+	case common.ErrTimeTooOld:
 		return "time-too-old"
-	case blockdag.ErrTimeTooNew:
+	case common.ErrTimeTooNew:
 		return "time-too-new"
-	case blockdag.ErrDifficultyTooLow:
+	case common.ErrDifficultyTooLow:
 		return "bad-diffbits"
-	case blockdag.ErrUnexpectedDifficulty:
+	case common.ErrUnexpectedDifficulty:
 		return "bad-diffbits"
-	case blockdag.ErrHighHash:
+	case common.ErrHighHash:
 		return "high-hash"
-	case blockdag.ErrBadMerkleRoot:
+	case common.ErrBadMerkleRoot:
 		return "bad-txnmrklroot"
-	case blockdag.ErrFinalityPointTimeTooOld:
+	case common.ErrFinalityPointTimeTooOld:
 		return "finality-point-time-too-old"
-	case blockdag.ErrNoTransactions:
+	case common.ErrNoTransactions:
 		return "bad-txns-none"
-	case blockdag.ErrNoTxInputs:
+	case common.ErrNoTxInputs:
 		return "bad-txns-noinputs"
-	case blockdag.ErrTxMassTooHigh:
+	case common.ErrTxMassTooHigh:
 		return "bad-txns-mass"
-	case blockdag.ErrBadTxOutValue:
+	case common.ErrBadTxOutValue:
 		return "bad-txns-outputvalue"
-	case blockdag.ErrDuplicateTxInputs:
+	case common.ErrDuplicateTxInputs:
 		return "bad-txns-dupinputs"
-	case blockdag.ErrBadTxInput:
+	case common.ErrBadTxInput:
 		return "bad-txns-badinput"
-	case blockdag.ErrMissingTxOut:
+	case common.ErrMissingTxOut:
 		return "bad-txns-missinginput"
-	case blockdag.ErrUnfinalizedTx:
+	case common.ErrUnfinalizedTx:
 		return "bad-txns-unfinalizedtx"
-	case blockdag.ErrDuplicateTx:
+	case common.ErrDuplicateTx:
 		return "bad-txns-duplicate"
-	case blockdag.ErrOverwriteTx:
+	case common.ErrOverwriteTx:
 		return "bad-txns-overwrite"
-	case blockdag.ErrImmatureSpend:
+	case common.ErrImmatureSpend:
 		return "bad-txns-maturity"
-	case blockdag.ErrSpendTooHigh:
+	case common.ErrSpendTooHigh:
 		return "bad-txns-highspend"
-	case blockdag.ErrBadFees:
+	case common.ErrBadFees:
 		return "bad-txns-fees"
-	case blockdag.ErrTooManySigOps:
+	case common.ErrTooManySigOps:
 		return "high-sigops"
-	case blockdag.ErrFirstTxNotCoinbase:
+	case common.ErrFirstTxNotCoinbase:
 		return "bad-txns-nocoinbase"
-	case blockdag.ErrMultipleCoinbases:
+	case common.ErrMultipleCoinbases:
 		return "bad-txns-multicoinbase"
-	case blockdag.ErrBadCoinbasePayloadLen:
+	case common.ErrBadCoinbasePayloadLen:
 		return "bad-cb-length"
-	case blockdag.ErrScriptMalformed:
+	case common.ErrScriptMalformed:
 		return "bad-script-malformed"
-	case blockdag.ErrScriptValidation:
+	case common.ErrScriptValidation:
 		return "bad-script-validate"
-	case blockdag.ErrParentBlockUnknown:
+	case common.ErrParentBlockUnknown:
 		return "parent-blk-not-found"
-	case blockdag.ErrInvalidAncestorBlock:
+	case common.ErrInvalidAncestorBlock:
 		return "bad-parentblk"
-	case blockdag.ErrParentBlockNotCurrentTips:
+	case common.ErrParentBlockNotCurrentTips:
 		return "inconclusive-not-best-parentblk"
 	}
 

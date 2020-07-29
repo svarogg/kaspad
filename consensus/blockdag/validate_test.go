@@ -5,6 +5,7 @@
 package blockdag
 
 import (
+	"github.com/kaspanet/kaspad/consensus/common"
 	"math"
 	"path/filepath"
 	"testing"
@@ -185,10 +186,10 @@ func TestCheckBlockSanity(t *testing.T) {
 	if err == nil {
 		t.Errorf("CheckBlockSanity: transactions disorder is not detected")
 	}
-	var ruleErr RuleError
+	var ruleErr common.RuleError
 	if !errors.As(err, &ruleErr) {
 		t.Errorf("CheckBlockSanity: wrong error returned, expect RuleError, got %T", err)
-	} else if ruleErr.ErrorCode != ErrTransactionsNotSorted {
+	} else if ruleErr.ErrorCode != common.ErrTransactionsNotSorted {
 		t.Errorf("CheckBlockSanity: wrong error returned, expect ErrTransactionsNotSorted, got"+
 			" %v, err %s", ruleErr.ErrorCode, err)
 	}
@@ -467,10 +468,10 @@ func TestCheckBlockSanity(t *testing.T) {
 	if err == nil {
 		t.Errorf("CheckBlockSanity: error is nil when it shouldn't be")
 	}
-	var rError RuleError
+	var rError common.RuleError
 	if !errors.As(err, &rError) {
 		t.Fatalf("CheckBlockSanity: expected a RuleError, but got %s", err)
-	} else if rError.ErrorCode != ErrWrongParentsOrder {
+	} else if rError.ErrorCode != common.ErrWrongParentsOrder {
 		t.Errorf("CheckBlockSanity: Expected error was ErrWrongParentsOrder but got %v", err)
 	}
 	if delay != 0 {
@@ -600,23 +601,23 @@ func TestCheckTransactionSanity(t *testing.T) {
 		expectedErr            error
 	}{
 		{"good one", 1, 1, 1, *subnetworkid.SubnetworkIDNative, nil, nil, nil},
-		{"no inputs", 0, 1, 1, *subnetworkid.SubnetworkIDNative, nil, nil, ruleError(ErrNoTxInputs, "")},
+		{"no inputs", 0, 1, 1, *subnetworkid.SubnetworkIDNative, nil, nil, common.NewRuleError(common.ErrNoTxInputs, "")},
 		{"no outputs", 1, 0, 1, *subnetworkid.SubnetworkIDNative, nil, nil, nil},
 		{"too much sompi in one output", 1, 1, util.MaxSompi + 1,
 			*subnetworkid.SubnetworkIDNative,
 			nil,
 			nil,
-			ruleError(ErrBadTxOutValue, "")},
+			common.NewRuleError(common.ErrBadTxOutValue, "")},
 		{"too much sompi in total outputs", 1, 2, util.MaxSompi - 1,
 			*subnetworkid.SubnetworkIDNative,
 			nil,
 			nil,
-			ruleError(ErrBadTxOutValue, "")},
+			common.NewRuleError(common.ErrBadTxOutValue, "")},
 		{"duplicate inputs", 2, 1, 1,
 			*subnetworkid.SubnetworkIDNative,
 			nil,
 			func(tx *wire.MsgTx) { tx.TxIn[1].PreviousOutpoint.Index = 0 },
-			ruleError(ErrDuplicateTxInputs, "")},
+			common.NewRuleError(common.ErrDuplicateTxInputs, "")},
 		{"1 input coinbase",
 			1,
 			1,
@@ -640,46 +641,46 @@ func TestCheckTransactionSanity(t *testing.T) {
 			*subnetworkid.SubnetworkIDNative,
 			&txSubnetworkData{subnetworkid.SubnetworkIDCoinbase, 0, make([]byte, MaxCoinbasePayloadLen+1)},
 			nil,
-			ruleError(ErrBadCoinbasePayloadLen, "")},
+			common.NewRuleError(common.ErrBadCoinbasePayloadLen, "")},
 		{"non-zero gas in Kaspa", 1, 1, 0,
 			*subnetworkid.SubnetworkIDNative,
 			&txSubnetworkData{subnetworkid.SubnetworkIDNative, 1, []byte{}},
 			nil,
-			ruleError(ErrInvalidGas, "")},
+			common.NewRuleError(common.ErrInvalidGas, "")},
 		{"non-zero gas in subnetwork registry", 1, 1, 0,
 			*subnetworkid.SubnetworkIDNative,
 			&txSubnetworkData{subnetworkid.SubnetworkIDNative, 1, []byte{}},
 			nil,
-			ruleError(ErrInvalidGas, "")},
+			common.NewRuleError(common.ErrInvalidGas, "")},
 		{"non-zero payload in Kaspa", 1, 1, 0,
 			*subnetworkid.SubnetworkIDNative,
 			&txSubnetworkData{subnetworkid.SubnetworkIDNative, 0, []byte{1}},
 			nil,
-			ruleError(ErrInvalidPayload, "")},
+			common.NewRuleError(common.ErrInvalidPayload, "")},
 		{"payload in subnetwork registry isn't 8 bytes", 1, 1, 0,
 			*subnetworkid.SubnetworkIDNative,
 			&txSubnetworkData{subnetworkid.SubnetworkIDNative, 0, []byte{1, 2, 3, 4, 5, 6, 7}},
 			nil,
-			ruleError(ErrInvalidPayload, "")},
+			common.NewRuleError(common.ErrInvalidPayload, "")},
 		{"payload in other subnetwork isn't 0 bytes", 1, 1, 0,
 			subnetworkid.SubnetworkID{123},
 			&txSubnetworkData{&subnetworkid.SubnetworkID{234}, 0, []byte{1}},
 			nil,
-			ruleError(ErrInvalidPayload, "")},
+			common.NewRuleError(common.ErrInvalidPayload, "")},
 		{"invalid payload hash", 1, 1, 0,
 			subnetworkid.SubnetworkID{123},
 			&txSubnetworkData{&subnetworkid.SubnetworkID{123}, 0, []byte{1}},
 			func(tx *wire.MsgTx) {
 				tx.PayloadHash = &daghash.Hash{}
 			},
-			ruleError(ErrInvalidPayloadHash, "")},
+			common.NewRuleError(common.ErrInvalidPayloadHash, "")},
 		{"invalid payload hash in native subnetwork", 1, 1, 0,
 			*subnetworkid.SubnetworkIDNative,
 			nil,
 			func(tx *wire.MsgTx) {
 				tx.PayloadHash = daghash.DoubleHashP(tx.Payload)
 			},
-			ruleError(ErrInvalidPayloadHash, "")},
+			common.NewRuleError(common.ErrInvalidPayloadHash, "")},
 	}
 
 	for _, test := range tests {

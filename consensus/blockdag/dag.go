@@ -7,6 +7,7 @@ package blockdag
 import (
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/blockstatus"
+	"github.com/kaspanet/kaspad/consensus/common"
 	"math"
 	"sort"
 	"sync"
@@ -499,7 +500,7 @@ func (dag *BlockDAG) calcSequenceLock(node *BlockNode, utxoSet UTXOSet, tx *util
 				"transaction %s input %d either does not exist or "+
 				"has already been spent", txIn.PreviousOutpoint,
 				tx.ID(), txInIndex)
-			return sequenceLock, ruleError(ErrMissingTxOut, str)
+			return sequenceLock, common.NewRuleError(common.ErrMissingTxOut, str)
 		}
 
 		// If the input blue score is set to the mempool blue score, then we
@@ -591,7 +592,7 @@ func (dag *BlockDAG) addBlock(node *BlockNode,
 	// Connect the block to the DAG.
 	chainUpdates, err := dag.connectBlock(node, block, selectedParentAnticone, fastAdd)
 	if err != nil {
-		if errors.As(err, &RuleError{}) {
+		if errors.As(err, &common.RuleError{}) {
 			dag.index.SetStatusFlags(node, blockstatus.StatusValidateFailed)
 
 			dbTx, err := dag.databaseContext.NewTx()
@@ -643,7 +644,7 @@ func (node *BlockNode) validateAcceptedIDMerkleRoot(dag *BlockDAG, txsAcceptance
 		str := fmt.Sprintf("block accepted ID merkle root is invalid - block "+
 			"header indicates %s, but calculated value is %s",
 			header.AcceptedIDMerkleRoot, calculatedAccepetedIDMerkleRoot)
-		return ruleError(ErrBadMerkleRoot, str)
+		return common.NewRuleError(common.ErrBadMerkleRoot, str)
 	}
 	return nil
 }
@@ -898,11 +899,11 @@ func (dag *BlockDAG) validateGasLimit(block *util.Block) error {
 		newGasUsage := currentGasUsage + msgTx.Gas
 		if newGasUsage < currentGasUsage { // check for overflow
 			str := fmt.Sprintf("Block gas usage in subnetwork with ID %s has overflown", currentSubnetworkID)
-			return ruleError(ErrInvalidGas, str)
+			return common.NewRuleError(common.ErrInvalidGas, str)
 		}
 		if newGasUsage > currentSubnetworkGasLimit {
 			str := fmt.Sprintf("Block wastes too much gas in subnetwork with ID %s", currentSubnetworkID)
-			return ruleError(ErrInvalidGas, str)
+			return common.NewRuleError(common.ErrInvalidGas, str)
 		}
 
 		currentGasUsage = newGasUsage
@@ -957,7 +958,7 @@ func (dag *BlockDAG) checkFinalityViolation(newNode *BlockNode) error {
 	}
 
 	if !isInSelectedChain {
-		return ruleError(ErrFinality, "the last finality point is not in the selected parent chain of this block")
+		return common.NewRuleError(common.ErrFinality, "the last finality point is not in the selected parent chain of this block")
 	}
 	return nil
 }
@@ -1157,7 +1158,7 @@ func checkDoubleSpendsWithBlockPast(pastUTXO UTXOSet, blockTransactions []*util.
 
 		for _, txIn := range tx.MsgTx().TxIn {
 			if _, ok := pastUTXO.Get(txIn.PreviousOutpoint); !ok {
-				return ruleError(ErrMissingTxOut, fmt.Sprintf("missing transaction "+
+				return common.NewRuleError(common.ErrMissingTxOut, fmt.Sprintf("missing transaction "+
 					"output %s in the utxo set", txIn.PreviousOutpoint))
 			}
 		}
@@ -1197,7 +1198,7 @@ func (node *BlockNode) verifyAndBuildUTXO(dag *BlockDAG, transactions []*util.Tx
 		str := fmt.Sprintf("block %s UTXO commitment is invalid - block "+
 			"header indicates %s, but calculated value is %s", node.hash,
 			node.utxoCommitment, calculatedMultisetHash)
-		return nil, nil, nil, nil, ruleError(ErrBadUTXOCommitment, str)
+		return nil, nil, nil, nil, common.NewRuleError(common.ErrBadUTXOCommitment, str)
 	}
 
 	return pastUTXO, txsAcceptanceData, feeData, multiset, nil
@@ -2059,7 +2060,7 @@ func (dag *BlockDAG) processDelayedBlocks() error {
 			log.Errorf("Error while processing delayed block (block %s)", delayedBlock.block.Hash().String())
 			// Rule errors should not be propagated as they refer only to the delayed block,
 			// while this function runs in the context of another block
-			if !errors.As(err, &RuleError{}) {
+			if !errors.As(err, &common.RuleError{}) {
 				return err
 			}
 		}

@@ -3,6 +3,7 @@ package blockdag
 import (
 	"errors"
 	"github.com/kaspanet/kaspad/consensus/blockstatus"
+	"github.com/kaspanet/kaspad/consensus/common"
 	"path/filepath"
 	"testing"
 
@@ -33,15 +34,15 @@ func TestMaybeAcceptBlockErrors(t *testing.T) {
 	err = dag.maybeAcceptBlock(block, BFNone)
 	if err == nil {
 		t.Errorf("TestMaybeAcceptBlockErrors: rejecting the block if its parents are missing: "+
-			"Expected: %s, got: <nil>", ErrParentBlockUnknown)
+			"Expected: %s, got: <nil>", common.ErrParentBlockUnknown)
 	}
-	var ruleErr RuleError
+	var ruleErr common.RuleError
 	if ok := errors.As(err, &ruleErr); !ok {
 		t.Errorf("TestMaybeAcceptBlockErrors: rejecting the block if its parents are missing: "+
 			"Expected RuleError but got %s", err)
-	} else if ruleErr.ErrorCode != ErrParentBlockUnknown {
+	} else if ruleErr.ErrorCode != common.ErrParentBlockUnknown {
 		t.Errorf("TestMaybeAcceptBlockErrors: rejecting the block if its parents are missing: "+
-			"Unexpected error code. Want: %s, got: %s", ErrParentBlockUnknown, ruleErr.ErrorCode)
+			"Unexpected error code. Want: %s, got: %s", common.ErrParentBlockUnknown, ruleErr.ErrorCode)
 	}
 
 	// Test rejecting the block if its parents are invalid
@@ -74,14 +75,14 @@ func TestMaybeAcceptBlockErrors(t *testing.T) {
 	err = dag.maybeAcceptBlock(block2, BFNone)
 	if err == nil {
 		t.Errorf("TestMaybeAcceptBlockErrors: rejecting the block if its parents are invalid: "+
-			"Expected: %s, got: <nil>", ErrInvalidAncestorBlock)
+			"Expected: %s, got: <nil>", common.ErrInvalidAncestorBlock)
 	}
 	if ok := errors.As(err, &ruleErr); !ok {
 		t.Errorf("TestMaybeAcceptBlockErrors: rejecting the block if its parents are invalid: "+
 			"Expected RuleError but got %s", err)
-	} else if ruleErr.ErrorCode != ErrInvalidAncestorBlock {
+	} else if ruleErr.ErrorCode != common.ErrInvalidAncestorBlock {
 		t.Errorf("TestMaybeAcceptBlockErrors: rejecting the block if its parents are invalid: "+
-			"Unexpected error. Want: %s, got: %s", ErrInvalidAncestorBlock, ruleErr.ErrorCode)
+			"Unexpected error. Want: %s, got: %s", common.ErrInvalidAncestorBlock, ruleErr.ErrorCode)
 	}
 
 	// Set block1's status back to valid for next tests
@@ -93,14 +94,14 @@ func TestMaybeAcceptBlockErrors(t *testing.T) {
 	err = dag.maybeAcceptBlock(block2, BFNone)
 	if err == nil {
 		t.Errorf("TestMaybeAcceptBlockErrors: rejecting the block due to bad context: "+
-			"Expected: %s, got: <nil>", ErrUnexpectedDifficulty)
+			"Expected: %s, got: <nil>", common.ErrUnexpectedDifficulty)
 	}
 	if ok := errors.As(err, &ruleErr); !ok {
 		t.Errorf("TestMaybeAcceptBlockErrors: rejecting the block due to bad context: "+
 			"Expected RuleError but got %s", err)
-	} else if ruleErr.ErrorCode != ErrUnexpectedDifficulty {
+	} else if ruleErr.ErrorCode != common.ErrUnexpectedDifficulty {
 		t.Errorf("TestMaybeAcceptBlockErrors: rejecting the block due to bad context: "+
-			"Unexpected error. Want: %s, got: %s", ErrUnexpectedDifficulty, ruleErr.ErrorCode)
+			"Unexpected error. Want: %s, got: %s", common.ErrUnexpectedDifficulty, ruleErr.ErrorCode)
 	}
 
 	// Set block2's bits back to valid for next tests

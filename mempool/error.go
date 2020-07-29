@@ -5,7 +5,7 @@
 package mempool
 
 import (
-	"github.com/kaspanet/kaspad/consensus/blockdag"
+	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/wire"
 	"github.com/pkg/errors"
 )
@@ -53,7 +53,7 @@ func txRuleError(c wire.RejectCode, desc string) RuleError {
 
 // dagRuleError returns a RuleError that encapsulates the given
 // blockdag.RuleError.
-func dagRuleError(dagErr blockdag.RuleError) RuleError {
+func dagRuleError(dagErr common.RuleError) RuleError {
 	return RuleError{
 		Err: dagErr,
 	}
@@ -69,23 +69,23 @@ func extractRejectCode(err error) (wire.RejectCode, bool) {
 		err = ruleErr.Err
 	}
 
-	var dagRuleErr blockdag.RuleError
+	var dagRuleErr common.RuleError
 	if errors.As(err, &dagRuleErr) {
 		// Convert the DAG error to a reject code.
 		var code wire.RejectCode
 		switch dagRuleErr.ErrorCode {
 		// Rejected due to duplicate.
-		case blockdag.ErrDuplicateBlock:
+		case common.ErrDuplicateBlock:
 			code = wire.RejectDuplicate
 
 		// Rejected due to obsolete version.
-		case blockdag.ErrBlockVersionTooOld:
+		case common.ErrBlockVersionTooOld:
 			code = wire.RejectObsolete
 
 		// Rejected due to being earlier than the last finality point.
-		case blockdag.ErrFinalityPointTimeTooOld:
+		case common.ErrFinalityPointTimeTooOld:
 			code = wire.RejectFinality
-		case blockdag.ErrDifficultyTooLow:
+		case common.ErrDifficultyTooLow:
 			code = wire.RejectDifficulty
 
 		// Everything else is due to the block or transaction being invalid.

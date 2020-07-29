@@ -6,6 +6,7 @@ package blockdag
 
 import (
 	"fmt"
+	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/dagconfig"
 	"github.com/pkg/errors"
 	"time"
@@ -104,8 +105,8 @@ func (dag *BlockDAG) processOrphans(hash *daghash.Hash, flags BehaviorFlags) err
 			// still missing.
 			_, err := lookupParentNodes(orphan.block, dag)
 			if err != nil {
-				var ruleErr RuleError
-				if ok := errors.As(err, &ruleErr); ok && ruleErr.ErrorCode == ErrParentBlockUnknown {
+				var ruleErr common.RuleError
+				if ok := errors.As(err, &ruleErr); ok && ruleErr.ErrorCode == common.ErrParentBlockUnknown {
 					continue
 				}
 				return err
@@ -121,7 +122,7 @@ func (dag *BlockDAG) processOrphans(hash *daghash.Hash, flags BehaviorFlags) err
 			if err != nil {
 				// Since we don't want to reject the original block because of
 				// a bad unorphaned child, only return an error if it's not a RuleError.
-				if !errors.As(err, &RuleError{}) {
+				if !errors.As(err, &common.RuleError{}) {
 					return err
 				}
 				log.Warnf("Verification failed for orphan block %s: %s", orphanHash, err)
@@ -168,12 +169,12 @@ func (dag *BlockDAG) processBlockNoLock(block *util.Block, flags BehaviorFlags) 
 	// The block must not already exist as an orphan.
 	if _, exists := dag.orphans[*blockHash]; exists {
 		str := fmt.Sprintf("already have block (orphan) %s", blockHash)
-		return false, false, ruleError(ErrDuplicateBlock, str)
+		return false, false, common.NewRuleError(common.ErrDuplicateBlock, str)
 	}
 
 	if dag.isKnownDelayedBlock(blockHash) {
 		str := fmt.Sprintf("already have block (delayed) %s", blockHash)
-		return false, false, ruleError(ErrDuplicateBlock, str)
+		return false, false, common.NewRuleError(common.ErrDuplicateBlock, str)
 	}
 
 	if !isAfterDelay {
@@ -185,7 +186,7 @@ func (dag *BlockDAG) processBlockNoLock(block *util.Block, flags BehaviorFlags) 
 
 		if delay != 0 && disallowDelay {
 			str := fmt.Sprintf("Cannot process blocks beyond the allowed time offset while the BFDisallowDelay flag is raised %s", blockHash)
-			return false, true, ruleError(ErrDelayedBlockIsNotAllowed, str)
+			return false, true, common.NewRuleError(common.ErrDelayedBlockIsNotAllowed, str)
 		}
 
 		if delay != 0 {
@@ -205,7 +206,7 @@ func (dag *BlockDAG) processBlockNoLock(block *util.Block, flags BehaviorFlags) 
 	}
 	if len(missingParents) > 0 && disallowOrphans {
 		str := fmt.Sprintf("Cannot process orphan blocks while the BFDisallowOrphans flag is raised %s", blockHash)
-		return false, false, ruleError(ErrOrphanBlockIsNotAllowed, str)
+		return false, false, common.NewRuleError(common.ErrOrphanBlockIsNotAllowed, str)
 	}
 
 	// Handle the case of a block with a valid timestamp(non-delayed) which points to a delayed block.

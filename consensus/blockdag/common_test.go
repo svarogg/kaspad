@@ -7,6 +7,7 @@ package blockdag
 import (
 	"compress/bzip2"
 	"encoding/binary"
+	"github.com/kaspanet/kaspad/consensus/common"
 	"io"
 	"os"
 	"path/filepath"
@@ -147,12 +148,12 @@ func checkRuleError(gotErr, wantErr error) error {
 		return nil
 	}
 
-	var gotRuleErr RuleError
+	var gotRuleErr common.RuleError
 	if ok := errors.As(gotErr, &gotRuleErr); !ok {
 		return errors.Errorf("gotErr expected to be RuleError, but got %+v instead", gotErr)
 	}
 
-	var wantRuleErr RuleError
+	var wantRuleErr common.RuleError
 	if ok := errors.As(wantErr, &wantRuleErr); !ok {
 		return errors.Errorf("wantErr expected to be RuleError, but got %+v instead", wantErr)
 	}

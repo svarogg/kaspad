@@ -2,6 +2,7 @@ package relaytransactions
 
 import (
 	"github.com/kaspanet/kaspad/consensus/blockdag"
+	common2 "github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/mempool"
 	"github.com/kaspanet/kaspad/netadapter"
 	"github.com/kaspanet/kaspad/netadapter/router"
@@ -195,7 +196,7 @@ func (flow *handleRelayedTransactionsFlow) receiveTransactions(requestedTransact
 				if txRuleErr.RejectCode == wire.RejectInvalid {
 					shouldBan = true
 				}
-			} else if dagRuleErr := (&blockdag.RuleError{}); errors.As(ruleErr.Err, dagRuleErr) {
+			} else if dagRuleErr := (&common2.RuleError{}); errors.As(ruleErr.Err, dagRuleErr) {
 				shouldBan = true
 			}
 

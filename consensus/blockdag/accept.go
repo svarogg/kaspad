@@ -7,6 +7,7 @@ package blockdag
 import (
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/blockstatus"
+	"github.com/kaspanet/kaspad/consensus/common"
 
 	"github.com/kaspanet/kaspad/dbaccess"
 	"github.com/kaspanet/kaspad/util"
@@ -43,8 +44,8 @@ func (dag *BlockDAG) addNodeToIndexWithInvalidAncestor(block *util.Block) error 
 func (dag *BlockDAG) maybeAcceptBlock(block *util.Block, flags BehaviorFlags) error {
 	parents, err := lookupParentNodes(block, dag)
 	if err != nil {
-		var ruleErr RuleError
-		if ok := errors.As(err, &ruleErr); ok && ruleErr.ErrorCode == ErrInvalidAncestorBlock {
+		var ruleErr common.RuleError
+		if ok := errors.As(err, &ruleErr); ok && ruleErr.ErrorCode == common.ErrInvalidAncestorBlock {
 			err := dag.addNodeToIndexWithInvalidAncestor(block)
 			if err != nil {
 				return err
@@ -142,10 +143,10 @@ func lookupParentNodes(block *util.Block, dag *BlockDAG) (BlockNodeSet, error) {
 		node, ok := dag.index.LookupNode(parentHash)
 		if !ok {
 			str := fmt.Sprintf("parent block %s is unknown", parentHash)
-			return nil, ruleError(ErrParentBlockUnknown, str)
+			return nil, common.NewRuleError(common.ErrParentBlockUnknown, str)
 		} else if dag.index.NodeStatus(node).KnownInvalid() {
 			str := fmt.Sprintf("parent block %s is known to be invalid", parentHash)
-			return nil, ruleError(ErrInvalidAncestorBlock, str)
+			return nil, common.NewRuleError(common.ErrInvalidAncestorBlock, str)
 		}
 
 		nodes.Add(node)

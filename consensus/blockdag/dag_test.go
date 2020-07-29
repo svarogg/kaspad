@@ -7,6 +7,7 @@ package blockdag
 import (
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/blockstatus"
+	"github.com/kaspanet/kaspad/consensus/common"
 	"math"
 	"os"
 	"path/filepath"
@@ -170,13 +171,13 @@ func TestIsKnownBlock(t *testing.T) {
 	if err == nil {
 		t.Fatalf("ProcessBlock for block 3D has no error when expected to have an error\n")
 	}
-	var ruleErr RuleError
+	var ruleErr common.RuleError
 	ok := errors.As(err, &ruleErr)
 	if !ok {
 		t.Fatalf("ProcessBlock for block 3D expected a RuleError, but got %v\n", err)
 	}
-	if !ok || ruleErr.ErrorCode != ErrDuplicateTxInputs {
-		t.Fatalf("ProcessBlock for block 3D expected error code %s but got %s\n", ErrDuplicateTxInputs, ruleErr.ErrorCode)
+	if !ok || ruleErr.ErrorCode != common.ErrDuplicateTxInputs {
+		t.Fatalf("ProcessBlock for block 3D expected error code %s but got %s\n", common.ErrDuplicateTxInputs, ruleErr.ErrorCode)
 	}
 	if isDelayed {
 		t.Fatalf("ProcessBlock: block 3D " +
@@ -1047,7 +1048,7 @@ func TestDAGIndexFailedStatus(t *testing.T) {
 	invalidBlock := util.NewBlock(invalidMsgBlock)
 	isOrphan, isDelayed, err := dag.ProcessBlock(invalidBlock, BFNoPoWCheck)
 
-	if !errors.As(err, &RuleError{}) {
+	if !errors.As(err, &common.RuleError{}) {
 		t.Fatalf("ProcessBlock: expected a rule error but got %s instead", err)
 	}
 	if isDelayed {
@@ -1076,8 +1077,8 @@ func TestDAGIndexFailedStatus(t *testing.T) {
 	invalidBlockChild := util.NewBlock(invalidMsgBlockChild)
 
 	isOrphan, isDelayed, err = dag.ProcessBlock(invalidBlockChild, BFNoPoWCheck)
-	var ruleErr RuleError
-	if ok := errors.As(err, &ruleErr); !ok || ruleErr.ErrorCode != ErrInvalidAncestorBlock {
+	var ruleErr common.RuleError
+	if ok := errors.As(err, &ruleErr); !ok || ruleErr.ErrorCode != common.ErrInvalidAncestorBlock {
 		t.Fatalf("ProcessBlock: expected a rule error but got %s instead", err)
 	}
 	if isDelayed {
@@ -1105,7 +1106,7 @@ func TestDAGIndexFailedStatus(t *testing.T) {
 	invalidBlockGrandChild := util.NewBlock(invalidMsgBlockGrandChild)
 
 	isOrphan, isDelayed, err = dag.ProcessBlock(invalidBlockGrandChild, BFNoPoWCheck)
-	if ok := errors.As(err, &ruleErr); !ok || ruleErr.ErrorCode != ErrInvalidAncestorBlock {
+	if ok := errors.As(err, &ruleErr); !ok || ruleErr.ErrorCode != common.ErrInvalidAncestorBlock {
 		t.Fatalf("ProcessBlock: expected a rule error but got %s instead", err)
 	}
 	if isDelayed {
@@ -1209,7 +1210,7 @@ func TestDoubleSpends(t *testing.T) {
 	}
 	anotherBlockWithTx1.Header.HashMerkleRoot = BuildHashMerkleTreeStore(anotherBlockWithTx1UtilTxs).Root()
 
-	testProcessBlockRuleError(t, dag, anotherBlockWithTx1, ruleError(ErrOverwriteTx, ""))
+	testProcessBlockRuleError(t, dag, anotherBlockWithTx1, common.NewRuleError(common.ErrOverwriteTx, ""))
 
 	// Check that a block will be rejected if it has a transaction that double spends
 	// a transaction from its past.
@@ -1226,7 +1227,7 @@ func TestDoubleSpends(t *testing.T) {
 	}
 	blockWithDoubleSpendForTx1.Header.HashMerkleRoot = BuildHashMerkleTreeStore(blockWithDoubleSpendForTx1UtilTxs).Root()
 
-	testProcessBlockRuleError(t, dag, blockWithDoubleSpendForTx1, ruleError(ErrMissingTxOut, ""))
+	testProcessBlockRuleError(t, dag, blockWithDoubleSpendForTx1, common.NewRuleError(common.ErrMissingTxOut, ""))
 
 	blockInAnticoneOfBlockWithTx1, err := PrepareBlockForTest(dag, []*daghash.Hash{fundingBlock.BlockHash()}, []*wire.MsgTx{doubleSpendTx1})
 	if err != nil {
@@ -1251,7 +1252,7 @@ func TestDoubleSpends(t *testing.T) {
 	}
 	blockWithDoubleSpendWithItself.Header.HashMerkleRoot = BuildHashMerkleTreeStore(blockWithDoubleSpendWithItselfUtilTxs).Root()
 
-	testProcessBlockRuleError(t, dag, blockWithDoubleSpendWithItself, ruleError(ErrDoubleSpendInSameBlock, ""))
+	testProcessBlockRuleError(t, dag, blockWithDoubleSpendWithItself, common.NewRuleError(common.ErrDoubleSpendInSameBlock, ""))
 
 	// Check that a block will be rejected if it has the same transaction twice.
 	blockWithDuplicateTransaction, err := PrepareBlockForTest(dag, []*daghash.Hash{fundingBlock.BlockHash()}, nil)
@@ -1266,7 +1267,7 @@ func TestDoubleSpends(t *testing.T) {
 		blockWithDuplicateTransactionUtilTxs[i] = util.NewTx(tx)
 	}
 	blockWithDuplicateTransaction.Header.HashMerkleRoot = BuildHashMerkleTreeStore(blockWithDuplicateTransactionUtilTxs).Root()
-	testProcessBlockRuleError(t, dag, blockWithDuplicateTransaction, ruleError(ErrDuplicateTx, ""))
+	testProcessBlockRuleError(t, dag, blockWithDuplicateTransaction, common.NewRuleError(common.ErrDuplicateTx, ""))
 }
 
 func TestUTXOCommitment(t *testing.T) {

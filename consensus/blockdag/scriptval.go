@@ -6,6 +6,7 @@ package blockdag
 
 import (
 	"fmt"
+	"github.com/kaspanet/kaspad/consensus/common"
 	"runtime"
 	"time"
 
@@ -61,7 +62,7 @@ out:
 					"transaction %s input %d",
 					txIn.PreviousOutpoint, txVI.tx.ID(),
 					txVI.txInIndex)
-				err := ruleError(ErrMissingTxOut, str)
+				err := common.NewRuleError(common.ErrMissingTxOut, str)
 				v.sendResult(err)
 				break out
 			}
@@ -78,7 +79,7 @@ out:
 					"output script bytes %x)",
 					txVI.tx.ID(), txVI.txInIndex,
 					txIn.PreviousOutpoint, err, sigScript, scriptPubKey)
-				err := ruleError(ErrScriptMalformed, str)
+				err := common.NewRuleError(common.ErrScriptMalformed, str)
 				v.sendResult(err)
 				break out
 			}
@@ -91,7 +92,7 @@ out:
 					"script bytes %x)",
 					txVI.tx.ID(), txVI.txInIndex,
 					txIn.PreviousOutpoint, err, sigScript, scriptPubKey)
-				err := ruleError(ErrScriptValidation, str)
+				err := common.NewRuleError(common.ErrScriptValidation, str)
 				v.sendResult(err)
 				break out
 			}

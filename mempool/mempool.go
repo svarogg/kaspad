@@ -7,6 +7,7 @@ package mempool
 import (
 	"container/list"
 	"fmt"
+	"github.com/kaspanet/kaspad/consensus/common"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -840,7 +841,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *util.Tx, rejectDupOrphans bool) ([]
 	// transactions are allowed into blocks.
 	err = blockdag.CheckTransactionSanity(tx, subnetworkID)
 	if err != nil {
-		var ruleErr blockdag.RuleError
+		var ruleErr common.RuleError
 		if ok := errors.As(err, &ruleErr); ok {
 			return nil, nil, dagRuleError(ruleErr)
 		}
@@ -857,8 +858,8 @@ func (mp *TxPool) maybeAcceptTransaction(tx *util.Tx, rejectDupOrphans bool) ([]
 		if msgTx.Gas > gasLimit {
 			str := fmt.Sprintf("transaction wants more gas %d, than allowed %d",
 				msgTx.Gas, gasLimit)
-			return nil, nil, dagRuleError(blockdag.RuleError{
-				ErrorCode:   blockdag.ErrInvalidGas,
+			return nil, nil, dagRuleError(common.RuleError{
+				ErrorCode:   common.ErrInvalidGas,
 				Description: str})
 		}
 	}
@@ -948,7 +949,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *util.Tx, rejectDupOrphans bool) ([]
 	// with respect to its defined relative lock times.
 	sequenceLock, err := mp.cfg.CalcSequenceLockNoLock(tx, mp.mpUTXOSet)
 	if err != nil {
-		var dagRuleErr blockdag.RuleError
+		var dagRuleErr common.RuleError
 		if ok := errors.As(err, &dagRuleErr); ok {
 			return nil, nil, dagRuleError(dagRuleErr)
 		}
@@ -964,7 +965,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *util.Tx, rejectDupOrphans bool) ([]
 	// transaction mass.
 	err = blockdag.ValidateTxMass(tx, mp.mpUTXOSet)
 	if err != nil {
-		var ruleError blockdag.RuleError
+		var ruleError common.RuleError
 		if ok := errors.As(err, &ruleError); ok {
 			return nil, nil, dagRuleError(ruleError)
 		}
@@ -978,7 +979,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *util.Tx, rejectDupOrphans bool) ([]
 	txFee, err := blockdag.CheckTransactionInputsAndCalulateFee(tx, nextBlockBlueScore,
 		mp.mpUTXOSet, mp.cfg.DAG.Params, false)
 	if err != nil {
-		var dagRuleErr blockdag.RuleError
+		var dagRuleErr common.RuleError
 		if ok := errors.As(err, &dagRuleErr); ok {
 			return nil, nil, dagRuleError(dagRuleErr)
 		}
@@ -1039,7 +1040,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *util.Tx, rejectDupOrphans bool) ([]
 	err = blockdag.ValidateTransactionScripts(tx, mp.mpUTXOSet,
 		txscript.StandardVerifyFlags, mp.cfg.SigCache)
 	if err != nil {
-		var dagRuleErr blockdag.RuleError
+		var dagRuleErr common.RuleError
 		if ok := errors.As(err, &dagRuleErr); ok {
 			return nil, nil, dagRuleError(dagRuleErr)
 		}

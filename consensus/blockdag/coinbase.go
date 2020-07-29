@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
+	"github.com/kaspanet/kaspad/consensus/common"
 	"io"
 
 	"github.com/kaspanet/kaspad/dbaccess"
@@ -100,7 +101,7 @@ func (node *BlockNode) validateCoinbaseTransaction(dag *BlockDAG, block *util.Bl
 	blockCoinbaseTx := block.CoinbaseTransaction().MsgTx()
 	_, scriptPubKey, extraData, err := coinbasepayload.DeserializeCoinbasePayload(blockCoinbaseTx)
 	if errors.Is(err, coinbasepayload.ErrIncorrectScriptPubKeyLen) {
-		return ruleError(ErrBadCoinbaseTransaction, err.Error())
+		return common.NewRuleError(common.ErrBadCoinbaseTransaction, err.Error())
 	}
 	if err != nil {
 		return err
@@ -111,7 +112,7 @@ func (node *BlockNode) validateCoinbaseTransaction(dag *BlockDAG, block *util.Bl
 	}
 
 	if !expectedCoinbaseTransaction.Hash().IsEqual(block.CoinbaseTransaction().Hash()) {
-		return ruleError(ErrBadCoinbaseTransaction, "Coinbase transaction is not built as expected")
+		return common.NewRuleError(common.ErrBadCoinbaseTransaction, "Coinbase transaction is not built as expected")
 	}
 
 	return nil
