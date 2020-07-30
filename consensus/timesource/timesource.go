@@ -1,4 +1,4 @@
-package blockdag
+package timesource
 
 import (
 	"github.com/kaspanet/kaspad/util/mstime"
@@ -19,7 +19,7 @@ func (m *timeSource) Now() mstime.Time {
 	return mstime.Now()
 }
 
-// NewTimeSource returns a new instance of a TimeSource
-func NewTimeSource() TimeSource {
+// New returns a new instance of a TimeSource
+func New() TimeSource {
 	return &timeSource{}
 }

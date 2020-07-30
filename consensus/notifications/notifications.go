@@ -41,7 +41,7 @@ var notificationTypeStrings = map[NotificationType]string{
 	NTChainChanged: "NTChainChanged",
 }
 
-func NewConcensusNotifier() *ConsensusNotifier {
+func New() *ConsensusNotifier {
 	return &ConsensusNotifier{}
 }
 

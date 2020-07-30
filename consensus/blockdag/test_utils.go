@@ -5,6 +5,7 @@ package blockdag
 import (
 	"compress/bzip2"
 	"encoding/binary"
+	"github.com/kaspanet/kaspad/consensus/timesource"
 	"io"
 	"io/ioutil"
 	"os"
@@ -99,7 +100,7 @@ func DAGSetup(dbName string, openDb bool, config Config) (*BlockDAG, func(), err
 		}
 	}
 
-	config.TimeSource = NewTimeSource()
+	config.TimeSource = timesource.New()
 	config.SigCache = txscript.NewSigCache(1000)
 
 	// Create the DAG instance.

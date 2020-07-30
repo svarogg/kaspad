@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/kaspanet/kaspad/addressmanager"
+	"github.com/kaspanet/kaspad/consensus/timesource"
 	"sync/atomic"
 
 	"github.com/kaspanet/kaspad/dbaccess"
@@ -155,7 +156,7 @@ func setupDAG(cfg *config.Config, databaseContext *dbaccess.DatabaseContext, int
 		Interrupt:       interrupt,
 		DatabaseContext: databaseContext,
 		DAGParams:       cfg.NetParams(),
-		TimeSource:      blockdag.NewTimeSource(),
+		TimeSource:      timesource.New(),
 		SigCache:        sigCache,
 		IndexManager:    indexManager,
 		SubnetworkID:    cfg.SubnetworkID,

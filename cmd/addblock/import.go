@@ -6,6 +6,7 @@ package main
 
 import (
 	"encoding/binary"
+	"github.com/kaspanet/kaspad/consensus/timesource"
 	"github.com/kaspanet/kaspad/indexers"
 	"github.com/kaspanet/kaspad/util/mstime"
 	"github.com/pkg/errors"
@@ -302,7 +303,7 @@ func newBlockImporter(r io.ReadSeeker) (*blockImporter, error) {
 
 	dag, err := blockdag.New(&blockdag.Config{
 		DAGParams:    ActiveConfig().NetParams(),
-		TimeSource:   blockdag.NewTimeSource(),
+		TimeSource:   timesource.New(),
 		IndexManager: indexManager,
 	})
 	if err != nil {

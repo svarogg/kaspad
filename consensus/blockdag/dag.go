@@ -10,6 +10,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/multiset"
 	"github.com/kaspanet/kaspad/consensus/notifications"
+	"github.com/kaspanet/kaspad/consensus/timesource"
 	"math"
 	"sort"
 	"sync"
@@ -71,7 +72,7 @@ type BlockDAG struct {
 	// separate mutex.
 	Params          *dagconfig.Params
 	databaseContext *dbaccess.DatabaseContext
-	timeSource      TimeSource
+	timeSource      timesource.TimeSource
 	sigCache        *txscript.SigCache
 	indexManager    IndexManager
 	genesis         *BlockNode
@@ -199,7 +200,7 @@ func New(config *Config) (*BlockDAG, error) {
 		blockCount:                     0,
 		subnetworkID:                   config.SubnetworkID,
 		startTime:                      mstime.Now(),
-		notifier:                       notifications.NewConcensusNotifier(),
+		notifier:                       notifications.New(),
 	}
 
 	dag.virtual = newVirtualBlock(dag, nil)
@@ -2109,7 +2110,7 @@ type Config struct {
 
 	// TimeSource defines the time source to use for things such as
 	// block processing and determining whether or not the DAG is current.
-	TimeSource TimeSource
+	TimeSource timesource.TimeSource
 
 	// SigCache defines a signature cache to use when when validating
 	// signatures. This is typically most useful when individual

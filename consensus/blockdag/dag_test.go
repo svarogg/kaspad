@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/blockstatus"
 	"github.com/kaspanet/kaspad/consensus/common"
+	"github.com/kaspanet/kaspad/consensus/timesource"
 	"math"
 	"os"
 	"path/filepath"
@@ -570,7 +571,7 @@ func TestNew(t *testing.T) {
 	config := &Config{
 		DatabaseContext: databaseContext,
 		DAGParams:       &dagconfig.SimnetParams,
-		TimeSource:      NewTimeSource(),
+		TimeSource:      timesource.New(),
 		SigCache:        txscript.NewSigCache(1000),
 	}
 	_, err = New(config)
@@ -612,7 +613,7 @@ func TestAcceptingInInit(t *testing.T) {
 	config := &Config{
 		DatabaseContext: databaseContext,
 		DAGParams:       &dagconfig.SimnetParams,
-		TimeSource:      NewTimeSource(),
+		TimeSource:      timesource.New(),
 		SigCache:        txscript.NewSigCache(1000),
 	}
 	dag, err := New(config)

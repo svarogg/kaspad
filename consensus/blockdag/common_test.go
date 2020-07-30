@@ -8,6 +8,7 @@ import (
 	"compress/bzip2"
 	"encoding/binary"
 	"github.com/kaspanet/kaspad/consensus/common"
+	"github.com/kaspanet/kaspad/consensus/timesource"
 	"io"
 	"os"
 	"path/filepath"
@@ -99,7 +100,7 @@ func newTestDAG(params *dagconfig.Params) *BlockDAG {
 	index := newBlockIndex(params)
 	dag := &BlockDAG{
 		Params:                         params,
-		timeSource:                     NewTimeSource(),
+		timeSource:                     timesource.New(),
 		difficultyAdjustmentWindowSize: params.DifficultyAdjustmentWindowSize,
 		TimestampDeviationTolerance:    params.TimestampDeviationTolerance,
 		powMaxBits:                     util.BigToCompact(params.PowMax),
@@ -193,6 +194,6 @@ func (fts *fakeTimeSource) Now() mstime.Time {
 	return fts.time
 }
 
-func newFakeTimeSource(fakeTime mstime.Time) TimeSource {
+func newFakeTimeSource(fakeTime mstime.Time) timesource.TimeSource {
 	return &fakeTimeSource{time: fakeTime}
 }
