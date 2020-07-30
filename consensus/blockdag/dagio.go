@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/blockstatus"
+	"github.com/kaspanet/kaspad/consensus/utxo"
 	"io"
 
 	"github.com/kaspanet/kaspad/dagconfig"
@@ -45,47 +46,13 @@ func IsNotInDAGErr(err error) bool {
 	return errors.As(err, &notInDAGErr)
 }
 
-// outpointIndexByteOrder is the byte order for serializing the outpoint index.
-// It uses big endian to ensure that when outpoint is used as database key, the
-// keys will be iterated in an ascending order by the outpoint index.
-var outpointIndexByteOrder = binary.BigEndian
-
-func serializeOutpoint(w io.Writer, outpoint *wire.Outpoint) error {
-	_, err := w.Write(outpoint.TxID[:])
-	if err != nil {
-		return err
-	}
-
-	return binaryserializer.PutUint32(w, outpointIndexByteOrder, outpoint.Index)
-}
-
-var outpointSerializeSize = daghash.TxIDSize + 4
-
-// deserializeOutpoint decodes an outpoint from the passed serialized byte
-// slice into a new wire.Outpoint using a format that is suitable for long-
-// term storage. This format is described in detail above.
-func deserializeOutpoint(r io.Reader) (*wire.Outpoint, error) {
-	outpoint := &wire.Outpoint{}
-	_, err := r.Read(outpoint.TxID[:])
-	if err != nil {
-		return nil, err
-	}
-
-	outpoint.Index, err = binaryserializer.Uint32(r, outpointIndexByteOrder)
-	if err != nil {
-		return nil, err
-	}
-
-	return outpoint, nil
-}
-
 // updateUTXOSet updates the UTXO set in the database based on the provided
 // UTXO diff.
 func updateUTXOSet(dbContext dbaccess.Context, virtualUTXODiff *UTXODiff) error {
-	outpointBuff := bytes.NewBuffer(make([]byte, outpointSerializeSize))
+	outpointBuff := bytes.NewBuffer(make([]byte, utxo.OutpointSerializeSize))
 	for outpoint := range virtualUTXODiff.toRemove {
 		outpointBuff.Reset()
-		err := serializeOutpoint(outpointBuff, &outpoint)
+		err := utxo.SerializeOutpoint(outpointBuff, &outpoint)
 		if err != nil {
 			return err
 		}
@@ -111,7 +78,7 @@ func updateUTXOSet(dbContext dbaccess.Context, virtualUTXODiff *UTXODiff) error 
 		}
 		serializedEntry := utxoEntryBuff.Bytes()
 
-		err = serializeOutpoint(outpointBuff, &outpoint)
+		err = utxo.SerializeOutpoint(outpointBuff, &outpoint)
 		if err != nil {
 			return err
 		}
@@ -330,7 +297,7 @@ func (dag *BlockDAG) initUTXOSet() (fullUTXOCollection utxoCollection, err error
 		if err != nil {
 			return nil, err
 		}
-		outpoint, err := deserializeOutpoint(bytes.NewReader(key.Suffix()))
+		outpoint, err := utxo.DeserializeOutpoint(bytes.NewReader(key.Suffix()))
 		if err != nil {
 			return nil, err
 		}

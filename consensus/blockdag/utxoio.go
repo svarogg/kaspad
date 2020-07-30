@@ -2,6 +2,7 @@ package blockdag
 
 import (
 	"bytes"
+	"github.com/kaspanet/kaspad/consensus/utxo"
 	"github.com/kaspanet/kaspad/util/binaryserializer"
 	"github.com/kaspanet/kaspad/util/daghash"
 	"github.com/kaspanet/kaspad/wire"
@@ -102,7 +103,7 @@ func deserializeUTXOCollection(r io.Reader) (utxoCollection, error) {
 }
 
 func deserializeUTXO(r io.Reader) (*UTXOEntry, *wire.Outpoint, error) {
-	outpoint, err := deserializeOutpoint(r)
+	outpoint, err := utxo.DeserializeOutpoint(r)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -149,7 +150,7 @@ func serializeUTXOCollection(w io.Writer, collection utxoCollection) error {
 
 // serializeUTXO serializes a utxo entry-outpoint pair
 func serializeUTXO(w io.Writer, entry *UTXOEntry, outpoint *wire.Outpoint) error {
-	err := serializeOutpoint(w, outpoint)
+	err := utxo.SerializeOutpoint(w, outpoint)
 	if err != nil {
 		return err
 	}
