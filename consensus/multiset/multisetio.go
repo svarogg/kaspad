@@ -10,8 +10,8 @@ var (
 	byteOrder = binary.LittleEndian
 )
 
-// SerializeMultiset serializes an ECMH multiset.
-func SerializeMultiset(w io.Writer, ms *secp256k1.MultiSet) error {
+// serializeMultiset serializes an ECMH multiset.
+func serializeMultiset(w io.Writer, ms *secp256k1.MultiSet) error {
 	serialized := ms.Serialize()
 	err := binary.Write(w, byteOrder, serialized)
 	if err != nil {
@@ -20,8 +20,8 @@ func SerializeMultiset(w io.Writer, ms *secp256k1.MultiSet) error {
 	return nil
 }
 
-// DeserializeMultiset deserializes an EMCH multiset.
-func DeserializeMultiset(r io.Reader) (*secp256k1.MultiSet, error) {
+// deserializeMultiset deserializes an EMCH multiset.
+func deserializeMultiset(r io.Reader) (*secp256k1.MultiSet, error) {
 	serialized := &secp256k1.SerializedMultiSet{}
 	err := binary.Read(r, byteOrder, serialized[:])
 	if err != nil {

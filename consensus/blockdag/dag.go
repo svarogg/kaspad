@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/blockstatus"
 	"github.com/kaspanet/kaspad/consensus/common"
+	"github.com/kaspanet/kaspad/consensus/multiset"
 	"math"
 	"sort"
 	"sync"
@@ -158,7 +159,7 @@ type BlockDAG struct {
 	lastFinalityPoint *BlockNode
 
 	utxoDiffStore *utxoDiffStore
-	multisetStore *multisetStore
+	multisetStore *multiset.MultisetStore
 
 	reachabilityTree *reachabilityTree
 
@@ -205,7 +206,7 @@ func New(config *Config) (*BlockDAG, error) {
 
 	dag.virtual = newVirtualBlock(dag, nil)
 	dag.utxoDiffStore = newUTXODiffStore(dag)
-	dag.multisetStore = newMultisetStore(dag)
+	dag.multisetStore = multiset.NewMultisetStore()
 	dag.reachabilityTree = newReachabilityTree(dag)
 
 	// Initialize the DAG state from the passed database. When the db
@@ -749,7 +750,7 @@ func (node *BlockNode) selectedParentMultiset(dag *BlockDAG) (*secp256k1.MultiSe
 		return secp256k1.NewMultiset(), nil
 	}
 
-	ms, err := dag.multisetStore.multisetByBlockNode(node.selectedParent)
+	ms, err := dag.multisetStore.MultisetByBlockHash(node.selectedParent.hash)
 	if err != nil {
 		return nil, err
 	}
@@ -809,7 +810,7 @@ func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, virtualUTXODiff *UT
 		return err
 	}
 
-	err = dag.multisetStore.flushToDB(dbTx)
+	err = dag.multisetStore.FlushToDB(dbTx)
 	if err != nil {
 		return err
 	}
@@ -865,7 +866,7 @@ func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, virtualUTXODiff *UT
 	dag.utxoDiffStore.clearDirtyEntries()
 	dag.utxoDiffStore.clearOldEntries()
 	dag.reachabilityTree.store.clearDirtyEntries()
-	dag.multisetStore.clearNewEntries()
+	dag.multisetStore.ClearNewEntries()
 
 	return nil
 }
@@ -1105,7 +1106,7 @@ func (dag *BlockDAG) applyDAGChanges(node *BlockNode, newBlockPastUTXO UTXOSet,
 		return nil, nil, errors.Wrap(err, "failed adding block to the reachability tree")
 	}
 
-	dag.multisetStore.setMultiset(node, newBlockMultiset)
+	dag.multisetStore.SetMultiset(node.hash, newBlockMultiset)
 
 	if err = node.updateParents(dag, newBlockPastUTXO); err != nil {
 		return nil, nil, errors.Wrapf(err, "failed updating parents of %s", node)
