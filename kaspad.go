@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/kaspanet/kaspad/addressmanager"
 	"github.com/kaspanet/kaspad/consensus/timesource"
+	"github.com/kaspanet/kaspad/consensus/utxo"
 	"sync/atomic"
 
 	"github.com/kaspanet/kaspad/dbaccess"
@@ -190,7 +191,7 @@ func setupMempool(cfg *config.Config, dag *blockdag.BlockDAG, sigCache *txscript
 			MinRelayTxFee:   cfg.MinRelayTxFee,
 			MaxTxVersion:    1,
 		},
-		CalcSequenceLockNoLock: func(tx *util.Tx, utxoSet blockdag.UTXOSet) (*blockdag.SequenceLock, error) {
+		CalcSequenceLockNoLock: func(tx *util.Tx, utxoSet utxo.UTXOSet) (*blockdag.SequenceLock, error) {
 			return dag.CalcSequenceLockNoLock(tx, utxoSet, true)
 		},
 		IsDeploymentActive: dag.IsDeploymentActive,

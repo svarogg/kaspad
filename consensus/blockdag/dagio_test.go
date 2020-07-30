@@ -7,6 +7,7 @@ package blockdag
 import (
 	"bytes"
 	"encoding/hex"
+	"github.com/kaspanet/kaspad/consensus/utxo"
 	"github.com/pkg/errors"
 	"reflect"
 	"testing"
@@ -55,22 +56,22 @@ func TestUTXOSerialization(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		entry      *UTXOEntry
+		entry      *utxo.UTXOEntry
 		serialized []byte
 	}{
 		{
 			name: "blue score 1, coinbase",
-			entry: &UTXOEntry{
+			entry: &utxo.UTXOEntry{
 				amount:         5000000000,
 				scriptPubKey:   hexToBytes("410496b538e853519c726a2c91e61ec11600ae1390813a627c66fb8be7947be63c52da7589379515d4e0a604f8141781e62294721166bf621e73a82cbf2342c858eeac"),
 				blockBlueScore: 1,
-				packedFlags:    tfCoinbase,
+				packedFlags:    utxo.tfCoinbase,
 			},
 			serialized: hexToBytes("01000000000000000100f2052a0100000043410496b538e853519c726a2c91e61ec11600ae1390813a627c66fb8be7947be63c52da7589379515d4e0a604f8141781e62294721166bf621e73a82cbf2342c858eeac"),
 		},
 		{
 			name: "blue score 100001, not coinbase",
-			entry: &UTXOEntry{
+			entry: &utxo.UTXOEntry{
 				amount:         1000000,
 				scriptPubKey:   hexToBytes("76a914ee8bd501094a7d5ca318da2506de35e1cb025ddc88ac"),
 				blockBlueScore: 100001,

@@ -1,4 +1,4 @@
-package blockdag
+package utxo
 
 import (
 	"reflect"

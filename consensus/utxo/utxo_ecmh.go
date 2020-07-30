@@ -1,4 +1,4 @@
-package blockdag
+package utxo
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 
 func addUTXOToMultiset(ms *secp256k1.MultiSet, entry *UTXOEntry, outpoint *wire.Outpoint) (*secp256k1.MultiSet, error) {
 	w := &bytes.Buffer{}
-	err := serializeUTXO(w, entry, outpoint)
+	err := SerializeUTXO(w, entry, outpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -18,7 +18,7 @@ func addUTXOToMultiset(ms *secp256k1.MultiSet, entry *UTXOEntry, outpoint *wire.
 
 func removeUTXOFromMultiset(ms *secp256k1.MultiSet, entry *UTXOEntry, outpoint *wire.Outpoint) (*secp256k1.MultiSet, error) {
 	w := &bytes.Buffer{}
-	err := serializeUTXO(w, entry, outpoint)
+	err := SerializeUTXO(w, entry, outpoint)
 	if err != nil {
 		return nil, err
 	}

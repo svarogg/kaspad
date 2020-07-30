@@ -2,6 +2,7 @@ package blockdag
 
 import (
 	"bytes"
+	"github.com/kaspanet/kaspad/consensus/utxo"
 
 	"github.com/kaspanet/kaspad/dbaccess"
 	"github.com/kaspanet/kaspad/util/daghash"
@@ -9,7 +10,7 @@ import (
 )
 
 type blockUTXODiffData struct {
-	diff      *UTXODiff
+	diff      *utxo.UTXODiff
 	diffChild *BlockNode
 }
 
@@ -29,7 +30,7 @@ func newUTXODiffStore(dag *BlockDAG) *utxoDiffStore {
 	}
 }
 
-func (diffStore *utxoDiffStore) setBlockDiff(node *BlockNode, diff *UTXODiff) error {
+func (diffStore *utxoDiffStore) setBlockDiff(node *BlockNode, diff *utxo.UTXODiff) error {
 	diffStore.mtx.HighPriorityWriteLock()
 	defer diffStore.mtx.HighPriorityWriteUnlock()
 	// load the diff data from DB to diffStore.loaded
@@ -96,7 +97,7 @@ func (diffStore *utxoDiffStore) diffDataByBlockNode(node *BlockNode) (*blockUTXO
 	return diffData, nil
 }
 
-func (diffStore *utxoDiffStore) diffByNode(node *BlockNode) (*UTXODiff, error) {
+func (diffStore *utxoDiffStore) diffByNode(node *BlockNode) (*utxo.UTXODiff, error) {
 	diffStore.mtx.HighPriorityReadLock()
 	defer diffStore.mtx.HighPriorityReadUnlock()
 	diffData, err := diffStore.diffDataByBlockNode(node)

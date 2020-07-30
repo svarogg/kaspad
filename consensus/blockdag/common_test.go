@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/timesource"
+	"github.com/kaspanet/kaspad/consensus/utxo"
 	"io"
 	"os"
 	"path/filepath"
@@ -26,7 +27,7 @@ import (
 )
 
 // loadUTXOSet returns a utxo view loaded from a file.
-func loadUTXOSet(filename string) (UTXOSet, error) {
+func loadUTXOSet(filename string) (utxo.UTXOSet, error) {
 	// The utxostore file format is:
 	// <tx hash><output index><serialized utxo len><serialized utxo>
 	//
@@ -48,7 +49,7 @@ func loadUTXOSet(filename string) (UTXOSet, error) {
 	}
 	defer fi.Close()
 
-	utxoSet := NewFullUTXOSet()
+	utxoSet := utxo.NewFullUTXOSet()
 	for {
 		// Tx ID of the utxo entry.
 		var txID daghash.TxID

@@ -6,6 +6,7 @@ import (
 	"compress/bzip2"
 	"encoding/binary"
 	"github.com/kaspanet/kaspad/consensus/timesource"
+	"github.com/kaspanet/kaspad/consensus/utxo"
 	"io"
 	"io/ioutil"
 	"os"
@@ -174,7 +175,7 @@ func GetVirtualFromParentsForTest(dag *BlockDAG, parentHashes []*daghash.Hash) (
 	if err != nil {
 		return nil, err
 	}
-	diffUTXO := pastUTXO.clone().(*DiffUTXOSet)
+	diffUTXO := pastUTXO.clone().(*utxo.DiffUTXOSet)
 	err = diffUTXO.meldToBase()
 	if err != nil {
 		return nil, err

@@ -8,6 +8,7 @@ import (
 	"container/list"
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/common"
+	"github.com/kaspanet/kaspad/consensus/utxo"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -57,7 +58,7 @@ type Config struct {
 	// CalcSequenceLockNoLock defines the function to use in order to generate
 	// the current sequence lock for the given transaction using the passed
 	// utxo set.
-	CalcSequenceLockNoLock func(*util.Tx, blockdag.UTXOSet) (*blockdag.SequenceLock, error)
+	CalcSequenceLockNoLock func(*util.Tx, utxo.UTXOSet) (*blockdag.SequenceLock, error)
 
 	// IsDeploymentActive returns true if the target deploymentID is
 	// active, and false otherwise. The mempool uses this function to gauge
@@ -141,7 +142,7 @@ type TxPool struct {
 	// to on an unconditional timer.
 	nextExpireScan mstime.Time
 
-	mpUTXOSet blockdag.UTXOSet
+	mpUTXOSet utxo.UTXOSet
 }
 
 // Ensure the TxPool type implements the mining.TxSource interface.
@@ -446,7 +447,7 @@ func (mp *TxPool) HaveTransaction(txID *daghash.TxID) bool {
 //
 // This function MUST be called with the mempool lock held (for writes).
 func (mp *TxPool) removeTransactions(txs []*util.Tx) error {
-	diff := blockdag.NewUTXODiff()
+	diff := utxo.NewUTXODiff()
 
 	for _, tx := range txs {
 		txID := tx.ID()
@@ -494,7 +495,7 @@ func (mp *TxPool) removeTransaction(tx *util.Tx, removeDependants bool, restoreI
 		return nil
 	}
 
-	diff := blockdag.NewUTXODiff()
+	diff := utxo.NewUTXODiff()
 	err := mp.removeTransactionWithDiff(tx, diff, restoreInputs)
 	if err != nil {
 		return err
@@ -514,7 +515,7 @@ func (mp *TxPool) removeTransaction(tx *util.Tx, removeDependants bool, restoreI
 // be withDiff'd against the mempool UTXOSet to update it.
 //
 // This method assumes that tx exists in the mempool.
-func (mp *TxPool) removeTransactionWithDiff(tx *util.Tx, diff *blockdag.UTXODiff, restoreInputs bool) error {
+func (mp *TxPool) removeTransactionWithDiff(tx *util.Tx, diff *utxo.UTXODiff, restoreInputs bool) error {
 	txID := tx.ID()
 
 	err := mp.removeTransactionUTXOEntriesFromDiff(tx, diff)
@@ -540,7 +541,7 @@ func (mp *TxPool) removeTransactionWithDiff(tx *util.Tx, diff *blockdag.UTXODiff
 }
 
 // removeTransactionUTXOEntriesFromDiff removes tx's UTXOEntries from the diff
-func (mp *TxPool) removeTransactionUTXOEntriesFromDiff(tx *util.Tx, diff *blockdag.UTXODiff) error {
+func (mp *TxPool) removeTransactionUTXOEntriesFromDiff(tx *util.Tx, diff *utxo.UTXODiff) error {
 	for idx := range tx.MsgTx().TxOut {
 		outpoint := *wire.NewOutpoint(tx.ID(), uint32(idx))
 		entry, exists := mp.mpUTXOSet.Get(outpoint)
@@ -556,12 +557,12 @@ func (mp *TxPool) removeTransactionUTXOEntriesFromDiff(tx *util.Tx, diff *blockd
 
 // markTransactionOutputsUnspent updates the mempool so that tx's TXOs are unspent
 // Iff restoreInputs is true then the inputs are restored back into the supplied diff
-func (mp *TxPool) markTransactionOutputsUnspent(tx *util.Tx, diff *blockdag.UTXODiff, restoreInputs bool) error {
+func (mp *TxPool) markTransactionOutputsUnspent(tx *util.Tx, diff *utxo.UTXODiff, restoreInputs bool) error {
 	for _, txIn := range tx.MsgTx().TxIn {
 		if restoreInputs {
 			if prevTxDesc, exists := mp.pool[txIn.PreviousOutpoint.TxID]; exists {
 				prevOut := prevTxDesc.Tx.MsgTx().TxOut[txIn.PreviousOutpoint.Index]
-				entry := blockdag.NewUTXOEntry(prevOut, false, blockdag.UnacceptedBlueScore)
+				entry := utxo.NewUTXOEntry(prevOut, false, utxo.UnacceptedBlueScore)
 				err := diff.AddEntry(txIn.PreviousOutpoint, entry)
 				if err != nil {
 					return err
@@ -569,7 +570,7 @@ func (mp *TxPool) markTransactionOutputsUnspent(tx *util.Tx, diff *blockdag.UTXO
 			}
 			if prevTxDesc, exists := mp.depends[txIn.PreviousOutpoint.TxID]; exists {
 				prevOut := prevTxDesc.Tx.MsgTx().TxOut[txIn.PreviousOutpoint.Index]
-				entry := blockdag.NewUTXOEntry(prevOut, false, blockdag.UnacceptedBlueScore)
+				entry := utxo.NewUTXOEntry(prevOut, false, utxo.UnacceptedBlueScore)
 				err := diff.AddEntry(txIn.PreviousOutpoint, entry)
 				if err != nil {
 					return err
@@ -697,7 +698,7 @@ func (mp *TxPool) addTransaction(tx *util.Tx, fee uint64, parentsInPool []*wire.
 	for _, txIn := range tx.MsgTx().TxIn {
 		mp.outpoints[txIn.PreviousOutpoint] = tx
 	}
-	if isAccepted, err := mp.mpUTXOSet.AddTx(tx.MsgTx(), blockdag.UnacceptedBlueScore); err != nil {
+	if isAccepted, err := mp.mpUTXOSet.AddTx(tx.MsgTx(), utxo.UnacceptedBlueScore); err != nil {
 		return nil, err
 	} else if !isAccepted {
 		return nil, errors.Errorf("unexpectedly failed to add tx %s to the mempool utxo set", tx.ID())
@@ -1386,7 +1387,7 @@ func (mp *TxPool) HandleNewBlock(block *util.Block) ([]*util.Tx, error) {
 // transactions until they are mined into a block.
 func New(cfg *Config) *TxPool {
 	virtualUTXO := cfg.DAG.UTXOSet()
-	mpUTXO := blockdag.NewDiffUTXOSet(virtualUTXO, blockdag.NewUTXODiff())
+	mpUTXO := utxo.NewDiffUTXOSet(virtualUTXO, utxo.NewUTXODiff())
 	return &TxPool{
 		cfg:            *cfg,
 		pool:           make(map[daghash.TxID]*TxDesc),

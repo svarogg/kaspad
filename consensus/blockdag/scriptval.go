@@ -7,6 +7,7 @@ package blockdag
 import (
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/common"
+	"github.com/kaspanet/kaspad/consensus/utxo"
 	"runtime"
 	"time"
 
@@ -29,7 +30,7 @@ type txValidator struct {
 	validateChan chan *txValidateItem
 	quitChan     chan struct{}
 	resultChan   chan error
-	utxoSet      UTXOSet
+	utxoSet      utxo.UTXOSet
 	flags        txscript.ScriptFlags
 	sigCache     *txscript.SigCache
 }
@@ -166,7 +167,7 @@ func (v *txValidator) Validate(items []*txValidateItem) error {
 
 // newTxValidator returns a new instance of txValidator to be used for
 // validating transaction scripts asynchronously.
-func newTxValidator(utxoSet UTXOSet, flags txscript.ScriptFlags, sigCache *txscript.SigCache) *txValidator {
+func newTxValidator(utxoSet utxo.UTXOSet, flags txscript.ScriptFlags, sigCache *txscript.SigCache) *txValidator {
 	return &txValidator{
 		validateChan: make(chan *txValidateItem),
 		quitChan:     make(chan struct{}),
@@ -179,7 +180,7 @@ func newTxValidator(utxoSet UTXOSet, flags txscript.ScriptFlags, sigCache *txscr
 
 // ValidateTransactionScripts validates the scripts for the passed transaction
 // using multiple goroutines.
-func ValidateTransactionScripts(tx *util.Tx, utxoSet UTXOSet, flags txscript.ScriptFlags, sigCache *txscript.SigCache) error {
+func ValidateTransactionScripts(tx *util.Tx, utxoSet utxo.UTXOSet, flags txscript.ScriptFlags, sigCache *txscript.SigCache) error {
 	// Collect all of the transaction inputs and required information for
 	// validation.
 	txIns := tx.MsgTx().TxIn
@@ -200,7 +201,7 @@ func ValidateTransactionScripts(tx *util.Tx, utxoSet UTXOSet, flags txscript.Scr
 
 // checkBlockScripts executes and validates the scripts for all transactions in
 // the passed block using multiple goroutines.
-func checkBlockScripts(block *BlockNode, utxoSet UTXOSet, transactions []*util.Tx, scriptFlags txscript.ScriptFlags, sigCache *txscript.SigCache) error {
+func checkBlockScripts(block *BlockNode, utxoSet utxo.UTXOSet, transactions []*util.Tx, scriptFlags txscript.ScriptFlags, sigCache *txscript.SigCache) error {
 	// Collect all of the transaction inputs and required information for
 	// validation for all transactions in the block into a single slice.
 	numInputs := 0

@@ -9,6 +9,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/blockstatus"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/timesource"
+	utxo2 "github.com/kaspanet/kaspad/consensus/utxo"
 	"math"
 	"os"
 	"path/filepath"
@@ -260,7 +261,7 @@ func TestCalcSequenceLock(t *testing.T) {
 	// age of 4 blocks.
 	msgTx := wire.NewNativeMsgTx(wire.TxVersion, nil, []*wire.TxOut{{ScriptPubKey: nil, Value: 10}})
 	targetTx := util.NewTx(msgTx)
-	utxoSet := NewFullUTXOSet()
+	utxoSet := utxo2.NewFullUTXOSet()
 	blueScore := uint64(numBlocksToGenerate) - 4
 	if isAccepted, err := utxoSet.AddTx(targetTx.MsgTx(), blueScore); err != nil {
 		t.Fatalf("AddTx unexpectedly failed. Error: %s", err)
@@ -298,7 +299,7 @@ func TestCalcSequenceLock(t *testing.T) {
 		TxID:  *unConfTx.TxID(),
 		Index: 0,
 	}
-	if isAccepted, err := utxoSet.AddTx(unConfTx, UnacceptedBlueScore); err != nil {
+	if isAccepted, err := utxoSet.AddTx(unConfTx, utxo2.UnacceptedBlueScore); err != nil {
 		t.Fatalf("AddTx unexpectedly failed. Error: %s", err)
 	} else if !isAccepted {
 		t.Fatalf("AddTx unexpectedly didn't add tx %s", unConfTx.TxID())
@@ -307,7 +308,7 @@ func TestCalcSequenceLock(t *testing.T) {
 	tests := []struct {
 		name    string
 		tx      *wire.MsgTx
-		utxoSet UTXOSet
+		utxoSet utxo2.UTXOSet
 		mempool bool
 		want    *SequenceLock
 	}{
@@ -953,7 +954,7 @@ func testFinalizeNodesBelowFinalityPoint(t *testing.T, deleteDiffData bool) {
 		dag.index.AddNode(node)
 
 		// Put dummy diff data in dag.utxoDiffStore
-		err := dag.utxoDiffStore.setBlockDiff(node, NewUTXODiff())
+		err := dag.utxoDiffStore.setBlockDiff(node, utxo2.NewUTXODiff())
 		if err != nil {
 			t.Fatalf("setBlockDiff: %s", err)
 		}
@@ -1333,27 +1334,27 @@ func TestUTXOCommitment(t *testing.T) {
 		t.Fatalf("TestUTXOCommitment: BlockNode for block D not found")
 	}
 	blockDPastUTXO, _, _, _ := dag.pastUTXO(blockNodeD)
-	blockDPastDiffUTXOSet := blockDPastUTXO.(*DiffUTXOSet)
+	blockDPastDiffUTXOSet := blockDPastUTXO.(*utxo2.DiffUTXOSet)
 
 	// Build a Multiset for block D
 	multiset := secp256k1.NewMultiset()
 	for outpoint, entry := range blockDPastDiffUTXOSet.base.utxoCollection {
 		var err error
-		multiset, err = addUTXOToMultiset(multiset, entry, &outpoint)
+		multiset, err = utxo2.addUTXOToMultiset(multiset, entry, &outpoint)
 		if err != nil {
 			t.Fatalf("TestUTXOCommitment: addUTXOToMultiset unexpectedly failed")
 		}
 	}
 	for outpoint, entry := range blockDPastDiffUTXOSet.UTXODiff.toAdd {
 		var err error
-		multiset, err = addUTXOToMultiset(multiset, entry, &outpoint)
+		multiset, err = utxo2.addUTXOToMultiset(multiset, entry, &outpoint)
 		if err != nil {
 			t.Fatalf("TestUTXOCommitment: addUTXOToMultiset unexpectedly failed")
 		}
 	}
 	for outpoint, entry := range blockDPastDiffUTXOSet.UTXODiff.toRemove {
 		var err error
-		multiset, err = removeUTXOFromMultiset(multiset, entry, &outpoint)
+		multiset, err = utxo2.removeUTXOFromMultiset(multiset, entry, &outpoint)
 		if err != nil {
 			t.Fatalf("TestUTXOCommitment: removeUTXOFromMultiset unexpectedly failed")
 		}

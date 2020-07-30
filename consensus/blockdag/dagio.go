@@ -46,53 +46,6 @@ func IsNotInDAGErr(err error) bool {
 	return errors.As(err, &notInDAGErr)
 }
 
-// updateUTXOSet updates the UTXO set in the database based on the provided
-// UTXO diff.
-func updateUTXOSet(dbContext dbaccess.Context, virtualUTXODiff *UTXODiff) error {
-	outpointBuff := bytes.NewBuffer(make([]byte, utxo.OutpointSerializeSize))
-	for outpoint := range virtualUTXODiff.toRemove {
-		outpointBuff.Reset()
-		err := utxo.SerializeOutpoint(outpointBuff, &outpoint)
-		if err != nil {
-			return err
-		}
-
-		key := outpointBuff.Bytes()
-		err = dbaccess.RemoveFromUTXOSet(dbContext, key)
-		if err != nil {
-			return err
-		}
-	}
-
-	// We are preallocating for P2PKH entries because they are the most common ones.
-	// If we have entries with a compressed script bigger than P2PKH's, the buffer will grow.
-	utxoEntryBuff := bytes.NewBuffer(make([]byte, p2pkhUTXOEntrySerializeSize))
-
-	for outpoint, entry := range virtualUTXODiff.toAdd {
-		utxoEntryBuff.Reset()
-		outpointBuff.Reset()
-		// Serialize and store the UTXO entry.
-		err := serializeUTXOEntry(utxoEntryBuff, entry)
-		if err != nil {
-			return err
-		}
-		serializedEntry := utxoEntryBuff.Bytes()
-
-		err = utxo.SerializeOutpoint(outpointBuff, &outpoint)
-		if err != nil {
-			return err
-		}
-
-		key := outpointBuff.Bytes()
-		err = dbaccess.AddToUTXOSet(dbContext, key, serializedEntry)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 type dagState struct {
 	TipHashes         []*daghash.Hash
 	LastFinalityPoint *daghash.Hash
@@ -170,12 +123,6 @@ func (dag *BlockDAG) initDAGState() error {
 		return err
 	}
 
-	log.Debugf("Loading UTXO set...")
-	fullUTXOCollection, err := dag.initUTXOSet()
-	if err != nil {
-		return err
-	}
-
 	log.Debugf("Loading reachability data...")
 	err = dag.reachabilityTree.init(dag.databaseContext)
 	if err != nil {
@@ -188,8 +135,8 @@ func (dag *BlockDAG) initDAGState() error {
 		return err
 	}
 
-	log.Debugf("Applying the loaded utxoCollection to the virtual block...")
-	dag.virtual.utxoSet, err = newFullUTXOSetFromUTXOCollection(fullUTXOCollection)
+	log.Debugf("Loading UTXO set...")
+	dag.virtual.utxoSet, err = utxo.InitUTXOSet(dag.databaseContext)
 	if err != nil {
 		return errors.Wrap(err, "Error loading UTXOSet")
 	}
@@ -281,41 +228,6 @@ func (dag *BlockDAG) initBlockIndex() (unprocessedBlockNodes []*BlockNode, err e
 		dag.blockCount++
 	}
 	return unprocessedBlockNodes, nil
-}
-
-func (dag *BlockDAG) initUTXOSet() (fullUTXOCollection utxoCollection, err error) {
-	fullUTXOCollection = make(utxoCollection)
-	cursor, err := dbaccess.UTXOSetCursor(dag.databaseContext)
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close()
-
-	for cursor.Next() {
-		// Deserialize the outpoint
-		key, err := cursor.Key()
-		if err != nil {
-			return nil, err
-		}
-		outpoint, err := utxo.DeserializeOutpoint(bytes.NewReader(key.Suffix()))
-		if err != nil {
-			return nil, err
-		}
-
-		// Deserialize the utxo entry
-		value, err := cursor.Value()
-		if err != nil {
-			return nil, err
-		}
-		entry, err := deserializeUTXOEntry(bytes.NewReader(value))
-		if err != nil {
-			return nil, err
-		}
-
-		fullUTXOCollection[*outpoint] = entry
-	}
-
-	return fullUTXOCollection, nil
 }
 
 func (dag *BlockDAG) initVirtualBlockTips(state *dagState) error {

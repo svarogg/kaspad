@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/common"
+	"github.com/kaspanet/kaspad/consensus/utxo"
 	"math"
 	"reflect"
 	"runtime"
@@ -72,7 +73,7 @@ func (s *fakeDAG) SetMedianTimePast(mtp mstime.Time) {
 }
 
 func calcSequenceLock(tx *util.Tx,
-	utxoSet blockdag.UTXOSet) (*blockdag.SequenceLock, error) {
+	utxoSet utxo.UTXOSet) (*blockdag.SequenceLock, error) {
 
 	return &blockdag.SequenceLock{
 		Milliseconds:   -1,
@@ -702,7 +703,7 @@ func TestProcessTransaction(t *testing.T) {
 
 	// Checks that transactions get rejected from mempool if sequence lock is not active
 	harness.txPool.cfg.CalcSequenceLockNoLock = func(tx *util.Tx,
-		view blockdag.UTXOSet) (*blockdag.SequenceLock, error) {
+		view utxo.UTXOSet) (*blockdag.SequenceLock, error) {
 
 		return &blockdag.SequenceLock{
 			Milliseconds:   math.MaxInt64,

@@ -7,6 +7,7 @@ package blockdag
 import (
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/common"
+	"github.com/kaspanet/kaspad/consensus/utxo"
 	"github.com/kaspanet/kaspad/util/mstime"
 	"math"
 	"sort"
@@ -291,7 +292,7 @@ func (dag *BlockDAG) checkProofOfWork(header *wire.BlockHeader, flags BehaviorFl
 // ValidateTxMass makes sure that the given transaction's mass does not exceed
 // the maximum allowed limit. Currently, it is equivalent to the block mass limit.
 // See CalcTxMass for further details.
-func ValidateTxMass(tx *util.Tx, utxoSet UTXOSet) error {
+func ValidateTxMass(tx *util.Tx, utxoSet utxo.UTXOSet) error {
 	txMass, err := CalcTxMassFromUTXOSet(tx, utxoSet)
 	if err != nil {
 		return err
@@ -304,14 +305,14 @@ func ValidateTxMass(tx *util.Tx, utxoSet UTXOSet) error {
 	return nil
 }
 
-func validateBlockMass(pastUTXO UTXOSet, transactions []*util.Tx) error {
+func validateBlockMass(pastUTXO utxo.UTXOSet, transactions []*util.Tx) error {
 	_, err := CalcBlockMass(pastUTXO, transactions)
 	return err
 }
 
 // CalcBlockMass sums up and returns the "mass" of a block. See CalcTxMass
 // for further details.
-func CalcBlockMass(pastUTXO UTXOSet, transactions []*util.Tx) (uint64, error) {
+func CalcBlockMass(pastUTXO utxo.UTXOSet, transactions []*util.Tx) (uint64, error) {
 	totalMass := uint64(0)
 	for _, tx := range transactions {
 		txMass, err := CalcTxMassFromUTXOSet(tx, pastUTXO)
@@ -335,7 +336,7 @@ func CalcBlockMass(pastUTXO UTXOSet, transactions []*util.Tx) (uint64, error) {
 // UTXO set in its past.
 //
 // See CalcTxMass for more details.
-func CalcTxMassFromUTXOSet(tx *util.Tx, utxoSet UTXOSet) (uint64, error) {
+func CalcTxMassFromUTXOSet(tx *util.Tx, utxoSet utxo.UTXOSet) (uint64, error) {
 	if tx.IsCoinBase() {
 		return CalcTxMass(tx, nil), nil
 	}
@@ -763,7 +764,7 @@ func (dag *BlockDAG) validateAllTxsFinalized(block *util.Block, node *BlockNode,
 // For more details, see http://r6.ca/blog/20120206T005236Z.html.
 //
 // This function MUST be called with the dag state lock held (for reads).
-func ensureNoDuplicateTx(utxoSet UTXOSet, transactions []*util.Tx) error {
+func ensureNoDuplicateTx(utxoSet utxo.UTXOSet, transactions []*util.Tx) error {
 	// Fetch utxos for all of the transaction ouputs in this block.
 	// Typically, there will not be any utxos for any of the outputs.
 	fetchSet := make(map[wire.Outpoint]struct{})
@@ -798,7 +799,7 @@ func ensureNoDuplicateTx(utxoSet UTXOSet, transactions []*util.Tx) error {
 //
 // NOTE: The transaction MUST have already been sanity checked with the
 // CheckTransactionSanity function prior to calling this function.
-func CheckTransactionInputsAndCalulateFee(tx *util.Tx, txBlueScore uint64, utxoSet UTXOSet, dagParams *dagconfig.Params, fastAdd bool) (
+func CheckTransactionInputsAndCalulateFee(tx *util.Tx, txBlueScore uint64, utxoSet utxo.UTXOSet, dagParams *dagconfig.Params, fastAdd bool) (
 	txFeeInSompi uint64, err error) {
 
 	// Coinbase transactions have no standard inputs to validate.
@@ -875,7 +876,7 @@ func CheckTransactionInputsAndCalulateFee(tx *util.Tx, txBlueScore uint64, utxoS
 	return txFeeInSompi, nil
 }
 
-func validateCoinbaseMaturity(dagParams *dagconfig.Params, entry *UTXOEntry, txBlueScore uint64, txIn *wire.TxIn) error {
+func validateCoinbaseMaturity(dagParams *dagconfig.Params, entry *utxo.UTXOEntry, txBlueScore uint64, txIn *wire.TxIn) error {
 	// Ensure the transaction is not spending coins which have not
 	// yet reached the required coinbase maturity.
 	if entry.IsCoinbase() {
@@ -906,7 +907,7 @@ func validateCoinbaseMaturity(dagParams *dagconfig.Params, entry *UTXOEntry, txB
 // It also returns the feeAccumulator for this block.
 //
 // This function MUST be called with the dag state lock held (for writes).
-func (dag *BlockDAG) checkConnectToPastUTXO(block *BlockNode, pastUTXO UTXOSet,
+func (dag *BlockDAG) checkConnectToPastUTXO(block *BlockNode, pastUTXO utxo.UTXOSet,
 	transactions []*util.Tx, fastAdd bool) (compactFeeData, error) {
 
 	if !fastAdd {

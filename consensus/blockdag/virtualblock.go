@@ -5,6 +5,7 @@
 package blockdag
 
 import (
+	"github.com/kaspanet/kaspad/consensus/utxo"
 	"github.com/kaspanet/kaspad/util/daghash"
 	"sync"
 )
@@ -13,7 +14,7 @@ import (
 type virtualBlock struct {
 	mtx     sync.Mutex
 	dag     *BlockDAG
-	utxoSet *FullUTXOSet
+	utxoSet *utxo.FullUTXOSet
 	BlockNode
 
 	// selectedParentChainSet is a block set that includes all the blocks
@@ -31,7 +32,7 @@ func newVirtualBlock(dag *BlockDAG, tips BlockNodeSet) *virtualBlock {
 	// The mutex is intentionally not held since this is a constructor.
 	var virtual virtualBlock
 	virtual.dag = dag
-	virtual.utxoSet = NewFullUTXOSet()
+	virtual.utxoSet = utxo.NewFullUTXOSet()
 	virtual.selectedParentChainSet = NewBlockNodeSet()
 	virtual.selectedParentChainSlice = nil
 	virtual.setTips(tips)
