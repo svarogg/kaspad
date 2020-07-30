@@ -54,4 +54,4 @@ violations through type assertions. In addition, callers can programmatically
 determine the specific rule violation by examining the ErrorCode field of the
 type asserted blockdag.RuleError.
 */
-package blockdag
+package consensus
