@@ -2,7 +2,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package blockdag
+package scriptval
 
 import (
 	"fmt"
@@ -200,9 +200,9 @@ func ValidateTransactionScripts(tx *util.Tx, utxoSet utxo.UTXOSet, flags txscrip
 	return validator.Validate(txValItems)
 }
 
-// checkBlockScripts executes and validates the scripts for all transactions in
+// CheckBlockScripts executes and validates the scripts for all transactions in
 // the passed block using multiple goroutines.
-func checkBlockScripts(blockHash *daghash.Hash, utxoSet utxo.UTXOSet, transactions []*util.Tx, scriptFlags txscript.ScriptFlags, sigCache *txscript.SigCache) error {
+func CheckBlockScripts(blockHash *daghash.Hash, utxoSet utxo.UTXOSet, transactions []*util.Tx, scriptFlags txscript.ScriptFlags, sigCache *txscript.SigCache) error {
 	// Collect all of the transaction inputs and required information for
 	// validation for all transactions in the block into a single slice.
 	numInputs := 0

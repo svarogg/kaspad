@@ -2,7 +2,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package blockdag
+package scriptval
 
 import (
 	"fmt"
@@ -44,12 +44,8 @@ func TestCheckBlockScripts(t *testing.T) {
 		return
 	}
 
-	node := &BlockNode{
-		hash: blocks[0].Hash(),
-	}
-
 	scriptFlags := txscript.ScriptNoFlags
-	err = checkBlockScripts(node.hash, utxoSet, blocks[0].Transactions(), scriptFlags, nil)
+	err = CheckBlockScripts(blocks[0].Hash(), utxoSet, blocks[0].Transactions(), scriptFlags, nil)
 	if err != nil {
 		t.Errorf("Transaction script validation failed: %v\n", err)
 		return
