@@ -379,6 +379,14 @@ func (d *UTXODiff) RemoveEntry(outpoint wire.Outpoint, entry *UTXOEntry) error {
 	return nil
 }
 
+func (d *UTXODiff) ToAdd() UTXOCollection {
+	return d.toAdd
+}
+
+func (d *UTXODiff) ToRemove() UTXOCollection {
+	return d.toRemove
+}
+
 func (d UTXODiff) String() string {
 	return fmt.Sprintf("toAdd: %s; toRemove: %s", d.toAdd, d.toRemove)
 }

@@ -1345,14 +1345,14 @@ func TestUTXOCommitment(t *testing.T) {
 			t.Fatalf("TestUTXOCommitment: addUTXOToMultiset unexpectedly failed")
 		}
 	}
-	for outpoint, entry := range blockDPastDiffUTXOSet.UTXODiff.toAdd {
+	for outpoint, entry := range blockDPastDiffUTXOSet.UTXODiff.ToAdd() {
 		var err error
 		multiset, err = utxo.AddUTXOToMultiset(multiset, entry, &outpoint)
 		if err != nil {
 			t.Fatalf("TestUTXOCommitment: addUTXOToMultiset unexpectedly failed")
 		}
 	}
-	for outpoint, entry := range blockDPastDiffUTXOSet.UTXODiff.toRemove {
+	for outpoint, entry := range blockDPastDiffUTXOSet.UTXODiff.ToRemove() {
 		var err error
 		multiset, err = utxo.RemoveUTXOFromMultiset(multiset, entry, &outpoint)
 		if err != nil {
