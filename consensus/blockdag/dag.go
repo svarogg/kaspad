@@ -1238,7 +1238,7 @@ func genesisPastUTXO(virtual *virtualBlock) utxo.UTXOSet {
 	// set by creating a diff UTXO set with the virtual UTXO
 	// set, and adding all of its entries in toRemove
 	diff := utxo.NewUTXODiff()
-	for outpoint, entry := range virtual.utxoSet.utxoCollection {
+	for outpoint, entry := range virtual.utxoSet.UTXOCollection {
 		diff.toRemove[outpoint] = entry
 	}
 	genesisPastUTXO := utxo.UTXOSet(utxo.NewDiffUTXOSet(virtual.utxoSet, diff))

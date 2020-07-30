@@ -68,12 +68,12 @@ func DeserializeUTXODiff(r io.Reader) (*UTXODiff, error) {
 	return diff, nil
 }
 
-func deserializeUTXOCollection(r io.Reader) (utxoCollection, error) {
+func deserializeUTXOCollection(r io.Reader) (UTXOCollection, error) {
 	count, err := wire.ReadVarInt(r)
 	if err != nil {
 		return nil, err
 	}
-	collection := utxoCollection{}
+	collection := UTXOCollection{}
 	for i := uint64(0); i < count; i++ {
 		utxoEntry, outpoint, err := deserializeUTXO(r)
 		if err != nil {
@@ -113,10 +113,10 @@ func SerializeUTXODiff(w io.Writer, diff *UTXODiff) error {
 	return nil
 }
 
-// serializeUTXOCollection serializes utxoCollection by iterating over
+// serializeUTXOCollection serializes UTXOCollection by iterating over
 // the utxo entries and serializing them and their corresponding outpoint
 // prefixed by a varint that indicates their size.
-func serializeUTXOCollection(w io.Writer, collection utxoCollection) error {
+func serializeUTXOCollection(w io.Writer, collection UTXOCollection) error {
 	err := wire.WriteVarInt(w, uint64(len(collection)))
 	if err != nil {
 		return err
@@ -270,7 +270,7 @@ func UpdateUTXOSet(dbContext dbaccess.Context, virtualUTXODiff *UTXODiff) error 
 }
 
 func InitUTXOSet(dbContext dbaccess.Context) (*FullUTXOSet, error) {
-	fullUTXOCollection := make(utxoCollection)
+	fullUTXOCollection := make(UTXOCollection)
 	cursor, err := dbaccess.UTXOSetCursor(dbContext)
 	if err != nil {
 		return nil, err

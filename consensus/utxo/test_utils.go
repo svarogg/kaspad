@@ -66,7 +66,7 @@ func LoadUTXOSet(filename string) (UTXOSet, error) {
 		if err != nil {
 			return nil, err
 		}
-		utxoSet.utxoCollection[wire.Outpoint{TxID: txID, Index: index}] = entry
+		utxoSet.UTXOCollection[wire.Outpoint{TxID: txID, Index: index}] = entry
 	}
 
 	return utxoSet, nil

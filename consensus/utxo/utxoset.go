@@ -92,10 +92,10 @@ func NewUTXOEntry(txOut *wire.TxOut, isCoinbase bool, blockBlueScore uint64) *UT
 	return entry
 }
 
-// utxoCollection represents a set of UTXOs indexed by their outpoints
-type utxoCollection map[wire.Outpoint]*UTXOEntry
+// UTXOCollection represents a set of UTXOs indexed by their outpoints
+type UTXOCollection map[wire.Outpoint]*UTXOEntry
 
-func (uc utxoCollection) String() string {
+func (uc UTXOCollection) String() string {
 	utxoStrings := make([]string, len(uc))
 
 	i := 0
@@ -112,38 +112,38 @@ func (uc utxoCollection) String() string {
 }
 
 // add adds a new UTXO entry to this collection
-func (uc utxoCollection) add(outpoint wire.Outpoint, entry *UTXOEntry) {
+func (uc UTXOCollection) add(outpoint wire.Outpoint, entry *UTXOEntry) {
 	uc[outpoint] = entry
 }
 
 // remove removes a UTXO entry from this collection if it exists
-func (uc utxoCollection) remove(outpoint wire.Outpoint) {
+func (uc UTXOCollection) remove(outpoint wire.Outpoint) {
 	delete(uc, outpoint)
 }
 
 // get returns the UTXOEntry represented by provided outpoint,
 // and a boolean value indicating if said UTXOEntry is in the set or not
-func (uc utxoCollection) get(outpoint wire.Outpoint) (*UTXOEntry, bool) {
+func (uc UTXOCollection) get(outpoint wire.Outpoint) (*UTXOEntry, bool) {
 	entry, ok := uc[outpoint]
 	return entry, ok
 }
 
 // contains returns a boolean value indicating whether a UTXO entry is in the set
-func (uc utxoCollection) contains(outpoint wire.Outpoint) bool {
+func (uc UTXOCollection) contains(outpoint wire.Outpoint) bool {
 	_, ok := uc[outpoint]
 	return ok
 }
 
 // containsWithBlueScore returns a boolean value indicating whether a UTXOEntry
 // is in the set and its blue score is equal to the given blue score.
-func (uc utxoCollection) containsWithBlueScore(outpoint wire.Outpoint, blueScore uint64) bool {
+func (uc UTXOCollection) containsWithBlueScore(outpoint wire.Outpoint, blueScore uint64) bool {
 	entry, ok := uc.get(outpoint)
 	return ok && entry.blockBlueScore == blueScore
 }
 
 // clone returns a clone of this collection
-func (uc utxoCollection) clone() utxoCollection {
-	clone := utxoCollection{}
+func (uc UTXOCollection) clone() UTXOCollection {
+	clone := UTXOCollection{}
 	for outpoint, entry := range uc {
 		clone.add(outpoint, entry)
 	}
@@ -153,16 +153,16 @@ func (uc utxoCollection) clone() utxoCollection {
 
 // UTXODiff represents a diff between two UTXO Sets.
 type UTXODiff struct {
-	toAdd    utxoCollection
-	toRemove utxoCollection
+	toAdd    UTXOCollection
+	toRemove UTXOCollection
 }
 
 // NewUTXODiff creates a new, empty utxoDiff
 // without a multiset.
 func NewUTXODiff() *UTXODiff {
 	return &UTXODiff{
-		toAdd:    utxoCollection{},
-		toRemove: utxoCollection{},
+		toAdd:    UTXOCollection{},
+		toRemove: UTXOCollection{},
 	}
 }
 
@@ -196,8 +196,8 @@ func NewUTXODiff() *UTXODiff {
 //    DiffFrom results in the UTXO being added to toAdd
 func (d *UTXODiff) diffFrom(other *UTXODiff) (*UTXODiff, error) {
 	result := UTXODiff{
-		toAdd:    make(utxoCollection, len(d.toRemove)+len(other.toAdd)),
-		toRemove: make(utxoCollection, len(d.toAdd)+len(other.toRemove)),
+		toAdd:    make(UTXOCollection, len(d.toRemove)+len(other.toAdd)),
+		toRemove: make(UTXOCollection, len(d.toAdd)+len(other.toRemove)),
 	}
 
 	// Note that the following cases are not accounted for, as they are impossible
@@ -406,18 +406,18 @@ type UTXOSet interface {
 
 // FullUTXOSet represents a full list of transaction outputs and their values
 type FullUTXOSet struct {
-	utxoCollection
+	UTXOCollection
 }
 
 // NewFullUTXOSet creates a new utxoSet with full list of transaction outputs and their values
 func NewFullUTXOSet() *FullUTXOSet {
 	return &FullUTXOSet{
-		utxoCollection: utxoCollection{},
+		UTXOCollection: UTXOCollection{},
 	}
 }
 
-// newFullUTXOSetFromUTXOCollection converts a utxoCollection to a FullUTXOSet
-func newFullUTXOSetFromUTXOCollection(collection utxoCollection) (*FullUTXOSet, error) {
+// newFullUTXOSetFromUTXOCollection converts a UTXOCollection to a FullUTXOSet
+func newFullUTXOSetFromUTXOCollection(collection UTXOCollection) (*FullUTXOSet, error) {
 	var err error
 	multiset := secp256k1.NewMultiset()
 	for outpoint, utxoEntry := range collection {
@@ -427,7 +427,7 @@ func newFullUTXOSetFromUTXOCollection(collection utxoCollection) (*FullUTXOSet, 
 		}
 	}
 	return &FullUTXOSet{
-		utxoCollection: collection,
+		UTXOCollection: collection,
 	}, nil
 }
 
@@ -488,12 +488,12 @@ func (fus *FullUTXOSet) containsInputs(tx *wire.MsgTx) bool {
 
 // clone returns a clone of this utxoSet
 func (fus *FullUTXOSet) Clone() UTXOSet {
-	return &FullUTXOSet{utxoCollection: fus.utxoCollection.clone()}
+	return &FullUTXOSet{UTXOCollection: fus.UTXOCollection.clone()}
 }
 
 // Get returns the UTXOEntry associated with the given Outpoint, and a boolean indicating if such entry was found
 func (fus *FullUTXOSet) Get(outpoint wire.Outpoint) (*UTXOEntry, bool) {
-	utxoEntry, ok := fus.utxoCollection[outpoint]
+	utxoEntry, ok := fus.UTXOCollection[outpoint]
 	return utxoEntry, ok
 }
 
