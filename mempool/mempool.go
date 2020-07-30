@@ -8,7 +8,7 @@ import (
 	"container/list"
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/common"
-	"github.com/kaspanet/kaspad/consensus/scriptval"
+	"github.com/kaspanet/kaspad/consensus/scriptvalidation"
 	"github.com/kaspanet/kaspad/consensus/utxo"
 	"sync"
 	"sync/atomic"
@@ -1039,7 +1039,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *util.Tx, rejectDupOrphans bool) ([]
 
 	// Verify crypto signatures for each input and reject the transaction if
 	// any don't verify.
-	err = scriptval.ValidateTransactionScripts(tx, mp.mpUTXOSet,
+	err = scriptvalidation.ValidateTransactionScripts(tx, mp.mpUTXOSet,
 		txscript.StandardVerifyFlags, mp.cfg.SigCache)
 	if err != nil {
 		var dagRuleErr common.RuleError
