@@ -1,4 +1,4 @@
-package blockdag
+package multiset
 
 import (
 	"encoding/binary"
@@ -6,10 +6,12 @@ import (
 	"io"
 )
 
-const multisetPointSize = 32
+var (
+	byteOrder = binary.LittleEndian
+)
 
-// serializeMultiset serializes an ECMH multiset.
-func serializeMultiset(w io.Writer, ms *secp256k1.MultiSet) error {
+// SerializeMultiset serializes an ECMH multiset.
+func SerializeMultiset(w io.Writer, ms *secp256k1.MultiSet) error {
 	serialized := ms.Serialize()
 	err := binary.Write(w, byteOrder, serialized)
 	if err != nil {
@@ -18,8 +20,8 @@ func serializeMultiset(w io.Writer, ms *secp256k1.MultiSet) error {
 	return nil
 }
 
-// deserializeMultiset deserializes an EMCH multiset.
-func deserializeMultiset(r io.Reader) (*secp256k1.MultiSet, error) {
+// DeserializeMultiset deserializes an EMCH multiset.
+func DeserializeMultiset(r io.Reader) (*secp256k1.MultiSet, error) {
 	serialized := &secp256k1.SerializedMultiSet{}
 	err := binary.Read(r, byteOrder, serialized[:])
 	if err != nil {

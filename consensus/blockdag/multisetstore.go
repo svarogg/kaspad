@@ -3,6 +3,7 @@ package blockdag
 import (
 	"bytes"
 	"github.com/kaspanet/go-secp256k1"
+	"github.com/kaspanet/kaspad/consensus/multiset"
 	"github.com/kaspanet/kaspad/dbaccess"
 	"github.com/kaspanet/kaspad/util/daghash"
 	"github.com/kaspanet/kaspad/util/locks"
@@ -66,7 +67,7 @@ func (store *multisetStore) flushToDB(dbContext *dbaccess.TxContext) error {
 			return multisetNotFoundError(&hash)
 		}
 
-		err := serializeMultiset(w, &ms)
+		err := multiset.SerializeMultiset(w, &ms)
 		if err != nil {
 			return err
 		}
@@ -106,7 +107,7 @@ func (store *multisetStore) init(dbContext dbaccess.Context) error {
 			return err
 		}
 
-		ms, err := deserializeMultiset(bytes.NewReader(serializedMS))
+		ms, err := multiset.DeserializeMultiset(bytes.NewReader(serializedMS))
 		if err != nil {
 			return err
 		}
