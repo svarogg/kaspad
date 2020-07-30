@@ -1533,7 +1533,7 @@ func (dag *BlockDAG) CalcPastMedianTime() mstime.Time {
 // This function is safe for concurrent access. However, the returned entry (if
 // any) is NOT.
 func (dag *BlockDAG) GetUTXOEntry(outpoint wire.Outpoint) (*utxo.UTXOEntry, bool) {
-	return dag.virtual.utxoSet.get(outpoint)
+	return dag.virtual.utxoSet.Get(outpoint)
 }
 
 // BlueScoreByBlockHash returns the blue score of a block with the given hash.

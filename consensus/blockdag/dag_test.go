@@ -1338,7 +1338,7 @@ func TestUTXOCommitment(t *testing.T) {
 
 	// Build a Multiset for block D
 	multiset := secp256k1.NewMultiset()
-	for outpoint, entry := range blockDPastDiffUTXOSet.base.utxoCollection {
+	for outpoint, entry := range blockDPastDiffUTXOSet.Base().UTXOCollection {
 		var err error
 		multiset, err = utxo.AddUTXOToMultiset(multiset, entry, &outpoint)
 		if err != nil {

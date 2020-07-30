@@ -180,7 +180,7 @@ func GetVirtualFromParentsForTest(dag *BlockDAG, parentHashes []*daghash.Hash) (
 	if err != nil {
 		return nil, err
 	}
-	virtual.utxoSet = diffUTXO.base
+	virtual.utxoSet = diffUTXO.Base()
 
 	return virtual, nil
 }

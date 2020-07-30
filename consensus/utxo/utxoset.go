@@ -121,9 +121,9 @@ func (uc UTXOCollection) remove(outpoint wire.Outpoint) {
 	delete(uc, outpoint)
 }
 
-// get returns the UTXOEntry represented by provided outpoint,
+// Get returns the UTXOEntry represented by provided outpoint,
 // and a boolean value indicating if said UTXOEntry is in the set or not
-func (uc UTXOCollection) get(outpoint wire.Outpoint) (*UTXOEntry, bool) {
+func (uc UTXOCollection) Get(outpoint wire.Outpoint) (*UTXOEntry, bool) {
 	entry, ok := uc[outpoint]
 	return entry, ok
 }
@@ -137,7 +137,7 @@ func (uc UTXOCollection) contains(outpoint wire.Outpoint) bool {
 // containsWithBlueScore returns a boolean value indicating whether a UTXOEntry
 // is in the set and its blue score is equal to the given blue score.
 func (uc UTXOCollection) containsWithBlueScore(outpoint wire.Outpoint, blueScore uint64) bool {
-	entry, ok := uc.get(outpoint)
+	entry, ok := uc.Get(outpoint)
 	return ok && entry.blockBlueScore == blueScore
 }
 
@@ -216,7 +216,7 @@ func (d *UTXODiff) diffFrom(other *UTXODiff) (*UTXODiff, error) {
 			return nil, errors.New(
 				"DiffFrom: outpoint both in d.toAdd, other.toAdd, and only one of d.toRemove and other.toRemove")
 		}
-		if diffEntry, ok := other.toRemove.get(outpoint); ok {
+		if diffEntry, ok := other.toRemove.Get(outpoint); ok {
 			// An exception is made for entries with unequal blue scores
 			// as long as the appropriate entry exists in either d.toRemove
 			// or other.toAdd.
@@ -234,7 +234,7 @@ func (d *UTXODiff) diffFrom(other *UTXODiff) (*UTXODiff, error) {
 	// If they are not in other.toRemove - should be added in result.toAdd
 	// If they are in other.toAdd - base utxoSet is not the same
 	for outpoint, utxoEntry := range d.toRemove {
-		diffEntry, ok := other.toRemove.get(outpoint)
+		diffEntry, ok := other.toRemove.Get(outpoint)
 		if ok {
 			// if have the same entry in d.toRemove - simply don't copy.
 			// unless existing entry is with different blue score, in this case - this is an error
@@ -249,7 +249,7 @@ func (d *UTXODiff) diffFrom(other *UTXODiff) (*UTXODiff, error) {
 		if !other.toRemove.containsWithBlueScore(outpoint, utxoEntry.blockBlueScore) {
 			result.toAdd.add(outpoint, utxoEntry)
 		}
-		if diffEntry, ok := other.toAdd.get(outpoint); ok {
+		if diffEntry, ok := other.toAdd.Get(outpoint); ok {
 			// An exception is made for entries with unequal blue scores
 			// as long as the appropriate entry exists in either d.toAdd
 			// or other.toRemove.
@@ -312,7 +312,7 @@ func (d *UTXODiff) WithDiffInPlace(diff *UTXODiff) error {
 			d.toRemove.remove(outpoint)
 			continue
 		}
-		if existingEntry, ok := d.toAdd.get(outpoint); ok &&
+		if existingEntry, ok := d.toAdd.Get(outpoint); ok &&
 			(existingEntry.blockBlueScore == entryToAdd.blockBlueScore ||
 				!diff.toRemove.containsWithBlueScore(outpoint, existingEntry.blockBlueScore)) {
 			// If already exists - this is an error
@@ -609,6 +609,10 @@ func (dus *DiffUTXOSet) MeldToBase() error {
 	return nil
 }
 
+func (dus *DiffUTXOSet) Base() *FullUTXOSet {
+	return dus.base
+}
+
 func (dus *DiffUTXOSet) String() string {
 	return fmt.Sprintf("{Base: %s, To Add: %s, To Remove: %s}", dus.base, dus.UTXODiff.toAdd, dus.UTXODiff.toRemove)
 }
@@ -627,17 +631,17 @@ func (dus *DiffUTXOSet) CloneWithoutBase() UTXOSet {
 // Get returns the UTXOEntry associated with provided outpoint in this UTXOSet.
 // Returns false in second output if this UTXOEntry was not found
 func (dus *DiffUTXOSet) Get(outpoint wire.Outpoint) (*UTXOEntry, bool) {
-	if toRemoveEntry, ok := dus.UTXODiff.toRemove.get(outpoint); ok {
+	if toRemoveEntry, ok := dus.UTXODiff.toRemove.Get(outpoint); ok {
 		// An exception is made for entries with unequal blue scores
 		// These are just "updates" to accepted blue score
-		if toAddEntry, ok := dus.UTXODiff.toAdd.get(outpoint); ok && toAddEntry.blockBlueScore != toRemoveEntry.blockBlueScore {
+		if toAddEntry, ok := dus.UTXODiff.toAdd.Get(outpoint); ok && toAddEntry.blockBlueScore != toRemoveEntry.blockBlueScore {
 			return toAddEntry, true
 		}
 		return nil, false
 	}
-	if txOut, ok := dus.base.get(outpoint); ok {
+	if txOut, ok := dus.base.Get(outpoint); ok {
 		return txOut, true
 	}
-	txOut, ok := dus.UTXODiff.toAdd.get(outpoint)
+	txOut, ok := dus.UTXODiff.toAdd.Get(outpoint)
 	return txOut, ok
 }
