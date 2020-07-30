@@ -922,7 +922,7 @@ func (rt *reachabilityTree) init(dbContext dbaccess.Context) error {
 
 func (rt *reachabilityTree) storeState(dbTx *dbaccess.TxContext) error {
 	// Flush the store
-	err := rt.dag.reachabilityTree.store.flushToDB(dbTx)
+	err := rt.store.flushToDB(dbTx)
 	if err != nil {
 		return err
 	}
