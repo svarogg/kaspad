@@ -2,9 +2,10 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package blockdag
+package merkle
 
 import (
+	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/util/daghash"
 	"testing"
 
@@ -13,11 +14,11 @@ import (
 
 // TestMerkle tests the BuildHashMerkleTreeStore API.
 func TestMerkle(t *testing.T) {
-	block := util.NewBlock(&Block100000)
+	block := util.NewBlock(&common.Block100000)
 
 	hashMerkleTree := BuildHashMerkleTreeStore(block.Transactions())
 	calculatedHashMerkleRoot := hashMerkleTree.Root()
-	wantHashMerkleRoot := Block100000.Header.HashMerkleRoot
+	wantHashMerkleRoot := common.Block100000.Header.HashMerkleRoot
 	if !wantHashMerkleRoot.IsEqual(calculatedHashMerkleRoot) {
 		t.Errorf("BuildHashMerkleTreeStore: hash merkle root mismatch - "+
 			"got %v, want %v", calculatedHashMerkleRoot, wantHashMerkleRoot)

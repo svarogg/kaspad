@@ -3,6 +3,7 @@ package blockdag_test
 import (
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/common"
+	"github.com/kaspanet/kaspad/consensus/merkle"
 	"github.com/kaspanet/kaspad/consensus/notifications"
 	"github.com/kaspanet/kaspad/testdata"
 	"math"
@@ -128,7 +129,7 @@ func TestFinality(t *testing.T) {
 	if err != nil {
 		t.Errorf("NextBlockCoinbaseTransaction: %s", err)
 	}
-	merkleRoot := blockdag.BuildHashMerkleTreeStore([]*util.Tx{fakeCoinbaseTx}).Root()
+	merkleRoot := merkle.BuildHashMerkleTreeStore([]*util.Tx{fakeCoinbaseTx}).Root()
 	beforeFinalityBlock := wire.NewMsgBlock(&wire.BlockHeader{
 		Version:              0x10000000,
 		ParentHashes:         []*daghash.Hash{genesis.Hash()},
@@ -295,7 +296,7 @@ func TestChainedTransactions(t *testing.T) {
 	for i, tx := range block2.Transactions {
 		block2UtilTxs[i] = util.NewTx(tx)
 	}
-	block2.Header.HashMerkleRoot = blockdag.BuildHashMerkleTreeStore(block2UtilTxs).Root()
+	block2.Header.HashMerkleRoot = merkle.BuildHashMerkleTreeStore(block2UtilTxs).Root()
 
 	//Checks that dag.ProcessBlock fails because we don't allow a transaction to spend another transaction from the same block
 	isOrphan, isDelayed, err = dag.ProcessBlock(util.NewBlock(block2), blockdag.BFNoPoWCheck)

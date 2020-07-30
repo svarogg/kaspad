@@ -5,7 +5,7 @@
 package bloom
 
 import (
-	"github.com/kaspanet/kaspad/consensus/blockdag"
+	"github.com/kaspanet/kaspad/consensus/merkle"
 	"github.com/kaspanet/kaspad/util"
 	"github.com/kaspanet/kaspad/util/daghash"
 	"github.com/kaspanet/kaspad/wire"
@@ -41,7 +41,7 @@ func (m *merkleBlock) calcHash(height, pos uint32) *daghash.Hash {
 	} else {
 		right = left
 	}
-	return blockdag.HashMerkleBranches(left, right)
+	return merkle.HashMerkleBranches(left, right)
 }
 
 // traverseAndBuild builds a partial merkle tree using a recursive depth-first

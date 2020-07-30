@@ -1,6 +1,7 @@
 package blockdag
 
 import (
+	"github.com/kaspanet/kaspad/consensus/common"
 	"testing"
 
 	"github.com/kaspanet/kaspad/dagconfig"
@@ -21,7 +22,7 @@ func TestBlockHeap(t *testing.T) {
 	block0Header := dagconfig.SimnetParams.GenesisBlock.Header
 	block0, _ := dag.initBlockNode(&block0Header, NewBlockNodeSet())
 
-	block100000Header := Block100000.Header
+	block100000Header := common.Block100000.Header
 	block100000, _ := dag.initBlockNode(&block100000Header, BlockNodeSetFromSlice(block0))
 
 	block0smallHash, _ := dag.initBlockNode(&block0Header, NewBlockNodeSet())

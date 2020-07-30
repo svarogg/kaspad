@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/blockstatus"
 	"github.com/kaspanet/kaspad/consensus/common"
+	"github.com/kaspanet/kaspad/consensus/merkle"
 	"github.com/kaspanet/kaspad/consensus/timesource"
 	"github.com/kaspanet/kaspad/consensus/utxo"
 	"github.com/kaspanet/kaspad/testdata"
@@ -192,7 +193,7 @@ func TestIsKnownBlock(t *testing.T) {
 	}
 
 	// Insert an orphan block.
-	isOrphan, isDelayed, err = dag.ProcessBlock(util.NewBlock(&Block100000), BFNoPoWCheck)
+	isOrphan, isDelayed, err = dag.ProcessBlock(util.NewBlock(&common.Block100000), BFNoPoWCheck)
 	if err != nil {
 		t.Fatalf("Unable to process block 100000: %v", err)
 	}
@@ -1037,7 +1038,7 @@ func TestDAGIndexFailedStatus(t *testing.T) {
 
 	invalidCbTx := wire.NewSubnetworkMsgTx(wire.TxVersion, []*wire.TxIn{}, []*wire.TxOut{}, subnetworkid.SubnetworkIDCoinbase, 0, []byte{})
 	txs := []*util.Tx{util.NewTx(invalidCbTx)}
-	hashMerkleRoot := BuildHashMerkleTreeStore(txs).Root()
+	hashMerkleRoot := merkle.BuildHashMerkleTreeStore(txs).Root()
 	invalidMsgBlock := wire.NewMsgBlock(
 		wire.NewBlockHeader(
 			1,
@@ -1211,7 +1212,7 @@ func TestDoubleSpends(t *testing.T) {
 	for i, tx := range anotherBlockWithTx1.Transactions {
 		anotherBlockWithTx1UtilTxs[i] = util.NewTx(tx)
 	}
-	anotherBlockWithTx1.Header.HashMerkleRoot = BuildHashMerkleTreeStore(anotherBlockWithTx1UtilTxs).Root()
+	anotherBlockWithTx1.Header.HashMerkleRoot = merkle.BuildHashMerkleTreeStore(anotherBlockWithTx1UtilTxs).Root()
 
 	testProcessBlockRuleError(t, dag, anotherBlockWithTx1, common.NewRuleError(common.ErrOverwriteTx, ""))
 
@@ -1228,7 +1229,7 @@ func TestDoubleSpends(t *testing.T) {
 	for i, tx := range blockWithDoubleSpendForTx1.Transactions {
 		blockWithDoubleSpendForTx1UtilTxs[i] = util.NewTx(tx)
 	}
-	blockWithDoubleSpendForTx1.Header.HashMerkleRoot = BuildHashMerkleTreeStore(blockWithDoubleSpendForTx1UtilTxs).Root()
+	blockWithDoubleSpendForTx1.Header.HashMerkleRoot = merkle.BuildHashMerkleTreeStore(blockWithDoubleSpendForTx1UtilTxs).Root()
 
 	testProcessBlockRuleError(t, dag, blockWithDoubleSpendForTx1, common.NewRuleError(common.ErrMissingTxOut, ""))
 
@@ -1253,7 +1254,7 @@ func TestDoubleSpends(t *testing.T) {
 	for i, tx := range blockWithDoubleSpendWithItself.Transactions {
 		blockWithDoubleSpendWithItselfUtilTxs[i] = util.NewTx(tx)
 	}
-	blockWithDoubleSpendWithItself.Header.HashMerkleRoot = BuildHashMerkleTreeStore(blockWithDoubleSpendWithItselfUtilTxs).Root()
+	blockWithDoubleSpendWithItself.Header.HashMerkleRoot = merkle.BuildHashMerkleTreeStore(blockWithDoubleSpendWithItselfUtilTxs).Root()
 
 	testProcessBlockRuleError(t, dag, blockWithDoubleSpendWithItself, common.NewRuleError(common.ErrDoubleSpendInSameBlock, ""))
 
@@ -1269,7 +1270,7 @@ func TestDoubleSpends(t *testing.T) {
 	for i, tx := range blockWithDuplicateTransaction.Transactions {
 		blockWithDuplicateTransactionUtilTxs[i] = util.NewTx(tx)
 	}
-	blockWithDuplicateTransaction.Header.HashMerkleRoot = BuildHashMerkleTreeStore(blockWithDuplicateTransactionUtilTxs).Root()
+	blockWithDuplicateTransaction.Header.HashMerkleRoot = merkle.BuildHashMerkleTreeStore(blockWithDuplicateTransactionUtilTxs).Root()
 	testProcessBlockRuleError(t, dag, blockWithDuplicateTransaction, common.NewRuleError(common.ErrDuplicateTx, ""))
 }
 

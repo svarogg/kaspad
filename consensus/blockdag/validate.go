@@ -7,6 +7,7 @@ package blockdag
 import (
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/common"
+	"github.com/kaspanet/kaspad/consensus/merkle"
 	"github.com/kaspanet/kaspad/consensus/scriptvalidation"
 	"github.com/kaspanet/kaspad/consensus/utxo"
 	"github.com/kaspanet/kaspad/util/mstime"
@@ -584,7 +585,7 @@ func (dag *BlockDAG) checkBlockHashMerkleRoot(block *util.Block) error {
 	// entry in the block header. This also has the effect of caching all
 	// of the transaction hashes in the block to speed up future hash
 	// checks.
-	hashMerkleTree := BuildHashMerkleTreeStore(block.Transactions())
+	hashMerkleTree := merkle.BuildHashMerkleTreeStore(block.Transactions())
 	calculatedHashMerkleRoot := hashMerkleTree.Root()
 	if !block.MsgBlock().Header.HashMerkleRoot.IsEqual(calculatedHashMerkleRoot) {
 		str := fmt.Sprintf("block hash merkle root is invalid - block "+

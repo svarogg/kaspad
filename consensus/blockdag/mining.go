@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"github.com/kaspanet/go-secp256k1"
+	"github.com/kaspanet/kaspad/consensus/merkle"
 	"github.com/kaspanet/kaspad/consensus/txscript"
 	"github.com/kaspanet/kaspad/util"
 	"github.com/kaspanet/kaspad/util/daghash"
@@ -29,7 +30,7 @@ func (dag *BlockDAG) BlockForMining(transactions []*util.Tx) (*wire.MsgBlock, er
 	}
 
 	// Create a new block ready to be solved.
-	hashMerkleTree := BuildHashMerkleTreeStore(transactions)
+	hashMerkleTree := merkle.BuildHashMerkleTreeStore(transactions)
 	acceptedIDMerkleRoot, err := dag.NextAcceptedIDMerkleRootNoLock()
 	if err != nil {
 		return nil, err

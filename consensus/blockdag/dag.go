@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/blockstatus"
 	"github.com/kaspanet/kaspad/consensus/common"
+	"github.com/kaspanet/kaspad/consensus/merkle"
 	"github.com/kaspanet/kaspad/consensus/multiset"
 	"github.com/kaspanet/kaspad/consensus/notifications"
 	"github.com/kaspanet/kaspad/consensus/timesource"
@@ -630,7 +631,7 @@ func calculateAcceptedIDMerkleRoot(multiBlockTxsAcceptanceData MultiBlockTxsAcce
 		return daghash.LessTxID(acceptedTxs[i].ID(), acceptedTxs[j].ID())
 	})
 
-	acceptedIDMerkleTree := BuildIDMerkleTreeStore(acceptedTxs)
+	acceptedIDMerkleTree := merkle.BuildIDMerkleTreeStore(acceptedTxs)
 	return acceptedIDMerkleTree.Root()
 }
 

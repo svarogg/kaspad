@@ -3,6 +3,7 @@ package mining
 // This file functions are not considered safe for regular use, and should be used for test purposes only.
 
 import (
+	"github.com/kaspanet/kaspad/consensus/merkle"
 	"github.com/kaspanet/kaspad/util/mstime"
 	"github.com/pkg/errors"
 
@@ -101,7 +102,7 @@ func PrepareBlockForTest(dag *blockdag.BlockDAG, parentHashes []*daghash.Hash, t
 		for i, tx := range template.Block.Transactions {
 			utilTxs[i] = util.NewTx(tx)
 		}
-		template.Block.Header.HashMerkleRoot = blockdag.BuildHashMerkleTreeStore(utilTxs).Root()
+		template.Block.Header.HashMerkleRoot = merkle.BuildHashMerkleTreeStore(utilTxs).Root()
 
 		ms, err := dag.NextBlockMultiset()
 		if err != nil {
