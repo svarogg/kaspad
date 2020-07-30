@@ -1233,16 +1233,19 @@ func (data MultiBlockTxsAcceptanceData) FindAcceptanceData(blockHash *daghash.Ha
 	return nil, false
 }
 
-func genesisPastUTXO(virtual *virtualBlock) utxo.UTXOSet {
+func genesisPastUTXO(virtual *virtualBlock) (utxo.UTXOSet, error) {
 	// The genesis has no past UTXO, so we create an empty UTXO
 	// set by creating a diff UTXO set with the virtual UTXO
 	// set, and adding all of its entries in toRemove
 	diff := utxo.NewUTXODiff()
 	for outpoint, entry := range virtual.utxoSet.UTXOCollection {
-		diff.toRemove[outpoint] = entry
+		err := diff.RemoveEntry(outpoint, entry)
+		if err != nil {
+			return nil, err
+		}
 	}
 	genesisPastUTXO := utxo.UTXOSet(utxo.NewDiffUTXOSet(virtual.utxoSet, diff))
-	return genesisPastUTXO
+	return genesisPastUTXO, nil
 }
 
 func (dag *BlockDAG) fetchBlueBlocks(node *BlockNode) ([]*util.Block, error) {
@@ -1354,7 +1357,11 @@ func (dag *BlockDAG) pastUTXO(node *BlockNode) (
 	pastUTXO, selectedParentPastUTXO utxo.UTXOSet, bluesTxsAcceptanceData MultiBlockTxsAcceptanceData, err error) {
 
 	if node.IsGenesis() {
-		return genesisPastUTXO(dag.virtual), nil, MultiBlockTxsAcceptanceData{}, nil
+		genesisPastUTXO, err := genesisPastUTXO(dag.virtual)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		return genesisPastUTXO, nil, MultiBlockTxsAcceptanceData{}, nil
 	}
 
 	selectedParentPastUTXO, err = dag.restorePastUTXO(node.selectedParent)
