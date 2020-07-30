@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/blockstatus"
 	"github.com/kaspanet/kaspad/consensus/common"
+	"github.com/kaspanet/kaspad/consensus/notifications"
 
 	"github.com/kaspanet/kaspad/dbaccess"
 	"github.com/kaspanet/kaspad/util"
@@ -119,12 +120,12 @@ func (dag *BlockDAG) maybeAcceptBlock(block *util.Block, flags BehaviorFlags) er
 	// DAG. The caller would typically want to react by relaying the
 	// inventory to other peers.
 	dag.dagLock.Unlock()
-	dag.sendNotification(NTBlockAdded, &BlockAddedNotificationData{
+	dag.notifier.SendNotification(notifications.NTBlockAdded, &notifications.BlockAddedNotificationData{
 		Block:         block,
 		WasUnorphaned: flags&BFWasUnorphaned != 0,
 	})
 	if len(chainUpdates.addedChainBlockHashes) > 0 {
-		dag.sendNotification(NTChainChanged, &ChainChangedNotificationData{
+		dag.notifier.SendNotification(notifications.NTChainChanged, &notifications.ChainChangedNotificationData{
 			RemovedChainBlockHashes: chainUpdates.removedChainBlockHashes,
 			AddedChainBlockHashes:   chainUpdates.addedChainBlockHashes,
 		})

@@ -9,6 +9,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/blockstatus"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/multiset"
+	"github.com/kaspanet/kaspad/consensus/notifications"
 	"math"
 	"sort"
 	"sync"
@@ -74,6 +75,7 @@ type BlockDAG struct {
 	sigCache        *txscript.SigCache
 	indexManager    IndexManager
 	genesis         *BlockNode
+	notifier        *notifications.ConsensusNotifier
 
 	// The following fields are calculated based upon the provided DAG
 	// parameters. They are also set when the instance is created and
@@ -151,11 +153,6 @@ type BlockDAG struct {
 	unknownRulesWarned    bool
 	unknownVersionsWarned bool
 
-	// The notifications field stores a slice of callbacks to be executed on
-	// certain blockDAG events.
-	notificationsLock sync.RWMutex
-	notifications     []NotificationCallback
-
 	lastFinalityPoint *BlockNode
 
 	utxoDiffStore *utxoDiffStore
@@ -202,6 +199,7 @@ func New(config *Config) (*BlockDAG, error) {
 		blockCount:                     0,
 		subnetworkID:                   config.SubnetworkID,
 		startTime:                      mstime.Now(),
+		notifier:                       notifications.NewConcensusNotifier(),
 	}
 
 	dag.virtual = newVirtualBlock(dag, nil)
@@ -2163,4 +2161,8 @@ func (dag *BlockDAG) initBlockNode(blockHeader *wire.BlockHeader, parents BlockN
 		panic(errors.Wrap(err, "unexpected error in GHOSTDAG"))
 	}
 	return node, selectedParentAnticone
+}
+
+func (dag *BlockDAG) Notifier() *notifications.ConsensusNotifier {
+	return dag.notifier
 }

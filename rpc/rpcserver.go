@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"github.com/kaspanet/kaspad/addressmanager"
 	"github.com/kaspanet/kaspad/connmanager"
+	"github.com/kaspanet/kaspad/consensus/notifications"
 	"github.com/kaspanet/kaspad/protocol"
 	"github.com/kaspanet/kaspad/util/mstime"
 	"io"
@@ -735,17 +736,17 @@ func NewRPCServer(
 		rpc.limitauthsha = sha256.Sum256([]byte(auth))
 	}
 	rpc.ntfnMgr = newWsNotificationManager(&rpc)
-	rpc.dag.Subscribe(rpc.handleBlockDAGNotification)
+	rpc.dag.Notifier().Subscribe(rpc.handleBlockDAGNotification)
 
 	return &rpc, nil
 }
 
 // Callback for notifications from blockdag. It notifies clients that are
 // long polling for changes or subscribed to websockets notifications.
-func (s *Server) handleBlockDAGNotification(notification *blockdag.Notification) {
+func (s *Server) handleBlockDAGNotification(notification *notifications.Notification) {
 	switch notification.Type {
-	case blockdag.NTBlockAdded:
-		data, ok := notification.Data.(*blockdag.BlockAddedNotificationData)
+	case notifications.NTBlockAdded:
+		data, ok := notification.Data.(*notifications.BlockAddedNotificationData)
 		if !ok {
 			log.Warnf("Block added notification data is of wrong type.")
 			break
@@ -761,8 +762,8 @@ func (s *Server) handleBlockDAGNotification(notification *blockdag.Notification)
 
 		// Notify registered websocket clients of incoming block.
 		s.ntfnMgr.NotifyBlockAdded(block)
-	case blockdag.NTChainChanged:
-		data, ok := notification.Data.(*blockdag.ChainChangedNotificationData)
+	case notifications.NTChainChanged:
+		data, ok := notification.Data.(*notifications.ChainChangedNotificationData)
 		if !ok {
 			log.Warnf("Chain changed notification data is of wrong type.")
 			break

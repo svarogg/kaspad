@@ -2,12 +2,13 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package blockdag
+package notifications
 
 import (
 	"fmt"
 	"github.com/kaspanet/kaspad/util"
 	"github.com/kaspanet/kaspad/util/daghash"
+	"sync"
 )
 
 // NotificationType represents the type of a notification message.
@@ -16,6 +17,11 @@ type NotificationType int
 // NotificationCallback is used for a caller to provide a callback for
 // notifications about various blockDAG events.
 type NotificationCallback func(*Notification)
+
+type ConsensusNotifier struct {
+	notifications []NotificationCallback
+	sync.RWMutex
+}
 
 // Constants for the type of a notification message.
 const (
@@ -33,6 +39,10 @@ const (
 var notificationTypeStrings = map[NotificationType]string{
 	NTBlockAdded:   "NTBlockAdded",
 	NTChainChanged: "NTChainChanged",
+}
+
+func NewConcensusNotifier() *ConsensusNotifier {
+	return &ConsensusNotifier{}
 }
 
 // String returns the NotificationType in human-readable form.
@@ -55,21 +65,21 @@ type Notification struct {
 // Subscribe to block DAG notifications. Registers a callback to be executed
 // when various events take place. See the documentation on Notification and
 // NotificationType for details on the types and contents of notifications.
-func (dag *BlockDAG) Subscribe(callback NotificationCallback) {
-	dag.notificationsLock.Lock()
-	defer dag.notificationsLock.Unlock()
-	dag.notifications = append(dag.notifications, callback)
+func (cn *ConsensusNotifier) Subscribe(callback NotificationCallback) {
+	cn.Lock()
+	defer cn.Unlock()
+	cn.notifications = append(cn.notifications, callback)
 }
 
-// sendNotification sends a notification with the passed type and data if the
+// SendNotification sends a notification with the passed type and data if the
 // caller requested notifications by providing a callback function in the call
 // to New.
-func (dag *BlockDAG) sendNotification(typ NotificationType, data interface{}) {
+func (cn *ConsensusNotifier) SendNotification(typ NotificationType, data interface{}) {
 	// Generate and send the notification.
 	n := Notification{Type: typ, Data: data}
-	dag.notificationsLock.RLock()
-	defer dag.notificationsLock.RUnlock()
-	for _, callback := range dag.notifications {
+	cn.RLock()
+	defer cn.RUnlock()
+	for _, callback := range cn.notifications {
 		callback(&n)
 	}
 }
