@@ -175,10 +175,6 @@ func (node *BlockNode) IsGenesis() bool {
 	return len(node.parents) == 0
 }
 
-func (node *BlockNode) FinalityScore(dag *BlockDAG) uint64 {
-	return node.blueScore / dag.FinalityInterval()
-}
-
 // String returns a string that contains the block hash.
 func (node BlockNode) String() string {
 	return node.hash.String()

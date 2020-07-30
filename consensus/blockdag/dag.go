@@ -975,14 +975,14 @@ func (dag *BlockDAG) updateFinalityPoint() {
 	}
 	// We are looking for a new finality point only if the new block's finality score is higher
 	// by 2 than the existing finality point's
-	if selectedTip.FinalityScore(dag) < dag.lastFinalityPoint.FinalityScore(dag)+2 {
+	if dag.FinalityScore(selectedTip) < dag.FinalityScore(dag.lastFinalityPoint)+2 {
 		return
 	}
 
 	var currentNode *BlockNode
 	for currentNode = selectedTip.selectedParent; ; currentNode = currentNode.selectedParent {
 		// We look for the first node in the selected parent chain that has a higher finality score than the last finality point.
-		if currentNode.selectedParent.FinalityScore(dag) == dag.lastFinalityPoint.FinalityScore(dag) {
+		if dag.FinalityScore(currentNode.selectedParent) == dag.FinalityScore(dag.lastFinalityPoint) {
 			break
 		}
 	}
@@ -2175,4 +2175,8 @@ func (dag *BlockDAG) initBlockNode(blockHeader *wire.BlockHeader, parents BlockN
 
 func (dag *BlockDAG) Notifier() *notifications.ConsensusNotifier {
 	return dag.notifier
+}
+
+func (dag *BlockDAG) FinalityScore(node *BlockNode) uint64 {
+	return node.blueScore / dag.FinalityInterval()
 }
