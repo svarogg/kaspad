@@ -43,8 +43,19 @@ func TestUTXODiffStore(t *testing.T) {
 	// Add node's diff data to the utxoDiffStore and check if it's checked correctly.
 	node := createNode()
 	diff := utxo.NewUTXODiff()
-	diff.toAdd.add(wire.Outpoint{TxID: daghash.TxID{0x01}, Index: 0}, &utxo.UTXOEntry{amount: 1, scriptPubKey: []byte{0x01}})
-	diff.toRemove.add(wire.Outpoint{TxID: daghash.TxID{0x02}, Index: 0}, &utxo.UTXOEntry{amount: 2, scriptPubKey: []byte{0x02}})
+
+	entryToAdd := utxo.NewUTXOEntry(&wire.TxOut{Value: 1, ScriptPubKey: []byte{0x01}}, false, 0)
+	err = diff.AddEntry(wire.Outpoint{TxID: daghash.TxID{0x01}, Index: 0}, entryToAdd)
+	if err != nil {
+		t.Fatalf("AddEntry: unexpected error: %s", err)
+	}
+
+	entryToRemove := utxo.NewUTXOEntry(&wire.TxOut{Value: 2, ScriptPubKey: []byte{0x02}}, false, 0)
+	err = diff.RemoveEntry(wire.Outpoint{TxID: daghash.TxID{0x02}, Index: 0}, entryToRemove)
+	if err != nil {
+		t.Fatalf("RemoveEntry: unexpected error: %s", err)
+	}
+
 	if err := dag.utxoDiffStore.setBlockDiff(node, diff); err != nil {
 		t.Fatalf("setBlockDiff: unexpected error: %s", err)
 	}
