@@ -7,6 +7,7 @@ package blockdag
 import (
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/utxo"
+	"github.com/kaspanet/kaspad/testdata"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -22,7 +23,7 @@ func TestCheckBlockScripts(t *testing.T) {
 
 	testBlockNum := 277647
 	blockDataFile := fmt.Sprintf("%d.dat", testBlockNum)
-	blocks, err := LoadBlocks(filepath.Join("testdata/", blockDataFile))
+	blocks, err := testdata.LoadBlocks(filepath.Join("testdata/", blockDataFile))
 	if err != nil {
 		t.Errorf("Error loading file: %v\n", err)
 		return
@@ -48,7 +49,7 @@ func TestCheckBlockScripts(t *testing.T) {
 	}
 
 	scriptFlags := txscript.ScriptNoFlags
-	err = checkBlockScripts(node, utxoSet, blocks[0].Transactions(), scriptFlags, nil)
+	err = checkBlockScripts(node.hash, utxoSet, blocks[0].Transactions(), scriptFlags, nil)
 	if err != nil {
 		t.Errorf("Transaction script validation failed: %v\n", err)
 		return

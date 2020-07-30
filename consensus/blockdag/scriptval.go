@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/utxo"
+	"github.com/kaspanet/kaspad/util/daghash"
 	"runtime"
 	"time"
 
@@ -201,7 +202,7 @@ func ValidateTransactionScripts(tx *util.Tx, utxoSet utxo.UTXOSet, flags txscrip
 
 // checkBlockScripts executes and validates the scripts for all transactions in
 // the passed block using multiple goroutines.
-func checkBlockScripts(block *BlockNode, utxoSet utxo.UTXOSet, transactions []*util.Tx, scriptFlags txscript.ScriptFlags, sigCache *txscript.SigCache) error {
+func checkBlockScripts(blockHash *daghash.Hash, utxoSet utxo.UTXOSet, transactions []*util.Tx, scriptFlags txscript.ScriptFlags, sigCache *txscript.SigCache) error {
 	// Collect all of the transaction inputs and required information for
 	// validation for all transactions in the block into a single slice.
 	numInputs := 0
@@ -228,7 +229,7 @@ func checkBlockScripts(block *BlockNode, utxoSet utxo.UTXOSet, transactions []*u
 	}
 	elapsed := time.Since(start)
 
-	log.Tracef("block %s took %s to verify", block.hash, elapsed)
+	log.Tracef("block %s took %s to verify", blockHash, elapsed)
 
 	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/kaspanet/kaspad/consensus/blockstatus"
 	"github.com/kaspanet/kaspad/consensus/common"
+	"github.com/kaspanet/kaspad/testdata"
 	"path/filepath"
 	"testing"
 
@@ -24,7 +25,7 @@ func TestMaybeAcceptBlockErrors(t *testing.T) {
 
 	// Test rejecting the block if its parents are missing
 	orphanBlockFile := "blk_3B.dat"
-	loadedBlocks, err := LoadBlocks(filepath.Join("../../testdata/", orphanBlockFile))
+	loadedBlocks, err := testdata.LoadBlocks(filepath.Join("../../testdata/", orphanBlockFile))
 	if err != nil {
 		t.Fatalf("TestMaybeAcceptBlockErrors: "+
 			"Error loading file '%s': %s\n", orphanBlockFile, err)
@@ -47,7 +48,7 @@ func TestMaybeAcceptBlockErrors(t *testing.T) {
 
 	// Test rejecting the block if its parents are invalid
 	blocksFile := "blk_0_to_4.dat"
-	blocks, err := LoadBlocks(filepath.Join("../../testdata/", blocksFile))
+	blocks, err := testdata.LoadBlocks(filepath.Join("../../testdata/", blocksFile))
 	if err != nil {
 		t.Fatalf("TestMaybeAcceptBlockErrors: "+
 			"Error loading file '%s': %s\n", blocksFile, err)

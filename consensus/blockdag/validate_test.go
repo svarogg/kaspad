@@ -6,6 +6,7 @@ package blockdag
 
 import (
 	"github.com/kaspanet/kaspad/consensus/common"
+	"github.com/kaspanet/kaspad/testdata"
 	"math"
 	"path/filepath"
 	"testing"
@@ -96,7 +97,7 @@ func TestCheckConnectBlockTemplate(t *testing.T) {
 
 	var blocks []*util.Block
 	for _, file := range testFiles {
-		blockTmp, err := LoadBlocks(filepath.Join("../../testdata/", file))
+		blockTmp, err := testdata.LoadBlocks(filepath.Join("../../testdata/", file))
 		if err != nil {
 			t.Fatalf("Error loading file: %v\n", err)
 		}

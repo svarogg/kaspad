@@ -998,7 +998,7 @@ func (dag *BlockDAG) checkConnectToPastUTXO(block *BlockNode, pastUTXO utxo.UTXO
 		// transactions are actually allowed to spend the coins by running the
 		// expensive SCHNORR signature check scripts. Doing this last helps
 		// prevent CPU exhaustion attacks.
-		err := checkBlockScripts(block, pastUTXO, transactions, scriptFlags, dag.sigCache)
+		err := checkBlockScripts(block.hash, pastUTXO, transactions, scriptFlags, dag.sigCache)
 		if err != nil {
 			return nil, err
 		}
