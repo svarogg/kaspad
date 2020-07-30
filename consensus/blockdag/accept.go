@@ -19,7 +19,7 @@ import (
 func (dag *BlockDAG) addNodeToIndexWithInvalidAncestor(block *util.Block) error {
 	blockHeader := &block.MsgBlock().Header
 	newNode, _ := dag.initBlockNode(blockHeader, blocknode.NewBlockNodeSet())
-	newNode.status = blockstatus.StatusInvalidAncestor
+	newNode.SetStatus(blockstatus.StatusInvalidAncestor)
 	dag.index.AddNode(newNode)
 
 	dbTx, err := dag.databaseContext.NewTx()
@@ -65,7 +65,7 @@ func (dag *BlockDAG) maybeAcceptBlock(block *util.Block, flags BehaviorFlags) er
 
 	// Create a new block node for the block and add it to the node index.
 	newNode, selectedParentAnticone := dag.initBlockNode(&block.MsgBlock().Header, parents)
-	newNode.status = blockstatus.StatusDataStored
+	newNode.SetStatus(blockstatus.StatusDataStored)
 	dag.index.AddNode(newNode)
 
 	// Insert the block into the database if it's not already there. Even

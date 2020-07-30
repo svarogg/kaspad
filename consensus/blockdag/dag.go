@@ -262,7 +262,7 @@ func New(config *Config) (*BlockDAG, error) {
 
 	selectedTip := dag.selectedTip()
 	log.Infof("DAG state (blue score %d, hash %s)",
-		selectedTip.blueScore, selectedTip.hash)
+		selectedTip.BlueScore(), selectedTip.Hash())
 
 	return dag, nil
 }
@@ -511,7 +511,7 @@ func (dag *BlockDAG) calcSequenceLock(node *blocknode.BlockNode, utxoSet utxo.UT
 		// evaluating its sequence blocks.
 		inputBlueScore := entry.BlockBlueScore()
 		if entry.IsUnaccepted() {
-			inputBlueScore = dag.virtual.blueScore
+			inputBlueScore = dag.virtual.BlueScore()
 		}
 
 		// Given a sequence number, we apply the relative time lock
@@ -533,8 +533,8 @@ func (dag *BlockDAG) calcSequenceLock(node *blocknode.BlockNode, utxoSet utxo.UT
 			// compute the past median time for the block prior to
 			// the one which accepted this referenced output.
 			blockNode := node
-			for blockNode.selectedParent.blueScore > inputBlueScore {
-				blockNode = blockNode.selectedParent
+			for blockNode.SelectedParent().BlueScore() > inputBlueScore {
+				blockNode = blockNode.SelectedParent()
 			}
 			medianTime := dag.PastMedianTime(blockNode)
 
@@ -682,12 +682,12 @@ func (dag *BlockDAG) connectBlock(node *blocknode.BlockNode,
 	}
 
 	newBlockPastUTXO, txsAcceptanceData, newBlockFeeData, newBlockMultiSet, err :=
-		node.verifyAndBuildUTXO(dag, block.Transactions(), fastAdd)
+		dag.verifyAndBuildUTXO(node, block.Transactions(), fastAdd)
 	if err != nil {
 		return nil, errors.Wrapf(err, "error verifying UTXO for %s", node)
 	}
 
-	err = node.validateCoinbaseTransaction(dag, block, txsAcceptanceData)
+	err = dag.validateCoinbaseTransaction(node, block, txsAcceptanceData)
 	if err != nil {
 		return nil, err
 	}
@@ -735,7 +735,7 @@ func (dag *BlockDAG) pastUTXOMultiSet(node *blocknode.BlockNode, acceptanceData 
 			tx := txAcceptanceData.Tx.MsgTx()
 
 			var err error
-			ms, err = addTxToMultiset(ms, tx, selectedParentPastUTXO, node.blueScore)
+			ms, err = addTxToMultiset(ms, tx, selectedParentPastUTXO, node.BlueScore())
 			if err != nil {
 				return nil, err
 			}
@@ -752,7 +752,7 @@ func (dag *BlockDAG) selectedParentMultiset(node *blocknode.BlockNode) (*secp256
 		return secp256k1.NewMultiset(), nil
 	}
 
-	ms, err := dag.multisetStore.MultisetByBlockHash(node.selectedParent.hash)
+	ms, err := dag.multisetStore.MultisetByBlockHash(node.SelectedParent().Hash())
 	if err != nil {
 		return nil, err
 	}
@@ -820,7 +820,7 @@ func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, virtualUTXODiff *ut
 	// Update DAG state.
 	state := &dagState{
 		TipHashes:         dag.TipHashes(),
-		LastFinalityPoint: dag.lastFinalityPoint.hash,
+		LastFinalityPoint: dag.lastFinalityPoint.Hash(),
 		LocalSubnetworkID: dag.subnetworkID,
 	}
 	err = saveDAGState(dbTx, state)
@@ -920,7 +920,7 @@ func (dag *BlockDAG) LastFinalityPointHash() *daghash.Hash {
 	if dag.lastFinalityPoint == nil {
 		return nil
 	}
-	return dag.lastFinalityPoint.hash
+	return dag.lastFinalityPoint.Hash()
 }
 
 // isInSelectedParentChainOf returns whether `node` is in the selected parent chain of `other`.
@@ -951,11 +951,11 @@ func (dag *BlockDAG) checkFinalityViolation(newNode *blocknode.BlockNode) error 
 	// selected parent chain of newNode.selectedParent, so
 	// we explicitly check if newNode.selectedParent is
 	// the finality point.
-	if dag.lastFinalityPoint == newNode.selectedParent {
+	if dag.lastFinalityPoint == newNode.SelectedParent() {
 		return nil
 	}
 
-	isInSelectedChain, err := dag.isInSelectedParentChainOf(dag.lastFinalityPoint, newNode.selectedParent)
+	isInSelectedChain, err := dag.isInSelectedParentChainOf(dag.lastFinalityPoint, newNode.SelectedParent())
 	if err != nil {
 		return err
 	}
@@ -981,9 +981,9 @@ func (dag *BlockDAG) updateFinalityPoint() {
 	}
 
 	var currentNode *blocknode.BlockNode
-	for currentNode = selectedTip.selectedParent; ; currentNode = currentNode.selectedParent {
+	for currentNode = selectedTip.SelectedParent(); ; currentNode = currentNode.SelectedParent() {
 		// We look for the first node in the selected parent chain that has a higher finality score than the last finality point.
-		if dag.FinalityScore(currentNode.selectedParent) == dag.FinalityScore(dag.lastFinalityPoint) {
+		if dag.FinalityScore(currentNode.SelectedParent()) == dag.FinalityScore(dag.lastFinalityPoint) {
 			break
 		}
 	}
@@ -994,8 +994,8 @@ func (dag *BlockDAG) updateFinalityPoint() {
 }
 
 func (dag *BlockDAG) finalizeNodesBelowFinalityPoint(deleteDiffData bool) {
-	queue := make([]*blocknode.BlockNode, 0, len(dag.lastFinalityPoint.parents))
-	for parent := range dag.lastFinalityPoint.parents {
+	queue := make([]*blocknode.BlockNode, 0, len(dag.lastFinalityPoint.Parents()))
+	for parent := range dag.lastFinalityPoint.Parents() {
 		queue = append(queue, parent)
 	}
 	var nodesToDelete []*blocknode.BlockNode
@@ -1005,12 +1005,12 @@ func (dag *BlockDAG) finalizeNodesBelowFinalityPoint(deleteDiffData bool) {
 	for len(queue) > 0 {
 		var current *blocknode.BlockNode
 		current, queue = queue[0], queue[1:]
-		if !current.isFinalized {
-			current.isFinalized = true
+		if !current.IsFinalized() {
+			current.SetFinalized(true)
 			if deleteDiffData {
 				nodesToDelete = append(nodesToDelete, current)
 			}
-			for parent := range current.parents {
+			for parent := range current.Parents() {
 				queue = append(queue, parent)
 			}
 		}
@@ -1029,7 +1029,7 @@ func (dag *BlockDAG) finalizeNodesBelowFinalityPoint(deleteDiffData bool) {
 // is finalized or not, use dag.checkFinalityViolation.
 func (dag *BlockDAG) IsKnownFinalizedBlock(blockHash *daghash.Hash) bool {
 	node, ok := dag.index.LookupNode(blockHash)
-	return ok && node.isFinalized
+	return ok && node.IsFinalized()
 }
 
 // NextBlockCoinbaseTransaction prepares the coinbase transaction for the next mined block
@@ -1050,7 +1050,7 @@ func (dag *BlockDAG) NextBlockCoinbaseTransactionNoLock(scriptPubKey []byte, ext
 	if err != nil {
 		return nil, err
 	}
-	return dag.virtual.BlockNode.expectedCoinbaseTransaction(dag, txsAcceptanceData, scriptPubKey, extraData)
+	return dag.expectedCoinbaseTransaction(&dag.virtual.BlockNode, txsAcceptanceData, scriptPubKey, extraData)
 }
 
 // NextAcceptedIDMerkleRootNoLock prepares the acceptedIDMerkleRoot for the next mined block
@@ -1108,9 +1108,9 @@ func (dag *BlockDAG) applyDAGChanges(node *blocknode.BlockNode, newBlockPastUTXO
 		return nil, nil, errors.Wrap(err, "failed adding block to the reachability tree")
 	}
 
-	dag.multisetStore.SetMultiset(node.hash, newBlockMultiset)
+	dag.multisetStore.SetMultiset(node.Hash(), newBlockMultiset)
 
-	if err = node.updateParents(dag, newBlockPastUTXO); err != nil {
+	if err = dag.updateParents(node, newBlockPastUTXO); err != nil {
 		return nil, nil, errors.Wrapf(err, "failed updating parents of %s", node)
 	}
 
@@ -1197,10 +1197,10 @@ func (dag *BlockDAG) verifyAndBuildUTXO(node *blocknode.BlockNode, transactions 
 	}
 
 	calculatedMultisetHash := daghash.Hash(*multiset.Finalize())
-	if !calculatedMultisetHash.IsEqual(node.utxoCommitment) {
+	if !calculatedMultisetHash.IsEqual(node.UTXOCommitment()) {
 		str := fmt.Sprintf("block %s UTXO commitment is invalid - block "+
-			"header indicates %s, but calculated value is %s", node.hash,
-			node.utxoCommitment, calculatedMultisetHash)
+			"header indicates %s, but calculated value is %s", node.Hash(),
+			node.UTXOCommitment(), calculatedMultisetHash)
 		return nil, nil, nil, nil, common.NewRuleError(common.ErrBadUTXOCommitment, str)
 	}
 
@@ -1251,9 +1251,9 @@ func genesisPastUTXO(virtual *virtualBlock) (utxo.UTXOSet, error) {
 }
 
 func (dag *BlockDAG) fetchBlueBlocks(node *blocknode.BlockNode) ([]*util.Block, error) {
-	blueBlocks := make([]*util.Block, len(node.blues))
-	for i, blueBlockNode := range node.blues {
-		blueBlock, err := dag.fetchBlockByHash(blueBlockNode.hash)
+	blueBlocks := make([]*util.Block, len(node.Blues()))
+	for i, blueBlockNode := range node.Blues() {
+		blueBlock, err := dag.fetchBlockByHash(blueBlockNode.Hash())
 		if err != nil {
 			return nil, err
 		}
@@ -1292,7 +1292,7 @@ func (dag *BlockDAG) applyBlueBlocks(node *blocknode.BlockNode, selectedParentPa
 			if !isSelectedParent && tx.IsCoinBase() {
 				isAccepted = false
 			} else {
-				isAccepted, err = pastUTXO.AddTx(tx.MsgTx(), node.blueScore)
+				isAccepted, err = pastUTXO.AddTx(tx.MsgTx(), node.BlueScore())
 				if err != nil {
 					return nil, nil, err
 				}
@@ -1324,7 +1324,7 @@ func (dag *BlockDAG) updateParentsDiffs(node *blocknode.BlockNode, newBlockUTXO 
 		return err
 	}
 
-	for parent := range node.parents {
+	for parent := range node.Parents() {
 		diffChild, err := dag.utxoDiffStore.diffChildByNode(parent)
 		if err != nil {
 			return err
@@ -1366,7 +1366,7 @@ func (dag *BlockDAG) pastUTXO(node *blocknode.BlockNode) (
 		return genesisPastUTXO, nil, MultiBlockTxsAcceptanceData{}, nil
 	}
 
-	selectedParentPastUTXO, err = dag.restorePastUTXO(node.selectedParent)
+	selectedParentPastUTXO, err = dag.restorePastUTXO(node.SelectedParent())
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -1376,7 +1376,7 @@ func (dag *BlockDAG) pastUTXO(node *blocknode.BlockNode) (
 		return nil, nil, nil, err
 	}
 
-	pastUTXO, bluesTxsAcceptanceData, err = node.applyBlueBlocks(selectedParentPastUTXO, blueBlocks)
+	pastUTXO, bluesTxsAcceptanceData, err = dag.applyBlueBlocks(node, selectedParentPastUTXO, blueBlocks)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -1425,7 +1425,7 @@ func (dag *BlockDAG) restorePastUTXO(node *blocknode.BlockNode) (utxo.UTXOSet, e
 
 // updateTipsUTXO builds and applies new diff UTXOs for all the DAG's tips
 func updateTipsUTXO(dag *BlockDAG, virtualUTXO utxo.UTXOSet) error {
-	for tip := range dag.virtual.parents {
+	for tip := range dag.virtual.Parents() {
 		tipPastUTXO, err := dag.restorePastUTXO(tip)
 		if err != nil {
 			return err
@@ -1461,7 +1461,7 @@ func (dag *BlockDAG) isSynced() bool {
 	if selectedTip == nil {
 		dagTimestamp = dag.Params.GenesisBlock.Header.Timestamp.UnixMilliseconds()
 	} else {
-		dagTimestamp = selectedTip.timestamp
+		dagTimestamp = selectedTip.Timestamp()
 	}
 	dagTime := mstime.UnixMilliseconds(dagTimestamp)
 	return dag.Now().Sub(dagTime) <= isDAGCurrentMaxDiff*dag.Params.TargetTimePerBlock
@@ -1490,7 +1490,7 @@ func (dag *BlockDAG) IsSynced() bool {
 // selectedTip returns the current selected tip for the DAG.
 // It will return nil if there is no tip.
 func (dag *BlockDAG) selectedTip() *blocknode.BlockNode {
-	return dag.virtual.selectedParent
+	return dag.virtual.SelectedParent()
 }
 
 // SelectedTipHeader returns the header of the current selected tip for the DAG.
@@ -1516,7 +1516,7 @@ func (dag *BlockDAG) SelectedTipHash() *daghash.Hash {
 		return nil
 	}
 
-	return selectedTip.hash
+	return selectedTip.Hash()
 }
 
 // UTXOSet returns the DAG's UTXO set
@@ -1545,7 +1545,7 @@ func (dag *BlockDAG) BlueScoreByBlockHash(hash *daghash.Hash) (uint64, error) {
 		return 0, errors.Errorf("block %s is unknown", hash)
 	}
 
-	return node.blueScore, nil
+	return node.BlueScore(), nil
 }
 
 // BluesByBlockHash returns the blues of the block for the given hash.
@@ -1555,9 +1555,9 @@ func (dag *BlockDAG) BluesByBlockHash(hash *daghash.Hash) ([]*daghash.Hash, erro
 		return nil, errors.Errorf("block %s is unknown", hash)
 	}
 
-	hashes := make([]*daghash.Hash, len(node.blues))
-	for i, blue := range node.blues {
-		hashes[i] = blue.hash
+	hashes := make([]*daghash.Hash, len(node.Blues()))
+	for i, blue := range node.Blues() {
+		hashes[i] = blue.Hash()
 	}
 
 	return hashes, nil
@@ -1623,7 +1623,7 @@ func (dag *BlockDAG) blockConfirmations(node *blocknode.BlockNode) (uint64, erro
 		return 0, nil
 	}
 
-	return dag.selectedTip().blueScore - acceptingBlock.blueScore + 1, nil
+	return dag.selectedTip().BlueScore() - acceptingBlock.BlueScore() + 1, nil
 }
 
 // acceptingBlock finds the node in the selected-parent chain that had accepted
@@ -1635,17 +1635,17 @@ func (dag *BlockDAG) acceptingBlock(node *blocknode.BlockNode) (*blocknode.Block
 	}
 
 	// If the node is a chain-block itself, the accepting block is its chain-child
-	isNodeInSelectedParentChain, err := dag.IsInSelectedParentChain(node.hash)
+	isNodeInSelectedParentChain, err := dag.IsInSelectedParentChain(node.Hash())
 	if err != nil {
 		return nil, err
 	}
 	if isNodeInSelectedParentChain {
-		if len(node.children) == 0 {
+		if len(node.Children()) == 0 {
 			// If the node is the selected tip, it doesn't have an accepting block
 			return nil, nil
 		}
-		for child := range node.children {
-			isChildInSelectedParentChain, err := dag.IsInSelectedParentChain(child.hash)
+		for child := range node.Children() {
+			isChildInSelectedParentChain, err := dag.IsInSelectedParentChain(child.Hash())
 			if err != nil {
 				return nil, err
 			}
@@ -1653,11 +1653,11 @@ func (dag *BlockDAG) acceptingBlock(node *blocknode.BlockNode) (*blocknode.Block
 				return child, nil
 			}
 		}
-		return nil, errors.Errorf("chain block %s does not have a chain child", node.hash)
+		return nil, errors.Errorf("chain block %s does not have a chain child", node.Hash())
 	}
 
 	// Find the only chain block that may contain the node in its blues
-	candidateAcceptingBlock := dag.oldestChainBlockWithBlueScoreGreaterThan(node.blueScore)
+	candidateAcceptingBlock := dag.oldestChainBlockWithBlueScoreGreaterThan(node.BlueScore())
 
 	// if no candidate is found, it means that the node has same or more
 	// blue score than the selected tip and is found in its anticone, so
@@ -1668,7 +1668,7 @@ func (dag *BlockDAG) acceptingBlock(node *blocknode.BlockNode) (*blocknode.Block
 
 	// candidateAcceptingBlock is the accepting block only if it actually contains
 	// the node in its blues
-	for _, blue := range candidateAcceptingBlock.blues {
+	for _, blue := range candidateAcceptingBlock.Blues() {
 		if blue == node {
 			return candidateAcceptingBlock, nil
 		}
@@ -1684,7 +1684,7 @@ func (dag *BlockDAG) acceptingBlock(node *blocknode.BlockNode) (*blocknode.Block
 func (dag *BlockDAG) oldestChainBlockWithBlueScoreGreaterThan(blueScore uint64) *blocknode.BlockNode {
 	chainBlockIndex, ok := util.SearchSlice(len(dag.virtual.selectedParentChainSlice), func(i int) bool {
 		selectedPathNode := dag.virtual.selectedParentChainSlice[i]
-		return selectedPathNode.blueScore > blueScore
+		return selectedPathNode.BlueScore() > blueScore
 	})
 	if !ok {
 		return nil
@@ -1715,7 +1715,7 @@ func (dag *BlockDAG) IsInSelectedParentChain(blockHash *daghash.Hash) (bool, err
 // This method MUST be called with the DAG lock held
 func (dag *BlockDAG) SelectedParentChain(blockHash *daghash.Hash) ([]*daghash.Hash, []*daghash.Hash, error) {
 	if blockHash == nil {
-		blockHash = dag.genesis.hash
+		blockHash = dag.genesis.Hash()
 	}
 	if !dag.IsInDAG(blockHash) {
 		return nil, nil, errors.Errorf("blockHash %s does not exist in the DAG", blockHash)
@@ -1735,7 +1735,7 @@ func (dag *BlockDAG) SelectedParentChain(blockHash *daghash.Hash) ([]*daghash.Ha
 		if !ok {
 			return nil, nil, errors.Errorf("block %s does not exist in the DAG", blockHash)
 		}
-		blockHash = node.selectedParent.hash
+		blockHash = node.SelectedParent().Hash()
 
 		isBlockInSelectedParentChain, err = dag.IsInSelectedParentChain(blockHash)
 		if err != nil {
@@ -1747,7 +1747,7 @@ func (dag *BlockDAG) SelectedParentChain(blockHash *daghash.Hash) ([]*daghash.Ha
 	blockHashIndex := len(dag.virtual.selectedParentChainSlice) - 1
 	for blockHashIndex >= 0 {
 		node := dag.virtual.selectedParentChainSlice[blockHashIndex]
-		if node.hash.IsEqual(blockHash) {
+		if node.Hash().IsEqual(blockHash) {
 			break
 		}
 		blockHashIndex--
@@ -1756,7 +1756,7 @@ func (dag *BlockDAG) SelectedParentChain(blockHash *daghash.Hash) ([]*daghash.Ha
 	// Copy all the addedChainHashes starting from blockHashIndex (exclusive)
 	addedChainHashes := make([]*daghash.Hash, len(dag.virtual.selectedParentChainSlice)-blockHashIndex-1)
 	for i, node := range dag.virtual.selectedParentChainSlice[blockHashIndex+1:] {
-		addedChainHashes[i] = node.hash
+		addedChainHashes[i] = node.Hash()
 	}
 
 	return removedChainHashes, addedChainHashes, nil
@@ -1764,12 +1764,12 @@ func (dag *BlockDAG) SelectedParentChain(blockHash *daghash.Hash) ([]*daghash.Ha
 
 // SelectedTipBlueScore returns the blue score of the selected tip.
 func (dag *BlockDAG) SelectedTipBlueScore() uint64 {
-	return dag.selectedTip().blueScore
+	return dag.selectedTip().BlueScore()
 }
 
 // VirtualBlueScore returns the blue score of the current virtual block
 func (dag *BlockDAG) VirtualBlueScore() uint64 {
-	return dag.virtual.blueScore
+	return dag.virtual.BlueScore()
 }
 
 // BlockCount returns the number of blocks in the DAG
@@ -1818,7 +1818,7 @@ func (dag *BlockDAG) ChildHashesByHash(hash *daghash.Hash) ([]*daghash.Hash, err
 
 	}
 
-	return node.children.Hashes(), nil
+	return node.Children().Hashes(), nil
 }
 
 // SelectedParentHash returns the selected parent hash of the block with the given hash in the
@@ -1833,10 +1833,10 @@ func (dag *BlockDAG) SelectedParentHash(blockHash *daghash.Hash) (*daghash.Hash,
 
 	}
 
-	if node.selectedParent == nil {
+	if node.SelectedParent() == nil {
 		return nil, nil
 	}
-	return node.selectedParent.hash, nil
+	return node.SelectedParent().Hash(), nil
 }
 
 // antiPastHashesBetween returns the hashes of the blocks between the
@@ -1851,7 +1851,7 @@ func (dag *BlockDAG) antiPastHashesBetween(lowHash, highHash *daghash.Hash, maxH
 	}
 	hashes := make([]*daghash.Hash, len(nodes))
 	for i, node := range nodes {
-		hashes[i] = node.hash
+		hashes[i] = node.Hash()
 	}
 	return hashes, nil
 }
@@ -1869,9 +1869,9 @@ func (dag *BlockDAG) antiPastBetween(lowHash, highHash *daghash.Hash, maxEntries
 	if !ok {
 		return nil, errors.Errorf("Couldn't find high hash %s", highHash)
 	}
-	if lowNode.blueScore >= highNode.blueScore {
+	if lowNode.BlueScore() >= highNode.BlueScore() {
 		return nil, errors.Errorf("Low hash blueScore >= high hash blueScore (%d >= %d)",
-			lowNode.blueScore, highNode.blueScore)
+			lowNode.BlueScore(), highNode.BlueScore())
 	}
 
 	// In order to get no more then maxEntries blocks from the
@@ -1882,8 +1882,8 @@ func (dag *BlockDAG) antiPastBetween(lowHash, highHash *daghash.Hash, maxEntries
 	// Using blueScore as an approximation is considered to be
 	// fairly accurate because we presume that most DAG blocks are
 	// blue.
-	for highNode.blueScore-lowNode.blueScore+1 > maxEntries {
-		highNode = highNode.selectedParent
+	for highNode.BlueScore()-lowNode.BlueScore()+1 > maxEntries {
+		highNode = highNode.SelectedParent()
 	}
 
 	// Collect every node in highNode's past (including itself) but
@@ -1907,7 +1907,7 @@ func (dag *BlockDAG) antiPastBetween(lowHash, highHash *daghash.Hash, maxEntries
 			continue
 		}
 		candidateNodes.Push(current)
-		for parent := range current.parents {
+		for parent := range current.Parents() {
 			queue.Push(parent)
 		}
 	}
@@ -1971,9 +1971,9 @@ func (dag *BlockDAG) GetTopHeaders(highHash *daghash.Hash, maxHeaders uint64) ([
 			return nil, errors.Errorf("Couldn't find the high hash %s in the dag", highHash)
 		}
 	}
-	headers := make([]*wire.BlockHeader, 0, highNode.blueScore)
+	headers := make([]*wire.BlockHeader, 0, highNode.BlueScore())
 	queue := newDownHeap()
-	queue.pushSet(highNode.parents)
+	queue.pushSet(highNode.Parents())
 
 	visited := blocknode.NewBlockNodeSet()
 	for i := uint32(0); queue.Len() > 0 && uint64(len(headers)) < maxHeaders; i++ {
@@ -1981,7 +1981,7 @@ func (dag *BlockDAG) GetTopHeaders(highHash *daghash.Hash, maxHeaders uint64) ([
 		if !visited.Contains(current) {
 			visited.Add(current)
 			headers = append(headers, current.Header())
-			queue.pushSet(current.parents)
+			queue.pushSet(current.Parents())
 		}
 	}
 	return headers, nil
@@ -2161,9 +2161,7 @@ func (dag *BlockDAG) isKnownDelayedBlock(hash *daghash.Hash) bool {
 func (dag *BlockDAG) initBlockNode(blockHeader *wire.BlockHeader, parents blocknode.BlockNodeSet) (node *blocknode.BlockNode, selectedParentAnticone []*blocknode.BlockNode) {
 	node = blocknode.NewBlockNode(blockHeader, parents, dag.Now())
 
-	if len(node.parents) == 0 {
-		// The genesis block is defined to have a blueScore of 0
-		node.blueScore = 0
+	if len(node.Parents()) == 0 {
 		return node, nil
 	}
 
@@ -2179,7 +2177,7 @@ func (dag *BlockDAG) Notifier() *notifications.ConsensusNotifier {
 }
 
 func (dag *BlockDAG) FinalityScore(node *blocknode.BlockNode) uint64 {
-	return node.blueScore / dag.FinalityInterval()
+	return node.BlueScore() / dag.FinalityInterval()
 }
 
 // CalcPastMedianTime returns the median time of the previous few blocks

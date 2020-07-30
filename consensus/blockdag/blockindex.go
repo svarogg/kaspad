@@ -75,7 +75,7 @@ func (bi *blockIndex) AddNode(node *blocknode.BlockNode) {
 //
 // This function is NOT safe for concurrent access.
 func (bi *blockIndex) addNode(node *blocknode.BlockNode) {
-	bi.index[*node.hash] = node
+	bi.index[*node.Hash()] = node
 }
 
 // NodeStatus provides concurrent-safe access to the status field of a node.
@@ -84,7 +84,7 @@ func (bi *blockIndex) addNode(node *blocknode.BlockNode) {
 func (bi *blockIndex) NodeStatus(node *blocknode.BlockNode) blockstatus.BlockStatus {
 	bi.RLock()
 	defer bi.RUnlock()
-	status := node.status
+	status := node.Status()
 	return status
 }
 
@@ -96,7 +96,7 @@ func (bi *blockIndex) NodeStatus(node *blocknode.BlockNode) blockstatus.BlockSta
 func (bi *blockIndex) SetStatusFlags(node *blocknode.BlockNode, flags blockstatus.BlockStatus) {
 	bi.Lock()
 	defer bi.Unlock()
-	node.status |= flags
+	node.AddStatus(flags)
 	bi.dirty[node] = struct{}{}
 }
 
@@ -107,7 +107,7 @@ func (bi *blockIndex) SetStatusFlags(node *blocknode.BlockNode, flags blockstatu
 func (bi *blockIndex) UnsetStatusFlags(node *blocknode.BlockNode, flags blockstatus.BlockStatus) {
 	bi.Lock()
 	defer bi.Unlock()
-	node.status &^= flags
+	node.RemoveStatus(flags)
 	bi.dirty[node] = struct{}{}
 }
 
@@ -124,7 +124,7 @@ func (bi *blockIndex) flushToDB(dbContext *dbaccess.TxContext) error {
 		if err != nil {
 			return err
 		}
-		key := blockIndexKey(node.hash, node.blueScore)
+		key := blockIndexKey(node.Hash(), node.BlueScore())
 		err = dbaccess.StoreIndexBlock(dbContext, key, serializedBlockNode)
 		if err != nil {
 			return err

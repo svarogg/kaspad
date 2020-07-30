@@ -196,20 +196,20 @@ func (dag *BlockDAG) initBlockIndex() (unprocessedBlockNodes []*blocknode.BlockN
 
 		// Check to see if this node had been stored in the the block DB
 		// but not yet accepted. If so, add it to a slice to be processed later.
-		if node.status == blockstatus.StatusDataStored {
+		if node.Status() == blockstatus.StatusDataStored {
 			unprocessedBlockNodes = append(unprocessedBlockNodes, node)
 			continue
 		}
 
 		// If the node is known to be invalid add it as-is to the block
 		// index and continue.
-		if node.status.KnownInvalid() {
+		if node.Status().KnownInvalid() {
 			dag.index.addNode(node)
 			continue
 		}
 
 		if dag.blockCount == 0 {
-			if !node.hash.IsEqual(dag.Params.GenesisHash) {
+			if !node.Hash().IsEqual(dag.Params.GenesisHash) {
 				return nil, errors.Errorf("Expected "+
 					"first entry in block index to be genesis block, "+
 					"found %s", node.hash)

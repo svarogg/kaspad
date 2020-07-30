@@ -90,6 +90,11 @@ func NewBlockNode(blockHeader *wire.BlockHeader, parents BlockNodeSet, timestamp
 		node.hash = &daghash.ZeroHash
 	}
 
+	// The genesis block is defined to have a blueScore of 0
+	if len(node.Parents()) == 0 {
+		node.blueScore = 0
+	}
+
 	return node
 }
 
@@ -168,4 +173,64 @@ func (node BlockNode) String() string {
 
 func (node *BlockNode) Time() mstime.Time {
 	return mstime.UnixMilliseconds(node.timestamp)
+}
+
+func (node *BlockNode) Status() blockstatus.BlockStatus {
+	return node.status
+}
+
+func (node *BlockNode) SetStatus(status blockstatus.BlockStatus) {
+	node.status = status
+}
+
+func (node *BlockNode) AddStatus(status blockstatus.BlockStatus) {
+	node.status |= status
+}
+
+func (node *BlockNode) RemoveStatus(status blockstatus.BlockStatus) {
+	node.status &^= status
+}
+
+func (node *BlockNode) Hash() *daghash.Hash {
+	return node.hash
+}
+
+func (node *BlockNode) BlueScore() uint64 {
+	return node.blueScore
+}
+
+func (node *BlockNode) SelectedParent() *BlockNode {
+	return node.selectedParent
+}
+
+func (node *BlockNode) Blues() []*BlockNode {
+	return node.blues
+}
+
+func (node *BlockNode) Timestamp() int64 {
+	return node.timestamp
+}
+
+func (node *BlockNode) Bits() uint32 {
+	return node.bits
+}
+
+func (node *BlockNode) Parents() BlockNodeSet {
+	return node.parents
+}
+
+func (node *BlockNode) IsFinalized() bool {
+	return node.isFinalized
+}
+
+func (node *BlockNode) SetFinalized(isFinalized bool) {
+	node.isFinalized = isFinalized
+}
+
+func (node *BlockNode) UTXOCommitment() *daghash.Hash {
+	return node.utxoCommitment
+}
+
+func (node *BlockNode) Children() BlockNodeSet {
+	return node.children
 }

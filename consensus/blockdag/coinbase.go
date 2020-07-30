@@ -81,13 +81,13 @@ func (cfr *compactFeeIterator) next() (uint64, error) {
 func (dag *BlockDAG) getBluesFeeData(node *blocknode.BlockNode) (map[daghash.Hash]compactFeeData, error) {
 	bluesFeeData := make(map[daghash.Hash]compactFeeData)
 
-	for _, blueBlock := range node.blues {
-		feeData, err := dbaccess.FetchFeeData(dag.databaseContext, blueBlock.hash)
+	for _, blueBlock := range node.Blues() {
+		feeData, err := dbaccess.FetchFeeData(dag.databaseContext, blueBlock.Hash())
 		if err != nil {
 			return nil, err
 		}
 
-		bluesFeeData[*blueBlock.hash] = feeData
+		bluesFeeData[*blueBlock.Hash()] = feeData
 	}
 
 	return bluesFeeData, nil
@@ -129,7 +129,7 @@ func (dag *BlockDAG) expectedCoinbaseTransaction(node *blocknode.BlockNode, txsA
 	txIns := []*wire.TxIn{}
 	txOuts := []*wire.TxOut{}
 
-	for _, blue := range node.blues {
+	for _, blue := range node.Blues() {
 		txOut, err := coinbaseOutputForBlueBlock(dag, blue, txsAcceptanceData, bluesFeeData)
 		if err != nil {
 			return nil, err
@@ -138,7 +138,7 @@ func (dag *BlockDAG) expectedCoinbaseTransaction(node *blocknode.BlockNode, txsA
 			txOuts = append(txOuts, txOut)
 		}
 	}
-	payload, err := coinbasepayload.SerializeCoinbasePayload(node.blueScore, scriptPubKey, extraData)
+	payload, err := coinbasepayload.SerializeCoinbasePayload(node.BlueScore(), scriptPubKey, extraData)
 	if err != nil {
 		return nil, err
 	}
@@ -152,19 +152,19 @@ func (dag *BlockDAG) expectedCoinbaseTransaction(node *blocknode.BlockNode, txsA
 func coinbaseOutputForBlueBlock(dag *BlockDAG, blueBlock *blocknode.BlockNode,
 	txsAcceptanceData MultiBlockTxsAcceptanceData, feeData map[daghash.Hash]compactFeeData) (*wire.TxOut, error) {
 
-	blockTxsAcceptanceData, ok := txsAcceptanceData.FindAcceptanceData(blueBlock.hash)
+	blockTxsAcceptanceData, ok := txsAcceptanceData.FindAcceptanceData(blueBlock.Hash())
 	if !ok {
-		return nil, errors.Errorf("No txsAcceptanceData for block %s", blueBlock.hash)
+		return nil, errors.Errorf("No txsAcceptanceData for block %s", blueBlock.Hash())
 	}
-	blockFeeData, ok := feeData[*blueBlock.hash]
+	blockFeeData, ok := feeData[*blueBlock.Hash()]
 	if !ok {
-		return nil, errors.Errorf("No feeData for block %s", blueBlock.hash)
+		return nil, errors.Errorf("No feeData for block %s", blueBlock.Hash())
 	}
 
 	if len(blockTxsAcceptanceData.TxAcceptanceData) != blockFeeData.Len() {
 		return nil, errors.Errorf(
 			"length of accepted transaction data(%d) and fee data(%d) is not equal for block %s",
-			len(blockTxsAcceptanceData.TxAcceptanceData), blockFeeData.Len(), blueBlock.hash)
+			len(blockTxsAcceptanceData.TxAcceptanceData), blockFeeData.Len(), blueBlock.Hash())
 	}
 
 	totalFees := uint64(0)
@@ -180,7 +180,7 @@ func coinbaseOutputForBlueBlock(dag *BlockDAG, blueBlock *blocknode.BlockNode,
 		}
 	}
 
-	totalReward := CalcBlockSubsidy(blueBlock.blueScore, dag.Params) + totalFees
+	totalReward := CalcBlockSubsidy(blueBlock.BlueScore(), dag.Params) + totalFees
 
 	if totalReward == 0 {
 		return nil, nil

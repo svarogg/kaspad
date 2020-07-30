@@ -50,16 +50,16 @@ func (dag *BlockDAG) BlockLocatorFromHashes(highHash, lowHash *daghash.Hash) (Bl
 func (dag *BlockDAG) blockLocator(highNode, lowNode *blocknode.BlockNode) (BlockLocator, error) {
 	// We use the selected parent of the high node, so the
 	// block locator won't contain the high node.
-	highNode = highNode.selectedParent
+	highNode = highNode.SelectedParent()
 
 	node := highNode
 	step := uint64(1)
 	locator := make(BlockLocator, 0)
 	for node != nil {
-		locator = append(locator, node.hash)
+		locator = append(locator, node.Hash())
 
 		// Nothing more to add once the low node has been added.
-		if node.blueScore <= lowNode.blueScore {
+		if node.BlueScore() <= lowNode.BlueScore() {
 			if node != lowNode {
 				return nil, errors.Errorf("highNode and lowNode are " +
 					"not in the same selected parent chain.")
@@ -69,9 +69,9 @@ func (dag *BlockDAG) blockLocator(highNode, lowNode *blocknode.BlockNode) (Block
 
 		// Calculate blueScore of previous node to include ensuring the
 		// final node is lowNode.
-		nextBlueScore := node.blueScore - step
-		if nextBlueScore < lowNode.blueScore {
-			nextBlueScore = lowNode.blueScore
+		nextBlueScore := node.BlueScore() - step
+		if nextBlueScore < lowNode.BlueScore() {
+			nextBlueScore = lowNode.BlueScore()
 		}
 
 		// walk backwards through the nodes to the correct ancestor.
@@ -104,7 +104,7 @@ func (dag *BlockDAG) FindNextLocatorBoundaries(locator BlockLocator) (highHash, 
 		}
 	}
 	if nextBlockLocatorIndex < 0 {
-		return nil, lowNode.hash
+		return nil, lowNode.Hash()
 	}
-	return locator[nextBlockLocatorIndex], lowNode.hash
+	return locator[nextBlockLocatorIndex], lowNode.Hash()
 }
