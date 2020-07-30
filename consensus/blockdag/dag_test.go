@@ -9,7 +9,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/blockstatus"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/timesource"
-	utxo2 "github.com/kaspanet/kaspad/consensus/utxo"
+	"github.com/kaspanet/kaspad/consensus/utxo"
 	"math"
 	"os"
 	"path/filepath"
@@ -261,7 +261,7 @@ func TestCalcSequenceLock(t *testing.T) {
 	// age of 4 blocks.
 	msgTx := wire.NewNativeMsgTx(wire.TxVersion, nil, []*wire.TxOut{{ScriptPubKey: nil, Value: 10}})
 	targetTx := util.NewTx(msgTx)
-	utxoSet := utxo2.NewFullUTXOSet()
+	utxoSet := utxo.NewFullUTXOSet()
 	blueScore := uint64(numBlocksToGenerate) - 4
 	if isAccepted, err := utxoSet.AddTx(targetTx.MsgTx(), blueScore); err != nil {
 		t.Fatalf("AddTx unexpectedly failed. Error: %s", err)
@@ -274,7 +274,7 @@ func TestCalcSequenceLock(t *testing.T) {
 	// that the sequence lock heights are always calculated from the same
 	// point of view that they were originally calculated from for a given
 	// utxo. That is to say, the height prior to it.
-	utxo := wire.Outpoint{
+	outpoint := wire.Outpoint{
 		TxID:  *targetTx.ID(),
 		Index: 0,
 	}
@@ -299,7 +299,7 @@ func TestCalcSequenceLock(t *testing.T) {
 		TxID:  *unConfTx.TxID(),
 		Index: 0,
 	}
-	if isAccepted, err := utxoSet.AddTx(unConfTx, utxo2.UnacceptedBlueScore); err != nil {
+	if isAccepted, err := utxoSet.AddTx(unConfTx, utxo.UnacceptedBlueScore); err != nil {
 		t.Fatalf("AddTx unexpectedly failed. Error: %s", err)
 	} else if !isAccepted {
 		t.Fatalf("AddTx unexpectedly didn't add tx %s", unConfTx.TxID())
@@ -308,7 +308,7 @@ func TestCalcSequenceLock(t *testing.T) {
 	tests := []struct {
 		name    string
 		tx      *wire.MsgTx
-		utxoSet utxo2.UTXOSet
+		utxoSet utxo.UTXOSet
 		mempool bool
 		want    *SequenceLock
 	}{
@@ -317,7 +317,7 @@ func TestCalcSequenceLock(t *testing.T) {
 		// should be disabled.
 		{
 			name:    "single input, max sequence number",
-			tx:      wire.NewNativeMsgTx(1, []*wire.TxIn{{PreviousOutpoint: utxo, Sequence: wire.MaxTxInSequenceNum}}, nil),
+			tx:      wire.NewNativeMsgTx(1, []*wire.TxIn{{PreviousOutpoint: outpoint, Sequence: wire.MaxTxInSequenceNum}}, nil),
 			utxoSet: utxoSet,
 			want: &SequenceLock{
 				Milliseconds:   -1,
@@ -332,7 +332,7 @@ func TestCalcSequenceLock(t *testing.T) {
 		// the targeted block.
 		{
 			name:    "single input, milliseconds lock time below time granularity",
-			tx:      wire.NewNativeMsgTx(1, []*wire.TxIn{{PreviousOutpoint: utxo, Sequence: LockTimeToSequence(true, 2)}}, nil),
+			tx:      wire.NewNativeMsgTx(1, []*wire.TxIn{{PreviousOutpoint: outpoint, Sequence: LockTimeToSequence(true, 2)}}, nil),
 			utxoSet: utxoSet,
 			want: &SequenceLock{
 				Milliseconds:   medianTime - 1,
@@ -344,7 +344,7 @@ func TestCalcSequenceLock(t *testing.T) {
 		// milliseconds after the median past time of the DAG.
 		{
 			name:    "single input, 1048575 milliseconds after median time",
-			tx:      wire.NewNativeMsgTx(1, []*wire.TxIn{{PreviousOutpoint: utxo, Sequence: LockTimeToSequence(true, 1048576)}}, nil),
+			tx:      wire.NewNativeMsgTx(1, []*wire.TxIn{{PreviousOutpoint: outpoint, Sequence: LockTimeToSequence(true, 1048576)}}, nil),
 			utxoSet: utxoSet,
 			want: &SequenceLock{
 				Milliseconds:   medianTime + 1048575,
@@ -361,13 +361,13 @@ func TestCalcSequenceLock(t *testing.T) {
 			name: "multiple varied inputs",
 			tx: wire.NewNativeMsgTx(1,
 				[]*wire.TxIn{{
-					PreviousOutpoint: utxo,
+					PreviousOutpoint: outpoint,
 					Sequence:         LockTimeToSequence(true, 2621440),
 				}, {
-					PreviousOutpoint: utxo,
+					PreviousOutpoint: outpoint,
 					Sequence:         LockTimeToSequence(false, 4),
 				}, {
-					PreviousOutpoint: utxo,
+					PreviousOutpoint: outpoint,
 					Sequence: LockTimeToSequence(false, 5) |
 						wire.SequenceLockTimeDisabled,
 				}},
@@ -384,7 +384,7 @@ func TestCalcSequenceLock(t *testing.T) {
 		// height of 2 meaning it can be included at height 3.
 		{
 			name:    "single input, lock-time in blocks",
-			tx:      wire.NewNativeMsgTx(1, []*wire.TxIn{{PreviousOutpoint: utxo, Sequence: LockTimeToSequence(false, 3)}}, nil),
+			tx:      wire.NewNativeMsgTx(1, []*wire.TxIn{{PreviousOutpoint: outpoint, Sequence: LockTimeToSequence(false, 3)}}, nil),
 			utxoSet: utxoSet,
 			want: &SequenceLock{
 				Milliseconds:   -1,
@@ -397,10 +397,10 @@ func TestCalcSequenceLock(t *testing.T) {
 		{
 			name: "two inputs, lock-times in seconds",
 			tx: wire.NewNativeMsgTx(1, []*wire.TxIn{{
-				PreviousOutpoint: utxo,
+				PreviousOutpoint: outpoint,
 				Sequence:         LockTimeToSequence(true, 5242880),
 			}, {
-				PreviousOutpoint: utxo,
+				PreviousOutpoint: outpoint,
 				Sequence:         LockTimeToSequence(true, 2621440),
 			}}, nil),
 			utxoSet: utxoSet,
@@ -417,10 +417,10 @@ func TestCalcSequenceLock(t *testing.T) {
 			name: "two inputs, lock-times in blocks",
 			tx: wire.NewNativeMsgTx(1,
 				[]*wire.TxIn{{
-					PreviousOutpoint: utxo,
+					PreviousOutpoint: outpoint,
 					Sequence:         LockTimeToSequence(false, 1),
 				}, {
-					PreviousOutpoint: utxo,
+					PreviousOutpoint: outpoint,
 					Sequence:         LockTimeToSequence(false, 11),
 				}},
 				nil),
@@ -437,16 +437,16 @@ func TestCalcSequenceLock(t *testing.T) {
 			name: "four inputs, two lock-times in time, two lock-times in blocks",
 			tx: wire.NewNativeMsgTx(1,
 				[]*wire.TxIn{{
-					PreviousOutpoint: utxo,
+					PreviousOutpoint: outpoint,
 					Sequence:         LockTimeToSequence(true, 2621440),
 				}, {
-					PreviousOutpoint: utxo,
+					PreviousOutpoint: outpoint,
 					Sequence:         LockTimeToSequence(true, 6815744),
 				}, {
-					PreviousOutpoint: utxo,
+					PreviousOutpoint: outpoint,
 					Sequence:         LockTimeToSequence(false, 3),
 				}, {
-					PreviousOutpoint: utxo,
+					PreviousOutpoint: outpoint,
 					Sequence:         LockTimeToSequence(false, 9),
 				}},
 				nil),
@@ -954,7 +954,7 @@ func testFinalizeNodesBelowFinalityPoint(t *testing.T, deleteDiffData bool) {
 		dag.index.AddNode(node)
 
 		// Put dummy diff data in dag.utxoDiffStore
-		err := dag.utxoDiffStore.setBlockDiff(node, utxo2.NewUTXODiff())
+		err := dag.utxoDiffStore.setBlockDiff(node, utxo.NewUTXODiff())
 		if err != nil {
 			t.Fatalf("setBlockDiff: %s", err)
 		}
@@ -1334,27 +1334,27 @@ func TestUTXOCommitment(t *testing.T) {
 		t.Fatalf("TestUTXOCommitment: BlockNode for block D not found")
 	}
 	blockDPastUTXO, _, _, _ := dag.pastUTXO(blockNodeD)
-	blockDPastDiffUTXOSet := blockDPastUTXO.(*utxo2.DiffUTXOSet)
+	blockDPastDiffUTXOSet := blockDPastUTXO.(*utxo.DiffUTXOSet)
 
 	// Build a Multiset for block D
 	multiset := secp256k1.NewMultiset()
 	for outpoint, entry := range blockDPastDiffUTXOSet.base.utxoCollection {
 		var err error
-		multiset, err = utxo2.addUTXOToMultiset(multiset, entry, &outpoint)
+		multiset, err = utxo.AddUTXOToMultiset(multiset, entry, &outpoint)
 		if err != nil {
 			t.Fatalf("TestUTXOCommitment: addUTXOToMultiset unexpectedly failed")
 		}
 	}
 	for outpoint, entry := range blockDPastDiffUTXOSet.UTXODiff.toAdd {
 		var err error
-		multiset, err = utxo2.addUTXOToMultiset(multiset, entry, &outpoint)
+		multiset, err = utxo.AddUTXOToMultiset(multiset, entry, &outpoint)
 		if err != nil {
 			t.Fatalf("TestUTXOCommitment: addUTXOToMultiset unexpectedly failed")
 		}
 	}
 	for outpoint, entry := range blockDPastDiffUTXOSet.UTXODiff.toRemove {
 		var err error
-		multiset, err = utxo2.removeUTXOFromMultiset(multiset, entry, &outpoint)
+		multiset, err = utxo.RemoveUTXOFromMultiset(multiset, entry, &outpoint)
 		if err != nil {
 			t.Fatalf("TestUTXOCommitment: removeUTXOFromMultiset unexpectedly failed")
 		}

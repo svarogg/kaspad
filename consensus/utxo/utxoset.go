@@ -166,12 +166,12 @@ func NewUTXODiff() *UTXODiff {
 	}
 }
 
-// diffFrom returns a new utxoDiff with the difference between this utxoDiff and another
+// DiffFrom returns a new utxoDiff with the difference between this utxoDiff and another
 // Assumes that:
 // Both utxoDiffs are from the same base
 // If a txOut exists in both utxoDiffs, its underlying values would be the same
 //
-// diffFrom follows a set of rules represented by the following 3 by 3 table:
+// DiffFrom follows a set of rules represented by the following 3 by 3 table:
 //
 //          |           | this      |           |
 // ---------+-----------+-----------+-----------+-----------
@@ -191,9 +191,9 @@ func NewUTXODiff() *UTXODiff {
 //
 // Examples:
 // 1. This diff contains a UTXO in toAdd, and the other diff contains it in toRemove
-//    diffFrom results in an error
+//    DiffFrom results in an error
 // 2. This diff contains a UTXO in toRemove, and the other diff does not contain it
-//    diffFrom results in the UTXO being added to toAdd
+//    DiffFrom results in the UTXO being added to toAdd
 func (d *UTXODiff) diffFrom(other *UTXODiff) (*UTXODiff, error) {
 	result := UTXODiff{
 		toAdd:    make(utxoCollection, len(d.toRemove)+len(other.toAdd)),
@@ -214,7 +214,7 @@ func (d *UTXODiff) diffFrom(other *UTXODiff) (*UTXODiff, error) {
 		} else if (d.toRemove.contains(outpoint) && !other.toRemove.contains(outpoint)) ||
 			(!d.toRemove.contains(outpoint) && other.toRemove.contains(outpoint)) {
 			return nil, errors.New(
-				"diffFrom: outpoint both in d.toAdd, other.toAdd, and only one of d.toRemove and other.toRemove")
+				"DiffFrom: outpoint both in d.toAdd, other.toAdd, and only one of d.toRemove and other.toRemove")
 		}
 		if diffEntry, ok := other.toRemove.get(outpoint); ok {
 			// An exception is made for entries with unequal blue scores
@@ -226,7 +226,7 @@ func (d *UTXODiff) diffFrom(other *UTXODiff) (*UTXODiff, error) {
 					other.toAdd.containsWithBlueScore(outpoint, utxoEntry.blockBlueScore)) {
 				continue
 			}
-			return nil, errors.Errorf("diffFrom: outpoint %s both in d.toAdd and in other.toRemove", outpoint)
+			return nil, errors.Errorf("DiffFrom: outpoint %s both in d.toAdd and in other.toRemove", outpoint)
 		}
 	}
 
@@ -239,7 +239,7 @@ func (d *UTXODiff) diffFrom(other *UTXODiff) (*UTXODiff, error) {
 			// if have the same entry in d.toRemove - simply don't copy.
 			// unless existing entry is with different blue score, in this case - this is an error
 			if utxoEntry.blockBlueScore != diffEntry.blockBlueScore {
-				return nil, errors.New("diffFrom: outpoint both in d.toRemove and other.toRemove with different " +
+				return nil, errors.New("DiffFrom: outpoint both in d.toRemove and other.toRemove with different " +
 					"blue scores, with no corresponding entry in d.toAdd")
 			}
 		} else { // if no existing entry - add to result.toAdd
@@ -259,7 +259,7 @@ func (d *UTXODiff) diffFrom(other *UTXODiff) (*UTXODiff, error) {
 					other.toRemove.containsWithBlueScore(outpoint, utxoEntry.blockBlueScore)) {
 				continue
 			}
-			return nil, errors.New("diffFrom: outpoint both in d.toRemove and in other.toAdd")
+			return nil, errors.New("DiffFrom: outpoint both in d.toRemove and in other.toAdd")
 		}
 	}
 
@@ -282,9 +282,9 @@ func (d *UTXODiff) diffFrom(other *UTXODiff) (*UTXODiff, error) {
 	return &result, nil
 }
 
-// withDiffInPlace applies provided diff to this diff in-place, that would be the result if
+// WithDiffInPlace applies provided diff to this diff in-place, that would be the result if
 // first d, and than diff were applied to the same base
-func (d *UTXODiff) withDiffInPlace(diff *UTXODiff) error {
+func (d *UTXODiff) WithDiffInPlace(diff *UTXODiff) error {
 	for outpoint, entryToRemove := range diff.toRemove {
 		if d.toAdd.containsWithBlueScore(outpoint, entryToRemove.blockBlueScore) {
 			// If already exists in toAdd with the same blueScore - remove from toAdd
@@ -294,7 +294,7 @@ func (d *UTXODiff) withDiffInPlace(diff *UTXODiff) error {
 		if d.toRemove.contains(outpoint) {
 			// If already exists - this is an error
 			return errors.Errorf(
-				"withDiffInPlace: outpoint %s both in d.toRemove and in diff.toRemove", outpoint)
+				"WithDiffInPlace: outpoint %s both in d.toRemove and in diff.toRemove", outpoint)
 		}
 
 		// If not exists neither in toAdd nor in toRemove - add to toRemove
@@ -306,7 +306,7 @@ func (d *UTXODiff) withDiffInPlace(diff *UTXODiff) error {
 			// If already exists in toRemove with the same blueScore - remove from toRemove
 			if d.toAdd.contains(outpoint) && !diff.toRemove.contains(outpoint) {
 				return errors.Errorf(
-					"withDiffInPlace: outpoint %s both in d.toAdd and in diff.toAdd with no "+
+					"WithDiffInPlace: outpoint %s both in d.toAdd and in diff.toAdd with no "+
 						"corresponding entry in diff.toRemove", outpoint)
 			}
 			d.toRemove.remove(outpoint)
@@ -317,7 +317,7 @@ func (d *UTXODiff) withDiffInPlace(diff *UTXODiff) error {
 				!diff.toRemove.containsWithBlueScore(outpoint, existingEntry.blockBlueScore)) {
 			// If already exists - this is an error
 			return errors.Errorf(
-				"withDiffInPlace: outpoint %s both in d.toAdd and in diff.toAdd", outpoint)
+				"WithDiffInPlace: outpoint %s both in d.toAdd and in diff.toAdd", outpoint)
 		}
 
 		// If not exists neither in toAdd nor in toRemove, or exists in toRemove with different blueScore - add to toAdd
@@ -330,9 +330,9 @@ func (d *UTXODiff) withDiffInPlace(diff *UTXODiff) error {
 // WithDiff applies provided diff to this diff, creating a new utxoDiff, that would be the result if
 // first d, and than diff were applied to some base
 func (d *UTXODiff) WithDiff(diff *UTXODiff) (*UTXODiff, error) {
-	clone := d.clone()
+	clone := d.Clone()
 
-	err := clone.withDiffInPlace(diff)
+	err := clone.WithDiffInPlace(diff)
 	if err != nil {
 		return nil, err
 	}
@@ -340,8 +340,8 @@ func (d *UTXODiff) WithDiff(diff *UTXODiff) (*UTXODiff, error) {
 	return clone, nil
 }
 
-// clone returns a clone of this utxoDiff
-func (d *UTXODiff) clone() *UTXODiff {
+// Clone returns a clone of this utxoDiff
+func (d *UTXODiff) Clone() *UTXODiff {
 	clone := &UTXODiff{
 		toAdd:    d.toAdd.clone(),
 		toRemove: d.toRemove.clone(),
@@ -397,10 +397,10 @@ func (d UTXODiff) String() string {
 // 7. Convert (meld) the new virtual's diffUTXOSet into a fullUTXOSet. This updates the DAG's fullUTXOSet
 type UTXOSet interface {
 	fmt.Stringer
-	diffFrom(other UTXOSet) (*UTXODiff, error)
+	DiffFrom(other UTXOSet) (*UTXODiff, error)
 	WithDiff(utxoDiff *UTXODiff) (UTXOSet, error)
 	AddTx(tx *wire.MsgTx, blockBlueScore uint64) (ok bool, err error)
-	clone() UTXOSet
+	Clone() UTXOSet
 	Get(outpoint wire.Outpoint) (*UTXOEntry, bool)
 }
 
@@ -421,7 +421,7 @@ func newFullUTXOSetFromUTXOCollection(collection utxoCollection) (*FullUTXOSet, 
 	var err error
 	multiset := secp256k1.NewMultiset()
 	for outpoint, utxoEntry := range collection {
-		multiset, err = addUTXOToMultiset(multiset, utxoEntry, &outpoint)
+		multiset, err = AddUTXOToMultiset(multiset, utxoEntry, &outpoint)
 		if err != nil {
 			return nil, err
 		}
@@ -431,16 +431,16 @@ func newFullUTXOSetFromUTXOCollection(collection utxoCollection) (*FullUTXOSet, 
 	}, nil
 }
 
-// diffFrom returns the difference between this utxoSet and another
-// diffFrom can only work when other is a diffUTXOSet, and its base utxoSet is this.
-func (fus *FullUTXOSet) diffFrom(other UTXOSet) (*UTXODiff, error) {
+// DiffFrom returns the difference between this utxoSet and another
+// DiffFrom can only work when other is a diffUTXOSet, and its base utxoSet is this.
+func (fus *FullUTXOSet) DiffFrom(other UTXOSet) (*UTXODiff, error) {
 	otherDiffSet, ok := other.(*DiffUTXOSet)
 	if !ok {
-		return nil, errors.New("can't diffFrom two fullUTXOSets")
+		return nil, errors.New("can't DiffFrom two fullUTXOSets")
 	}
 
 	if otherDiffSet.base != fus {
-		return nil, errors.New("can diffFrom only with diffUTXOSet where this fullUTXOSet is the base")
+		return nil, errors.New("can DiffFrom only with diffUTXOSet where this fullUTXOSet is the base")
 	}
 
 	return otherDiffSet.UTXODiff, nil
@@ -448,7 +448,7 @@ func (fus *FullUTXOSet) diffFrom(other UTXOSet) (*UTXODiff, error) {
 
 // WithDiff returns a utxoSet which is a diff between this and another utxoSet
 func (fus *FullUTXOSet) WithDiff(other *UTXODiff) (UTXOSet, error) {
-	return NewDiffUTXOSet(fus, other.clone()), nil
+	return NewDiffUTXOSet(fus, other.Clone()), nil
 }
 
 // AddTx adds a transaction to this utxoSet and returns isAccepted=true iff it's valid in this UTXO's context.
@@ -487,7 +487,7 @@ func (fus *FullUTXOSet) containsInputs(tx *wire.MsgTx) bool {
 }
 
 // clone returns a clone of this utxoSet
-func (fus *FullUTXOSet) clone() UTXOSet {
+func (fus *FullUTXOSet) Clone() UTXOSet {
 	return &FullUTXOSet{utxoCollection: fus.utxoCollection.clone()}
 }
 
@@ -511,22 +511,22 @@ func NewDiffUTXOSet(base *FullUTXOSet, diff *UTXODiff) *DiffUTXOSet {
 	}
 }
 
-// diffFrom returns the difference between this utxoSet and another.
-// diffFrom can work if other is this's base fullUTXOSet, or a diffUTXOSet with the same base as this
-func (dus *DiffUTXOSet) diffFrom(other UTXOSet) (*UTXODiff, error) {
+// DiffFrom returns the difference between this utxoSet and another.
+// DiffFrom can work if other is this's base fullUTXOSet, or a diffUTXOSet with the same base as this
+func (dus *DiffUTXOSet) DiffFrom(other UTXOSet) (*UTXODiff, error) {
 	otherDiffSet, ok := other.(*DiffUTXOSet)
 	if !ok {
-		return nil, errors.New("can't diffFrom diffUTXOSet with fullUTXOSet")
+		return nil, errors.New("can't DiffFrom diffUTXOSet with fullUTXOSet")
 	}
 
 	if otherDiffSet.base != dus.base {
-		return nil, errors.New("can't diffFrom with another diffUTXOSet with a different base")
+		return nil, errors.New("can't DiffFrom with another diffUTXOSet with a different base")
 	}
 
 	return dus.UTXODiff.diffFrom(otherDiffSet.UTXODiff)
 }
 
-// WithDiff return a new utxoSet which is a diffFrom between this and another utxoSet
+// WithDiff return a new utxoSet which is a DiffFrom between this and another utxoSet
 func (dus *DiffUTXOSet) WithDiff(other *UTXODiff) (UTXOSet, error) {
 	diff, err := dus.UTXODiff.WithDiff(other)
 	if err != nil {
@@ -592,8 +592,8 @@ func (dus *DiffUTXOSet) containsInputs(tx *wire.MsgTx) bool {
 	return true
 }
 
-// meldToBase updates the base fullUTXOSet with all changes in diff
-func (dus *DiffUTXOSet) meldToBase() error {
+// MeldToBase updates the base fullUTXOSet with all changes in diff
+func (dus *DiffUTXOSet) MeldToBase() error {
 	for outpoint := range dus.UTXODiff.toRemove {
 		if _, ok := dus.base.Get(outpoint); ok {
 			dus.base.remove(outpoint)
@@ -614,14 +614,14 @@ func (dus *DiffUTXOSet) String() string {
 }
 
 // clone returns a clone of this UTXO Set
-func (dus *DiffUTXOSet) clone() UTXOSet {
-	return NewDiffUTXOSet(dus.base.clone().(*FullUTXOSet), dus.UTXODiff.clone())
+func (dus *DiffUTXOSet) Clone() UTXOSet {
+	return NewDiffUTXOSet(dus.base.Clone().(*FullUTXOSet), dus.UTXODiff.Clone())
 }
 
-// cloneWithoutBase returns a *DiffUTXOSet with same
+// CloneWithoutBase returns a *DiffUTXOSet with same
 // base as this *DiffUTXOSet and a cloned diff.
-func (dus *DiffUTXOSet) cloneWithoutBase() UTXOSet {
-	return NewDiffUTXOSet(dus.base, dus.UTXODiff.clone())
+func (dus *DiffUTXOSet) CloneWithoutBase() UTXOSet {
+	return NewDiffUTXOSet(dus.base, dus.UTXODiff.Clone())
 }
 
 // Get returns the UTXOEntry associated with provided outpoint in this UTXOSet.

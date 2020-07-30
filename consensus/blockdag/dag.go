@@ -766,7 +766,7 @@ func addTxToMultiset(ms *secp256k1.MultiSet, tx *wire.MsgTx, pastUTXO utxo.UTXOS
 		}
 
 		var err error
-		ms, err = utxo.removeUTXOFromMultiset(ms, entry, &txIn.PreviousOutpoint)
+		ms, err = utxo.RemoveUTXOFromMultiset(ms, entry, &txIn.PreviousOutpoint)
 		if err != nil {
 			return nil, err
 		}
@@ -778,7 +778,7 @@ func addTxToMultiset(ms *secp256k1.MultiSet, tx *wire.MsgTx, pastUTXO utxo.UTXOS
 		entry := utxo.NewUTXOEntry(txOut, isCoinbase, blockBlueScore)
 
 		var err error
-		ms, err = utxo.addUTXOToMultiset(ms, entry, &outpoint)
+		ms, err = utxo.AddUTXOToMultiset(ms, entry, &outpoint)
 		if err != nil {
 			return nil, err
 		}
@@ -828,7 +828,7 @@ func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, virtualUTXODiff *ut
 
 	// Update the UTXO set using the diffSet that was melded into the
 	// full UTXO set.
-	err = utxo.updateUTXOSet(dbTx, virtualUTXODiff)
+	err = utxo.UpdateUTXOSet(dbTx, virtualUTXODiff)
 	if err != nil {
 		return err
 	}
@@ -1146,7 +1146,7 @@ func (dag *BlockDAG) applyDAGChanges(node *BlockNode, newBlockPastUTXO utxo.UTXO
 func (dag *BlockDAG) meldVirtualUTXO(newVirtualUTXODiffSet *utxo.DiffUTXOSet) error {
 	dag.utxoLock.Lock()
 	defer dag.utxoLock.Unlock()
-	return newVirtualUTXODiffSet.meldToBase()
+	return newVirtualUTXODiffSet.MeldToBase()
 }
 
 // checkDoubleSpendsWithBlockPast checks that each block transaction
@@ -1264,7 +1264,7 @@ func (dag *BlockDAG) fetchBlueBlocks(node *BlockNode) ([]*util.Block, error) {
 func (node *BlockNode) applyBlueBlocks(selectedParentPastUTXO utxo.UTXOSet, blueBlocks []*util.Block) (
 	pastUTXO utxo.UTXOSet, multiBlockTxsAcceptanceData MultiBlockTxsAcceptanceData, err error) {
 
-	pastUTXO = selectedParentPastUTXO.(*utxo.DiffUTXOSet).cloneWithoutBase()
+	pastUTXO = selectedParentPastUTXO.(*utxo.DiffUTXOSet).CloneWithoutBase()
 	multiBlockTxsAcceptanceData = make(MultiBlockTxsAcceptanceData, len(blueBlocks))
 
 	// Add blueBlocks to multiBlockTxsAcceptanceData in topological order. This
@@ -1309,7 +1309,7 @@ func (node *BlockNode) updateParents(dag *BlockDAG, newBlockUTXO utxo.UTXOSet) e
 
 // updateParentsDiffs updates the diff of any parent whose DiffChild is this block
 func (node *BlockNode) updateParentsDiffs(dag *BlockDAG, newBlockUTXO utxo.UTXOSet) error {
-	virtualDiffFromNewBlock, err := dag.virtual.utxoSet.diffFrom(newBlockUTXO)
+	virtualDiffFromNewBlock, err := dag.virtual.utxoSet.DiffFrom(newBlockUTXO)
 	if err != nil {
 		return err
 	}
@@ -1333,7 +1333,7 @@ func (node *BlockNode) updateParentsDiffs(dag *BlockDAG, newBlockUTXO utxo.UTXOS
 			if err != nil {
 				return err
 			}
-			diff, err := newBlockUTXO.diffFrom(parentPastUTXO)
+			diff, err := newBlockUTXO.DiffFrom(parentPastUTXO)
 			if err != nil {
 				return err
 			}
@@ -1397,7 +1397,7 @@ func (dag *BlockDAG) restorePastUTXO(node *BlockNode) (utxo.UTXOSet, error) {
 	if err != nil {
 		return nil, err
 	}
-	accumulatedDiff := topNodeDiff.clone()
+	accumulatedDiff := topNodeDiff.Clone()
 
 	for i := len(stack) - 1; i >= 0; i-- {
 		diff, err := dag.utxoDiffStore.diffByNode(stack[i])
@@ -1405,7 +1405,7 @@ func (dag *BlockDAG) restorePastUTXO(node *BlockNode) (utxo.UTXOSet, error) {
 			return nil, err
 		}
 		// Use withDiffInPlace, otherwise copying the diffs again and again create a polynomial overhead
-		err = accumulatedDiff.withDiffInPlace(diff)
+		err = accumulatedDiff.WithDiffInPlace(diff)
 		if err != nil {
 			return nil, err
 		}
@@ -1421,7 +1421,7 @@ func updateTipsUTXO(dag *BlockDAG, virtualUTXO utxo.UTXOSet) error {
 		if err != nil {
 			return err
 		}
-		diff, err := virtualUTXO.diffFrom(tipPastUTXO)
+		diff, err := virtualUTXO.DiffFrom(tipPastUTXO)
 		if err != nil {
 			return err
 		}

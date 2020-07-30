@@ -222,9 +222,9 @@ func deserializeUTXOEntry(r io.Reader) (*UTXOEntry, error) {
 	return entry, nil
 }
 
-// updateUTXOSet updates the UTXO set in the database based on the provided
+// UpdateUTXOSet updates the UTXO set in the database based on the provided
 // UTXO diff.
-func updateUTXOSet(dbContext dbaccess.Context, virtualUTXODiff *UTXODiff) error {
+func UpdateUTXOSet(dbContext dbaccess.Context, virtualUTXODiff *UTXODiff) error {
 	outpointBuff := bytes.NewBuffer(make([]byte, OutpointSerializeSize))
 	for outpoint := range virtualUTXODiff.toRemove {
 		outpointBuff.Reset()

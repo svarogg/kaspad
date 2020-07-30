@@ -97,7 +97,7 @@ func TestUTXODiff(t *testing.T) {
 	}
 
 	// Test utxoDiff cloning
-	clonedDiff := diff.clone()
+	clonedDiff := diff.Clone()
 	if clonedDiff == diff {
 		t.Errorf("cloned diff is reference-equal to the original")
 	}
@@ -115,7 +115,7 @@ func TestUTXODiff(t *testing.T) {
 	}
 }
 
-// TestUTXODiffRules makes sure that all diffFrom and WithDiff rules are followed.
+// TestUTXODiffRules makes sure that all DiffFrom and WithDiff rules are followed.
 // Each test case represents a cell in the two tables outlined in the documentation for utxoDiff.
 func TestUTXODiffRules(t *testing.T) {
 	txID0, _ := daghash.NewTxIDFromStr("0000000000000000000000000000000000000000000000000000000000000000")
@@ -124,9 +124,9 @@ func TestUTXODiffRules(t *testing.T) {
 	utxoEntry2 := NewUTXOEntry(&wire.TxOut{ScriptPubKey: []byte{}, Value: 10}, true, 20)
 
 	// For each of the following test cases, we will:
-	// this.diffFrom(other) and compare it to expectedDiffFromResult
+	// this.DiffFrom(other) and compare it to expectedDiffFromResult
 	// this.WithDiff(other) and compare it to expectedWithDiffResult
-	// this.withDiffInPlace(other) and compare it to expectedWithDiffResult
+	// this.WithDiffInPlace(other) and compare it to expectedWithDiffResult
 	//
 	// Note: an expected nil result means that we expect the respective operation to fail
 	// See the following spreadsheet for a summary of all test-cases:
@@ -531,24 +531,24 @@ func TestUTXODiffRules(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		// diffFrom from test.this to test.other
+		// DiffFrom from test.this to test.other
 		diffResult, err := test.this.diffFrom(test.other)
 
-		// Test whether diffFrom returned an error
+		// Test whether DiffFrom returned an error
 		isDiffFromOk := err == nil
 		expectedIsDiffFromOk := test.expectedDiffFromResult != nil
 		if isDiffFromOk != expectedIsDiffFromOk {
-			t.Errorf("unexpected diffFrom error in test \"%s\". "+
+			t.Errorf("unexpected DiffFrom error in test \"%s\". "+
 				"Expected: \"%t\", got: \"%t\".", test.name, expectedIsDiffFromOk, isDiffFromOk)
 		}
 
-		// If not error, test the diffFrom result
+		// If not error, test the DiffFrom result
 		if isDiffFromOk && !test.expectedDiffFromResult.equal(diffResult) {
-			t.Errorf("unexpected diffFrom result in test \"%s\". "+
+			t.Errorf("unexpected DiffFrom result in test \"%s\". "+
 				"Expected: \"%v\", got: \"%v\".", test.name, test.expectedDiffFromResult, diffResult)
 		}
 
-		// Make sure that WithDiff after diffFrom results in the original test.other
+		// Make sure that WithDiff after DiffFrom results in the original test.other
 		if isDiffFromOk {
 			otherResult, err := test.this.WithDiff(diffResult)
 			if err != nil {
@@ -577,32 +577,32 @@ func TestUTXODiffRules(t *testing.T) {
 				"Expected: \"%v\", got: \"%v\".", test.name, test.expectedWithDiffResult, withDiffResult)
 		}
 
-		// Repeat WithDiff check test.this time using withDiffInPlace
-		thisClone := test.this.clone()
-		err = thisClone.withDiffInPlace(test.other)
+		// Repeat WithDiff check test.this time using WithDiffInPlace
+		thisClone := test.this.Clone()
+		err = thisClone.WithDiffInPlace(test.other)
 
-		// Test whether withDiffInPlace returned an error
+		// Test whether WithDiffInPlace returned an error
 		isWithDiffInPlaceOk := err == nil
 		expectedIsWithDiffInPlaceOk := test.expectedWithDiffResult != nil
 		if isWithDiffInPlaceOk != expectedIsWithDiffInPlaceOk {
-			t.Errorf("unexpected withDiffInPlace error in test \"%s\". "+
+			t.Errorf("unexpected WithDiffInPlace error in test \"%s\". "+
 				"Expected: \"%t\", got: \"%t\".", test.name, expectedIsWithDiffInPlaceOk, isWithDiffInPlaceOk)
 		}
 
-		// If not error, test the withDiffInPlace result
+		// If not error, test the WithDiffInPlace result
 		if isWithDiffInPlaceOk && !thisClone.equal(test.expectedWithDiffResult) {
-			t.Errorf("unexpected withDiffInPlace result in test \"%s\". "+
+			t.Errorf("unexpected WithDiffInPlace result in test \"%s\". "+
 				"Expected: \"%v\", got: \"%v\".", test.name, test.expectedWithDiffResult, thisClone)
 		}
 
-		// Make sure that diffFrom after WithDiff results in the original test.other
+		// Make sure that DiffFrom after WithDiff results in the original test.other
 		if isWithDiffOk {
 			otherResult, err := test.this.diffFrom(withDiffResult)
 			if err != nil {
-				t.Errorf("diffFrom unexpectedly failed in test \"%s\": %s", test.name, err)
+				t.Errorf("DiffFrom unexpectedly failed in test \"%s\": %s", test.name, err)
 			}
 			if !test.other.equal(otherResult) {
-				t.Errorf("unexpected diffFrom result in test \"%s\". "+
+				t.Errorf("unexpected DiffFrom result in test \"%s\". "+
 					"Expected: \"%v\", got: \"%v\".", test.name, test.other, otherResult)
 			}
 		}
@@ -681,7 +681,7 @@ func TestFullUTXOSet(t *testing.T) {
 	}
 
 	// Test fullUTXOSet cloning
-	clonedEmptySet := emptySet.clone().(*FullUTXOSet)
+	clonedEmptySet := emptySet.Clone().(*FullUTXOSet)
 	if !reflect.DeepEqual(clonedEmptySet, emptySet) {
 		t.Errorf("clone does not equal the original set")
 	}
@@ -731,9 +731,9 @@ func TestDiffUTXOSet(t *testing.T) {
 		t.Errorf("WithDiff unexpectedly succeeded")
 	}
 
-	// Given a diffSet, each case tests that meldToBase, String, collection, and cloning work as expected
+	// Given a diffSet, each case tests that MeldToBase, String, collection, and cloning work as expected
 	// For each of the following test cases, we will:
-	// .meldToBase() the given diffSet and compare it to expectedMeldSet
+	// .MeldToBase() the given diffSet and compare it to expectedMeldSet
 	// .String() the given diffSet and compare it to expectedString
 	// .collection() the given diffSet and compare it to expectedCollection
 	// .clone() the given diffSet and compare its value to itself (expected: equals) and its reference to itself (expected: not equal)
@@ -855,15 +855,15 @@ func TestDiffUTXOSet(t *testing.T) {
 				"Expected: \"%s\", got: \"%s\".", test.name, test.expectedString, setString)
 		}
 
-		// Test meldToBase
-		meldSet := test.diffSet.clone().(*DiffUTXOSet)
-		err := meldSet.meldToBase()
+		// Test MeldToBase
+		meldSet := test.diffSet.Clone().(*DiffUTXOSet)
+		err := meldSet.MeldToBase()
 		errString := ""
 		if err != nil {
 			errString = err.Error()
 		}
 		if test.expectedMeldToBaseError != errString {
-			t.Errorf("meldToBase in test \"%s\" expected error \"%s\" but got: \"%s\"", test.name, test.expectedMeldToBaseError, errString)
+			t.Errorf("MeldToBase in test \"%s\" expected error \"%s\" but got: \"%s\"", test.name, test.expectedMeldToBaseError, errString)
 		}
 		if err != nil {
 			continue
@@ -883,7 +883,7 @@ func TestDiffUTXOSet(t *testing.T) {
 		}
 
 		// Test cloning
-		clonedSet := test.diffSet.clone().(*DiffUTXOSet)
+		clonedSet := test.diffSet.Clone().(*DiffUTXOSet)
 		if !reflect.DeepEqual(clonedSet, test.diffSet) {
 			t.Errorf("unexpected set clone in test \"%s\". "+
 				"Expected: \"%v\", got: \"%v\".", test.name, test.diffSet, clonedSet)
@@ -894,16 +894,16 @@ func TestDiffUTXOSet(t *testing.T) {
 	}
 }
 
-// TestUTXOSetDiffRules makes sure that utxoSet diffFrom rules are followed.
+// TestUTXOSetDiffRules makes sure that utxoSet DiffFrom rules are followed.
 // The rules are:
-// 1. Neither fullUTXOSet nor diffUTXOSet can diffFrom a fullUTXOSet.
-// 2. fullUTXOSet cannot diffFrom a diffUTXOSet with a base other that itself.
-// 3. diffUTXOSet cannot diffFrom a diffUTXOSet with a different base.
+// 1. Neither fullUTXOSet nor diffUTXOSet can DiffFrom a fullUTXOSet.
+// 2. fullUTXOSet cannot DiffFrom a diffUTXOSet with a base other that itself.
+// 3. diffUTXOSet cannot DiffFrom a diffUTXOSet with a different base.
 func TestUTXOSetDiffRules(t *testing.T) {
 	fullSet := NewFullUTXOSet()
 	diffSet := NewDiffUTXOSet(fullSet, NewUTXODiff())
 
-	// For each of the following test cases, we will call utxoSet.diffFrom(diffSet) and compare
+	// For each of the following test cases, we will call utxoSet.DiffFrom(diffSet) and compare
 	// whether the function succeeded with expectedSuccess
 	//
 	// Note: since test cases are similar for both fullUTXOSet and diffUTXOSet, we test both using the same test cases
@@ -931,10 +931,10 @@ func TestUTXOSetDiffRules(t *testing.T) {
 		}
 
 		for _, test := range tests {
-			_, err := set.diffFrom(test.diffSet)
+			_, err := set.DiffFrom(test.diffSet)
 			success := err == nil
 			if success != test.expectedSuccess {
-				t.Errorf("unexpected diffFrom success in test \"%s\". "+
+				t.Errorf("unexpected DiffFrom success in test \"%s\". "+
 					"Expected: \"%t\", got: \"%t\".", test.name, test.expectedSuccess, success)
 			}
 		}
@@ -1086,7 +1086,7 @@ func TestDiffUTXOSet_addTx(t *testing.T) {
 
 testLoop:
 	for _, test := range tests {
-		diffSet := test.startSet.clone()
+		diffSet := test.startSet.Clone()
 
 		// Apply all transactions to diffSet, in order, with the initial block height startHeight
 		for i, transaction := range test.toAdd {
@@ -1113,8 +1113,8 @@ func (fus *FullUTXOSet) collection() utxoCollection {
 
 // collection returns a collection of all UTXOs in this set
 func (dus *DiffUTXOSet) collection() (utxoCollection, error) {
-	clone := dus.clone().(*DiffUTXOSet)
-	err := clone.meldToBase()
+	clone := dus.Clone().(*DiffUTXOSet)
+	err := clone.MeldToBase()
 	if err != nil {
 		return nil, err
 	}

@@ -6,7 +6,7 @@ import (
 	"github.com/kaspanet/kaspad/wire"
 )
 
-func addUTXOToMultiset(ms *secp256k1.MultiSet, entry *UTXOEntry, outpoint *wire.Outpoint) (*secp256k1.MultiSet, error) {
+func AddUTXOToMultiset(ms *secp256k1.MultiSet, entry *UTXOEntry, outpoint *wire.Outpoint) (*secp256k1.MultiSet, error) {
 	w := &bytes.Buffer{}
 	err := SerializeUTXO(w, entry, outpoint)
 	if err != nil {
@@ -16,7 +16,7 @@ func addUTXOToMultiset(ms *secp256k1.MultiSet, entry *UTXOEntry, outpoint *wire.
 	return ms, nil
 }
 
-func removeUTXOFromMultiset(ms *secp256k1.MultiSet, entry *UTXOEntry, outpoint *wire.Outpoint) (*secp256k1.MultiSet, error) {
+func RemoveUTXOFromMultiset(ms *secp256k1.MultiSet, entry *UTXOEntry, outpoint *wire.Outpoint) (*secp256k1.MultiSet, error) {
 	w := &bytes.Buffer{}
 	err := SerializeUTXO(w, entry, outpoint)
 	if err != nil {
