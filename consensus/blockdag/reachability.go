@@ -2,6 +2,7 @@ package blockdag
 
 import (
 	"fmt"
+	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/dbaccess"
 	"github.com/pkg/errors"
 	"math"
@@ -208,7 +209,7 @@ func (ri *reachabilityInterval) String() string {
 // case, and so reindexing should always succeed unless more than
 // 2^64 blocks are added to the DAG/tree.
 type reachabilityTreeNode struct {
-	blockNode *BlockNode
+	blockNode *blocknode.BlockNode
 
 	children []*reachabilityTreeNode
 	parent   *reachabilityTreeNode
@@ -218,7 +219,7 @@ type reachabilityTreeNode struct {
 	interval *reachabilityInterval
 }
 
-func newReachabilityTreeNode(blockNode *BlockNode) *reachabilityTreeNode {
+func newReachabilityTreeNode(blockNode *blocknode.BlockNode) *reachabilityTreeNode {
 	// Please see the comment above reachabilityTreeNode to understand why
 	// we use these initial values.
 	interval := newReachabilityInterval(1, math.MaxUint64-1)
@@ -809,7 +810,7 @@ func (fb futureCoveringTreeNodeSet) String() string {
 	return intervalsString
 }
 
-func (rt *reachabilityTree) addBlock(node *BlockNode, selectedParentAnticone []*BlockNode) error {
+func (rt *reachabilityTree) addBlock(node *blocknode.BlockNode, selectedParentAnticone []*blocknode.BlockNode) error {
 	// Allocate a new reachability tree node
 	newTreeNode := newReachabilityTreeNode(node)
 
@@ -1157,7 +1158,7 @@ func (rt *reachabilityTree) propagateChildIntervals(interval *reachabilityInterv
 // isInPast returns true if `this` is in the past (exclusive) of `other`
 // in the DAG.
 // The complexity of this method is O(log(|this.futureCoveringTreeNodeSet|))
-func (rt *reachabilityTree) isInPast(this *BlockNode, other *BlockNode) (bool, error) {
+func (rt *reachabilityTree) isInPast(this *blocknode.BlockNode, other *blocknode.BlockNode) (bool, error) {
 	// By definition, a node is not in the past of itself.
 	if this == other {
 		return false, nil
@@ -1187,7 +1188,7 @@ func (rt *reachabilityTree) isInPast(this *BlockNode, other *BlockNode) (bool, e
 }
 
 // isReachabilityTreeAncestorOf returns whether `this` is in the selected parent chain of `other`.
-func (rt *reachabilityTree) isReachabilityTreeAncestorOf(this *BlockNode, other *BlockNode) (bool, error) {
+func (rt *reachabilityTree) isReachabilityTreeAncestorOf(this *blocknode.BlockNode, other *blocknode.BlockNode) (bool, error) {
 	thisTreeNode, err := rt.store.treeNodeByBlockNode(this)
 	if err != nil {
 		return false, err

@@ -2,16 +2,17 @@ package blockdag
 
 import (
 	"container/heap"
+	"github.com/kaspanet/kaspad/consensus/blocknode"
 )
 
 // baseHeap is an implementation for heap.Interface that sorts blocks by their height
-type baseHeap []*BlockNode
+type baseHeap []*blocknode.BlockNode
 
 func (h baseHeap) Len() int      { return len(h) }
 func (h baseHeap) Swap(i, j int) { h[i], h[j] = h[j], h[i] }
 
 func (h *baseHeap) Push(x interface{}) {
-	*h = append(*h, x.(*BlockNode))
+	*h = append(*h, x.(*blocknode.BlockNode))
 }
 
 func (h *baseHeap) Pop() interface{} {
@@ -56,17 +57,17 @@ func newUpHeap() blockHeap {
 }
 
 // pop removes the block with lowest height from this heap and returns it
-func (bh blockHeap) pop() *BlockNode {
-	return heap.Pop(bh.impl).(*BlockNode)
+func (bh blockHeap) pop() *blocknode.BlockNode {
+	return heap.Pop(bh.impl).(*blocknode.BlockNode)
 }
 
 // Push pushes the block onto the heap
-func (bh blockHeap) Push(block *BlockNode) {
+func (bh blockHeap) Push(block *blocknode.BlockNode) {
 	heap.Push(bh.impl, block)
 }
 
 // pushSet pushes a blockset to the heap.
-func (bh blockHeap) pushSet(bs BlockNodeSet) {
+func (bh blockHeap) pushSet(bs blocknode.BlockNodeSet) {
 	for block := range bs {
 		heap.Push(bh.impl, block)
 	}

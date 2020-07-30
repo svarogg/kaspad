@@ -1,6 +1,7 @@
 package blockdag
 
 import (
+	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/dagconfig"
 	"github.com/pkg/errors"
 	"sort"
@@ -25,10 +26,10 @@ import (
 //    bluesAnticoneSizes.
 //
 // For further details see the article https://eprint.iacr.org/2018/104.pdf
-func (dag *BlockDAG) ghostdag(newNode *BlockNode) (selectedParentAnticone []*BlockNode, err error) {
+func (dag *BlockDAG) ghostdag(newNode *blocknode.BlockNode) (selectedParentAnticone []*blocknode.BlockNode, err error) {
 	newNode.selectedParent = newNode.parents.Bluest()
 	newNode.bluesAnticoneSizes[newNode.selectedParent] = 0
-	newNode.blues = []*BlockNode{newNode.selectedParent}
+	newNode.blues = []*blocknode.BlockNode{newNode.selectedParent}
 	selectedParentAnticone, err = dag.selectedParentAnticone(newNode)
 	if err != nil {
 		return nil, err
@@ -39,7 +40,7 @@ func (dag *BlockDAG) ghostdag(newNode *BlockNode) (selectedParentAnticone []*Blo
 	})
 
 	for _, blueCandidate := range selectedParentAnticone {
-		candidateBluesAnticoneSizes := make(map[*BlockNode]dagconfig.KType)
+		candidateBluesAnticoneSizes := make(map[*blocknode.BlockNode]dagconfig.KType)
 		var candidateAnticoneSize dagconfig.KType
 		possiblyBlue := true
 
@@ -125,11 +126,11 @@ func (dag *BlockDAG) ghostdag(newNode *BlockNode) (selectedParentAnticone []*Blo
 // For each node in the queue:
 //   we check whether it is in the past of the selected parent.
 //   If not, we add the node to the resulting anticone-set and queue it for processing.
-func (dag *BlockDAG) selectedParentAnticone(node *BlockNode) ([]*BlockNode, error) {
-	anticoneSet := NewBlockNodeSet()
-	var anticoneSlice []*BlockNode
-	selectedParentPast := NewBlockNodeSet()
-	var queue []*BlockNode
+func (dag *BlockDAG) selectedParentAnticone(node *blocknode.BlockNode) ([]*blocknode.BlockNode, error) {
+	anticoneSet := blocknode.NewBlockNodeSet()
+	var anticoneSlice []*blocknode.BlockNode
+	selectedParentPast := blocknode.NewBlockNodeSet()
+	var queue []*blocknode.BlockNode
 	// Queueing all parents (other than the selected parent itself) for processing.
 	for parent := range node.parents {
 		if parent == node.selectedParent {
@@ -140,7 +141,7 @@ func (dag *BlockDAG) selectedParentAnticone(node *BlockNode) ([]*BlockNode, erro
 		queue = append(queue, parent)
 	}
 	for len(queue) > 0 {
-		var current *BlockNode
+		var current *blocknode.BlockNode
 		current, queue = queue[0], queue[1:]
 		// For each parent of a the current node we check whether it is in the past of the selected parent. If not,
 		// we add the it to the resulting anticone-set and queue it for further processing.
@@ -166,7 +167,7 @@ func (dag *BlockDAG) selectedParentAnticone(node *BlockNode) ([]*BlockNode, erro
 
 // blueAnticoneSize returns the blue anticone size of 'block' from the worldview of 'context'.
 // Expects 'block' to be in the blue set of 'context'
-func (dag *BlockDAG) blueAnticoneSize(block, context *BlockNode) (dagconfig.KType, error) {
+func (dag *BlockDAG) blueAnticoneSize(block, context *blocknode.BlockNode) (dagconfig.KType, error) {
 	for current := context; current != nil; current = current.selectedParent {
 		if blueAnticoneSize, ok := current.bluesAnticoneSizes[block]; ok {
 			return blueAnticoneSize, nil

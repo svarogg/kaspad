@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/consensus/blockstatus"
 	"github.com/kaspanet/kaspad/consensus/utxo"
 	"io"
@@ -177,7 +178,7 @@ func (dag *BlockDAG) validateLocalSubnetworkID(state *dagState) error {
 	return nil
 }
 
-func (dag *BlockDAG) initBlockIndex() (unprocessedBlockNodes []*BlockNode, err error) {
+func (dag *BlockDAG) initBlockIndex() (unprocessedBlockNodes []*blocknode.BlockNode, err error) {
 	blockIndexCursor, err := dbaccess.BlockIndexCursor(dag.databaseContext)
 	if err != nil {
 		return nil, err
@@ -231,7 +232,7 @@ func (dag *BlockDAG) initBlockIndex() (unprocessedBlockNodes []*BlockNode, err e
 }
 
 func (dag *BlockDAG) initVirtualBlockTips(state *dagState) error {
-	tips := NewBlockNodeSet()
+	tips := blocknode.NewBlockNodeSet()
 	for _, tipHash := range state.TipHashes {
 		tip, ok := dag.index.LookupNode(tipHash)
 		if !ok {
@@ -244,7 +245,7 @@ func (dag *BlockDAG) initVirtualBlockTips(state *dagState) error {
 	return nil
 }
 
-func (dag *BlockDAG) processUnprocessedBlockNodes(unprocessedBlockNodes []*BlockNode) error {
+func (dag *BlockDAG) processUnprocessedBlockNodes(unprocessedBlockNodes []*blocknode.BlockNode) error {
 	for _, node := range unprocessedBlockNodes {
 		// Check to see if the block exists in the block DB. If it
 		// doesn't, the database has certainly been corrupted.
@@ -287,7 +288,7 @@ func (dag *BlockDAG) processUnprocessedBlockNodes(unprocessedBlockNodes []*Block
 }
 
 // deserializeBlockNode parses a value in the block index bucket and returns a block node.
-func (dag *BlockDAG) deserializeBlockNode(blockRow []byte) (*BlockNode, error) {
+func (dag *BlockDAG) deserializeBlockNode(blockRow []byte) (*blocknode.BlockNode, error) {
 	buffer := bytes.NewReader(blockRow)
 
 	var header wire.BlockHeader
@@ -296,7 +297,7 @@ func (dag *BlockDAG) deserializeBlockNode(blockRow []byte) (*BlockNode, error) {
 		return nil, err
 	}
 
-	node := &BlockNode{
+	node := &blocknode.BlockNode{
 		hash:                 header.BlockHash(),
 		version:              header.Version,
 		bits:                 header.Bits,
@@ -307,8 +308,8 @@ func (dag *BlockDAG) deserializeBlockNode(blockRow []byte) (*BlockNode, error) {
 		utxoCommitment:       header.UTXOCommitment,
 	}
 
-	node.children = NewBlockNodeSet()
-	node.parents = NewBlockNodeSet()
+	node.children = blocknode.NewBlockNodeSet()
+	node.parents = blocknode.NewBlockNodeSet()
 
 	for _, hash := range header.ParentHashes {
 		parent, ok := dag.index.LookupNode(hash)
@@ -349,7 +350,7 @@ func (dag *BlockDAG) deserializeBlockNode(blockRow []byte) (*BlockNode, error) {
 		return nil, err
 	}
 
-	node.blues = make([]*BlockNode, bluesCount)
+	node.blues = make([]*blocknode.BlockNode, bluesCount)
 	for i := uint64(0); i < bluesCount; i++ {
 		hash := &daghash.Hash{}
 		if _, err := io.ReadFull(buffer, hash[:]); err != nil {
@@ -368,7 +369,7 @@ func (dag *BlockDAG) deserializeBlockNode(blockRow []byte) (*BlockNode, error) {
 		return nil, err
 	}
 
-	node.bluesAnticoneSizes = make(map[*BlockNode]dagconfig.KType)
+	node.bluesAnticoneSizes = make(map[*blocknode.BlockNode]dagconfig.KType)
 	for i := uint64(0); i < bluesAnticoneSizesLen; i++ {
 		hash := &daghash.Hash{}
 		if _, err := io.ReadFull(buffer, hash[:]); err != nil {
@@ -406,7 +407,7 @@ func storeBlock(dbContext *dbaccess.TxContext, block *util.Block) error {
 	return dbaccess.StoreBlock(dbContext, block.Hash(), blockBytes)
 }
 
-func serializeBlockNode(node *BlockNode) ([]byte, error) {
+func serializeBlockNode(node *blocknode.BlockNode) ([]byte, error) {
 	w := bytes.NewBuffer(make([]byte, 0, wire.MaxBlockHeaderPayload+1))
 	header := node.Header()
 	err := header.Serialize(w)

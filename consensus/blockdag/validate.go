@@ -6,6 +6,7 @@ package blockdag
 
 import (
 	"fmt"
+	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/merkle"
 	"github.com/kaspanet/kaspad/consensus/scriptvalidation"
@@ -635,7 +636,7 @@ func (dag *BlockDAG) checkBlockDoubleSpends(block *util.Block) error {
 //  - BFFastAdd: No checks are performed.
 //
 // This function MUST be called with the dag state lock held (for writes).
-func (dag *BlockDAG) checkBlockHeaderContext(header *wire.BlockHeader, bluestParent *BlockNode, fastAdd bool) error {
+func (dag *BlockDAG) checkBlockHeaderContext(header *wire.BlockHeader, bluestParent *blocknode.BlockNode, fastAdd bool) error {
 	if !fastAdd {
 		if err := dag.validateDifficulty(header, bluestParent); err != nil {
 			return err
@@ -648,7 +649,7 @@ func (dag *BlockDAG) checkBlockHeaderContext(header *wire.BlockHeader, bluestPar
 	return nil
 }
 
-func validateMedianTime(dag *BlockDAG, header *wire.BlockHeader, bluestParent *BlockNode) error {
+func validateMedianTime(dag *BlockDAG, header *wire.BlockHeader, bluestParent *blocknode.BlockNode) error {
 	if !header.IsGenesis() {
 		// Ensure the timestamp for the block header is not before the
 		// median time of the last several blocks (medianTimeBlocks).
@@ -662,7 +663,7 @@ func validateMedianTime(dag *BlockDAG, header *wire.BlockHeader, bluestParent *B
 	return nil
 }
 
-func (dag *BlockDAG) validateDifficulty(header *wire.BlockHeader, bluestParent *BlockNode) error {
+func (dag *BlockDAG) validateDifficulty(header *wire.BlockHeader, bluestParent *blocknode.BlockNode) error {
 	// Ensure the difficulty specified in the block header matches
 	// the calculated difficulty based on the previous block and
 	// difficulty retarget rules.
@@ -678,7 +679,7 @@ func (dag *BlockDAG) validateDifficulty(header *wire.BlockHeader, bluestParent *
 }
 
 // validateParents validates that no parent is an ancestor of another parent, and no parent is finalized
-func (dag *BlockDAG) validateParents(blockHeader *wire.BlockHeader, parents BlockNodeSet) error {
+func (dag *BlockDAG) validateParents(blockHeader *wire.BlockHeader, parents blocknode.BlockNodeSet) error {
 	for parentA := range parents {
 		// isFinalized might be false-negative because node finality status is
 		// updated in a separate goroutine. This is why later the block is
@@ -721,7 +722,7 @@ func (dag *BlockDAG) validateParents(blockHeader *wire.BlockHeader, parents Bloc
 // for how the flags modify its behavior.
 //
 // This function MUST be called with the dag state lock held (for writes).
-func (dag *BlockDAG) checkBlockContext(block *util.Block, parents BlockNodeSet, flags BehaviorFlags) error {
+func (dag *BlockDAG) checkBlockContext(block *util.Block, parents blocknode.BlockNodeSet, flags BehaviorFlags) error {
 	bluestParent := parents.Bluest()
 	fastAdd := flags&BFFastAdd == BFFastAdd
 
@@ -739,7 +740,7 @@ func (dag *BlockDAG) checkBlockContext(block *util.Block, parents BlockNodeSet, 
 	return nil
 }
 
-func (dag *BlockDAG) validateAllTxsFinalized(block *util.Block, node *BlockNode, bluestParent *BlockNode) error {
+func (dag *BlockDAG) validateAllTxsFinalized(block *util.Block, node *blocknode.BlockNode, bluestParent *blocknode.BlockNode) error {
 	blockTime := block.MsgBlock().Header.Timestamp
 	if !block.IsGenesis() {
 		blockTime = dag.PastMedianTime(bluestParent)
@@ -909,7 +910,7 @@ func validateCoinbaseMaturity(dagParams *dagconfig.Params, entry *utxo.UTXOEntry
 // It also returns the feeAccumulator for this block.
 //
 // This function MUST be called with the dag state lock held (for writes).
-func (dag *BlockDAG) checkConnectToPastUTXO(block *BlockNode, pastUTXO utxo.UTXOSet,
+func (dag *BlockDAG) checkConnectToPastUTXO(block *blocknode.BlockNode, pastUTXO utxo.UTXOSet,
 	transactions []*util.Tx, fastAdd bool) (compactFeeData, error) {
 
 	if !fastAdd {

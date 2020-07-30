@@ -1,6 +1,7 @@
 package blockdag
 
 import (
+	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/dagconfig"
 	"github.com/kaspanet/kaspad/util"
 	"github.com/pkg/errors"
@@ -25,8 +26,8 @@ func TestBlueBlockWindow(t *testing.T) {
 	windowSize := uint64(10)
 	genesisNode := dag.genesis
 	blockTime := genesisNode.Header().Timestamp
-	blockByIDMap := make(map[string]*BlockNode)
-	idByBlockMap := make(map[*BlockNode]string)
+	blockByIDMap := make(map[string]*blocknode.BlockNode)
+	idByBlockMap := make(map[*blocknode.BlockNode]string)
 	blockByIDMap["A"] = genesisNode
 	idByBlockMap[genesisNode] = "A"
 
@@ -109,7 +110,7 @@ func TestBlueBlockWindow(t *testing.T) {
 
 	for _, blockData := range blocksData {
 		blockTime = blockTime.Add(time.Second)
-		parents := BlockNodeSet{}
+		parents := blocknode.BlockNodeSet{}
 		for _, parentID := range blockData.parents {
 			parent := blockByIDMap[parentID]
 			parents.Add(parent)
@@ -148,7 +149,7 @@ func TestBlueBlockWindow(t *testing.T) {
 	}
 }
 
-func checkWindowIDs(window []*BlockNode, expectedIDs []string, idByBlockMap map[*BlockNode]string) error {
+func checkWindowIDs(window []*blocknode.BlockNode, expectedIDs []string, idByBlockMap map[*blocknode.BlockNode]string) error {
 	ids := make([]string, len(window))
 	for i, node := range window {
 		ids[i] = idByBlockMap[node]

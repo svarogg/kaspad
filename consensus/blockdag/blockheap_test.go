@@ -1,6 +1,7 @@
 package blockdag
 
 import (
+	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"testing"
 
@@ -20,38 +21,38 @@ func TestBlockHeap(t *testing.T) {
 	defer teardownFunc()
 
 	block0Header := dagconfig.SimnetParams.GenesisBlock.Header
-	block0, _ := dag.initBlockNode(&block0Header, NewBlockNodeSet())
+	block0, _ := dag.initBlockNode(&block0Header, blocknode.NewBlockNodeSet())
 
 	block100000Header := common.Block100000.Header
-	block100000, _ := dag.initBlockNode(&block100000Header, BlockNodeSetFromSlice(block0))
+	block100000, _ := dag.initBlockNode(&block100000Header, blocknode.BlockNodeSetFromSlice(block0))
 
-	block0smallHash, _ := dag.initBlockNode(&block0Header, NewBlockNodeSet())
+	block0smallHash, _ := dag.initBlockNode(&block0Header, blocknode.NewBlockNodeSet())
 	block0smallHash.hash = &daghash.Hash{}
 
 	tests := []struct {
 		name            string
-		toPush          []*BlockNode
+		toPush          []*blocknode.BlockNode
 		expectedLength  int
-		expectedPopUp   *BlockNode
-		expectedPopDown *BlockNode
+		expectedPopUp   *blocknode.BlockNode
+		expectedPopDown *blocknode.BlockNode
 	}{
 		{
 			name:            "empty heap must have length 0",
-			toPush:          []*BlockNode{},
+			toPush:          []*blocknode.BlockNode{},
 			expectedLength:  0,
 			expectedPopDown: nil,
 			expectedPopUp:   nil,
 		},
 		{
 			name:            "heap with one push must have length 1",
-			toPush:          []*BlockNode{block0},
+			toPush:          []*blocknode.BlockNode{block0},
 			expectedLength:  1,
 			expectedPopDown: nil,
 			expectedPopUp:   nil,
 		},
 		{
 			name:            "heap with one push and one pop",
-			toPush:          []*BlockNode{block0},
+			toPush:          []*blocknode.BlockNode{block0},
 			expectedLength:  0,
 			expectedPopDown: block0,
 			expectedPopUp:   block0,
@@ -59,7 +60,7 @@ func TestBlockHeap(t *testing.T) {
 		{
 			name: "push two blocks with different heights, heap shouldn't have to rebalance " +
 				"for down direction, but will have to rebalance for up direction",
-			toPush:          []*BlockNode{block100000, block0},
+			toPush:          []*blocknode.BlockNode{block100000, block0},
 			expectedLength:  1,
 			expectedPopDown: block100000,
 			expectedPopUp:   block0,
@@ -67,7 +68,7 @@ func TestBlockHeap(t *testing.T) {
 		{
 			name: "push two blocks with different heights, heap shouldn't have to rebalance " +
 				"for up direction, but will have to rebalance for down direction",
-			toPush:          []*BlockNode{block0, block100000},
+			toPush:          []*blocknode.BlockNode{block0, block100000},
 			expectedLength:  1,
 			expectedPopDown: block100000,
 			expectedPopUp:   block0,
@@ -75,7 +76,7 @@ func TestBlockHeap(t *testing.T) {
 		{
 			name: "push two blocks with equal heights but different hashes, heap shouldn't have to rebalance " +
 				"for down direction, but will have to rebalance for up direction",
-			toPush:          []*BlockNode{block0, block0smallHash},
+			toPush:          []*blocknode.BlockNode{block0, block0smallHash},
 			expectedLength:  1,
 			expectedPopDown: block0,
 			expectedPopUp:   block0smallHash,
@@ -83,7 +84,7 @@ func TestBlockHeap(t *testing.T) {
 		{
 			name: "push two blocks with equal heights but different hashes, heap shouldn't have to rebalance " +
 				"for up direction, but will have to rebalance for down direction",
-			toPush:          []*BlockNode{block0smallHash, block0},
+			toPush:          []*blocknode.BlockNode{block0smallHash, block0},
 			expectedLength:  1,
 			expectedPopDown: block0,
 			expectedPopUp:   block0smallHash,
@@ -96,7 +97,7 @@ func TestBlockHeap(t *testing.T) {
 			dHeap.Push(block)
 		}
 
-		var poppedBlock *BlockNode
+		var poppedBlock *blocknode.BlockNode
 		if test.expectedPopDown != nil {
 			poppedBlock = dHeap.pop()
 		}

@@ -1,6 +1,7 @@
 package blockdag
 
 import (
+	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/consensus/utxo"
 	"reflect"
 	"testing"
@@ -22,9 +23,9 @@ func TestUTXODiffStore(t *testing.T) {
 	defer teardownFunc()
 
 	nodeCounter := byte(0)
-	createNode := func() *BlockNode {
+	createNode := func() *blocknode.BlockNode {
 		nodeCounter++
-		node := &BlockNode{hash: &daghash.Hash{nodeCounter}}
+		node := &blocknode.BlockNode{hash: &daghash.Hash{nodeCounter}}
 		dag.index.AddNode(node)
 		return node
 	}
@@ -123,7 +124,7 @@ func TestClearOldEntries(t *testing.T) {
 	defer func() { maxBlueScoreDifferenceToKeepLoaded = currentDifference }()
 
 	// Add 10 blocks
-	blockNodes := make([]*BlockNode, 10)
+	blockNodes := make([]*blocknode.BlockNode, 10)
 	for i := 0; i < 10; i++ {
 		processedBlock := PrepareAndProcessBlockForTest(t, dag, dag.TipHashes(), nil)
 

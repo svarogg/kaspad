@@ -1,4 +1,4 @@
-package blockdag
+package blocknode
 
 import (
 	"strings"

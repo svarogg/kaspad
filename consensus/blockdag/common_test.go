@@ -5,6 +5,7 @@
 package blockdag
 
 import (
+	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/timesource"
 	"testing"
@@ -44,16 +45,16 @@ func newTestDAG(params *dagconfig.Params) *BlockDAG {
 
 	// Create a genesis block node and block index index populated with it
 	// on the above fake DAG.
-	dag.genesis, _ = dag.initBlockNode(&params.GenesisBlock.Header, NewBlockNodeSet())
+	dag.genesis, _ = dag.initBlockNode(&params.GenesisBlock.Header, blocknode.NewBlockNodeSet())
 	index.AddNode(dag.genesis)
 
-	dag.virtual = newVirtualBlock(dag, BlockNodeSetFromSlice(dag.genesis))
+	dag.virtual = newVirtualBlock(dag, blocknode.BlockNodeSetFromSlice(dag.genesis))
 	return dag
 }
 
 // newTestNode creates a block node connected to the passed parent with the
 // provided fields populated and fake values for the other fields.
-func newTestNode(dag *BlockDAG, parents BlockNodeSet, blockVersion int32, bits uint32, timestamp mstime.Time) *BlockNode {
+func newTestNode(dag *BlockDAG, parents blocknode.BlockNodeSet, blockVersion int32, bits uint32, timestamp mstime.Time) *blocknode.BlockNode {
 	// Make up a header and create a block node from it.
 	header := &wire.BlockHeader{
 		Version:              blockVersion,
@@ -68,7 +69,7 @@ func newTestNode(dag *BlockDAG, parents BlockNodeSet, blockVersion int32, bits u
 	return node
 }
 
-func addNodeAsChildToParents(node *BlockNode) {
+func addNodeAsChildToParents(node *blocknode.BlockNode) {
 	for parent := range node.parents {
 		parent.children.Add(node)
 	}
@@ -111,7 +112,7 @@ func prepareAndProcessBlockByParentMsgBlocks(t *testing.T, dag *BlockDAG, parent
 	return PrepareAndProcessBlockForTest(t, dag, parentHashes, nil)
 }
 
-func nodeByMsgBlock(t *testing.T, dag *BlockDAG, block *wire.MsgBlock) *BlockNode {
+func nodeByMsgBlock(t *testing.T, dag *BlockDAG, block *wire.MsgBlock) *blocknode.BlockNode {
 	node, ok := dag.index.LookupNode(block.BlockHash())
 	if !ok {
 		t.Fatalf("couldn't find block node with hash %s", block.BlockHash())

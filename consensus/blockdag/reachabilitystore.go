@@ -2,6 +2,7 @@ package blockdag
 
 import (
 	"bytes"
+	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/database"
 	"github.com/kaspanet/kaspad/dbaccess"
 	"github.com/kaspanet/kaspad/util/daghash"
@@ -41,7 +42,7 @@ func (store *reachabilityStore) setTreeNode(treeNode *reachabilityTreeNode) {
 	store.setBlockAsDirty(node.hash)
 }
 
-func (store *reachabilityStore) setFutureCoveringSet(node *BlockNode, futureCoveringSet futureCoveringTreeNodeSet) error {
+func (store *reachabilityStore) setFutureCoveringSet(node *blocknode.BlockNode, futureCoveringSet futureCoveringTreeNodeSet) error {
 	// load the reachability data from DB to store.loaded
 	_, exists := store.reachabilityDataByHash(node.hash)
 	if !exists {
@@ -69,11 +70,11 @@ func (store *reachabilityStore) treeNodeByBlockHash(hash *daghash.Hash) (*reacha
 	return reachabilityData.treeNode, nil
 }
 
-func (store *reachabilityStore) treeNodeByBlockNode(node *BlockNode) (*reachabilityTreeNode, error) {
+func (store *reachabilityStore) treeNodeByBlockNode(node *blocknode.BlockNode) (*reachabilityTreeNode, error) {
 	return store.treeNodeByBlockHash(node.hash)
 }
 
-func (store *reachabilityStore) futureCoveringSetByBlockNode(node *BlockNode) (futureCoveringTreeNodeSet, error) {
+func (store *reachabilityStore) futureCoveringSetByBlockNode(node *blocknode.BlockNode) (futureCoveringTreeNodeSet, error) {
 	reachabilityData, exists := store.reachabilityDataByHash(node.hash)
 	if !exists {
 		return nil, reachabilityNotFoundError(node.hash)

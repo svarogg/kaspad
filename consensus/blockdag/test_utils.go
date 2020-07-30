@@ -3,6 +3,7 @@ package blockdag
 // This file functions are not considered safe for regular use, and should be used for test purposes only.
 
 import (
+	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/consensus/timesource"
 	"github.com/kaspanet/kaspad/consensus/utxo"
 	"io/ioutil"
@@ -157,7 +158,7 @@ func SetVirtualForTest(dag *BlockDAG, virtual VirtualForTest) VirtualForTest {
 
 // GetVirtualFromParentsForTest generates a virtual block with the given parents.
 func GetVirtualFromParentsForTest(dag *BlockDAG, parentHashes []*daghash.Hash) (VirtualForTest, error) {
-	parents := NewBlockNodeSet()
+	parents := blocknode.NewBlockNodeSet()
 	for _, hash := range parentHashes {
 		parent, ok := dag.index.LookupNode(hash)
 		if !ok {

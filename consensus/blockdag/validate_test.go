@@ -5,6 +5,7 @@
 package blockdag
 
 import (
+	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/testdata"
 	"math"
@@ -501,14 +502,14 @@ func TestPastMedianTime(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		blockTime = blockTime.Add(time.Second)
-		tip = newTestNode(dag, BlockNodeSetFromSlice(tip),
+		tip = newTestNode(dag, blocknode.BlockNodeSetFromSlice(tip),
 			blockVersion,
 			0,
 			blockTime)
 	}
 
 	// Checks that a block is valid if it has timestamp equals to past median time
-	node := newTestNode(dag, BlockNodeSetFromSlice(tip),
+	node := newTestNode(dag, blocknode.BlockNodeSetFromSlice(tip),
 		blockVersion,
 		dag.powMaxBits,
 		dag.PastMedianTime(tip))
@@ -521,7 +522,7 @@ func TestPastMedianTime(t *testing.T) {
 	}
 
 	// Checks that a block is valid if its timestamp is after past median time
-	node = newTestNode(dag, BlockNodeSetFromSlice(tip),
+	node = newTestNode(dag, blocknode.BlockNodeSetFromSlice(tip),
 		blockVersion,
 		dag.powMaxBits,
 		dag.PastMedianTime(tip).Add(time.Second))
@@ -534,7 +535,7 @@ func TestPastMedianTime(t *testing.T) {
 	}
 
 	// Checks that a block is invalid if its timestamp is before past median time
-	node = newTestNode(dag, BlockNodeSetFromSlice(tip),
+	node = newTestNode(dag, blocknode.BlockNodeSetFromSlice(tip),
 		blockVersion,
 		0,
 		dag.PastMedianTime(tip).Add(-time.Second))
@@ -572,19 +573,19 @@ func TestValidateParents(t *testing.T) {
 	}
 
 	// Check direct parents relation
-	err = dag.validateParents(fakeBlockHeader, BlockNodeSetFromSlice(aNode, bNode))
+	err = dag.validateParents(fakeBlockHeader, blocknode.BlockNodeSetFromSlice(aNode, bNode))
 	if err == nil {
 		t.Errorf("validateParents: `a` is a parent of `b`, so an error is expected")
 	}
 
 	// Check indirect parents relation
-	err = dag.validateParents(fakeBlockHeader, BlockNodeSetFromSlice(dag.genesis, bNode))
+	err = dag.validateParents(fakeBlockHeader, blocknode.BlockNodeSetFromSlice(dag.genesis, bNode))
 	if err == nil {
 		t.Errorf("validateParents: `genesis` and `b` are indirectly related, so an error is expected")
 	}
 
 	// Check parents with no relation
-	err = dag.validateParents(fakeBlockHeader, BlockNodeSetFromSlice(bNode, cNode))
+	err = dag.validateParents(fakeBlockHeader, blocknode.BlockNodeSetFromSlice(bNode, cNode))
 	if err != nil {
 		t.Errorf("validateParents: unexpected error: %v", err)
 	}

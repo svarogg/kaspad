@@ -5,6 +5,7 @@
 package blockdag
 
 import (
+	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/consensus/utxo"
 	"github.com/kaspanet/kaspad/util/daghash"
 	"sync"
@@ -15,25 +16,25 @@ type virtualBlock struct {
 	mtx     sync.Mutex
 	dag     *BlockDAG
 	utxoSet *utxo.FullUTXOSet
-	BlockNode
+	blocknode.BlockNode
 
 	// selectedParentChainSet is a block set that includes all the blocks
 	// that belong to the chain of selected parents from the virtual block.
-	selectedParentChainSet BlockNodeSet
+	selectedParentChainSet blocknode.BlockNodeSet
 
 	// selectedParentChainSlice is an ordered slice that includes all the
 	// blocks that belong the the chain of selected parents from the
 	// virtual block.
-	selectedParentChainSlice []*BlockNode
+	selectedParentChainSlice []*blocknode.BlockNode
 }
 
 // newVirtualBlock creates and returns a new VirtualBlock.
-func newVirtualBlock(dag *BlockDAG, tips BlockNodeSet) *virtualBlock {
+func newVirtualBlock(dag *BlockDAG, tips blocknode.BlockNodeSet) *virtualBlock {
 	// The mutex is intentionally not held since this is a constructor.
 	var virtual virtualBlock
 	virtual.dag = dag
 	virtual.utxoSet = utxo.NewFullUTXOSet()
-	virtual.selectedParentChainSet = NewBlockNodeSet()
+	virtual.selectedParentChainSet = blocknode.NewBlockNodeSet()
 	virtual.selectedParentChainSlice = nil
 	virtual.setTips(tips)
 
@@ -45,7 +46,7 @@ func newVirtualBlock(dag *BlockDAG, tips BlockNodeSet) *virtualBlock {
 // is up to the caller to ensure the lock is held.
 //
 // This function MUST be called with the view mutex locked (for writes).
-func (v *virtualBlock) setTips(tips BlockNodeSet) *chainUpdates {
+func (v *virtualBlock) setTips(tips blocknode.BlockNodeSet) *chainUpdates {
 	oldSelectedParent := v.selectedParent
 	node, _ := v.dag.initBlockNode(nil, tips)
 	v.BlockNode = *node
@@ -60,9 +61,9 @@ func (v *virtualBlock) setTips(tips BlockNodeSet) *chainUpdates {
 // parent and are not selected ancestors of the new one, and adding
 // blocks that are selected ancestors of the new selected parent
 // and aren't selected ancestors of the old one.
-func (v *virtualBlock) updateSelectedParentSet(oldSelectedParent *BlockNode) *chainUpdates {
-	var intersectionNode *BlockNode
-	nodesToAdd := make([]*BlockNode, 0)
+func (v *virtualBlock) updateSelectedParentSet(oldSelectedParent *blocknode.BlockNode) *chainUpdates {
+	var intersectionNode *blocknode.BlockNode
+	nodesToAdd := make([]*blocknode.BlockNode, 0)
 	for node := v.BlockNode.selectedParent; intersectionNode == nil && node != nil; node = node.selectedParent {
 		if v.selectedParentChainSet.Contains(node) {
 			intersectionNode = node
@@ -112,7 +113,7 @@ func (v *virtualBlock) updateSelectedParentSet(oldSelectedParent *BlockNode) *ch
 // given BlockNodeSet.
 //
 // This function is safe for concurrent access.
-func (v *virtualBlock) SetTips(tips BlockNodeSet) {
+func (v *virtualBlock) SetTips(tips blocknode.BlockNodeSet) {
 	v.mtx.Lock()
 	defer v.mtx.Unlock()
 	v.setTips(tips)
@@ -124,7 +125,7 @@ func (v *virtualBlock) SetTips(tips BlockNodeSet) {
 // is up to the caller to ensure the lock is held.
 //
 // This function MUST be called with the view mutex locked (for writes).
-func (v *virtualBlock) addTip(newTip *BlockNode) *chainUpdates {
+func (v *virtualBlock) addTip(newTip *blocknode.BlockNode) *chainUpdates {
 	updatedTips := v.tips().Clone()
 	for parent := range newTip.parents {
 		updatedTips.Remove(parent)
@@ -139,7 +140,7 @@ func (v *virtualBlock) addTip(newTip *BlockNode) *chainUpdates {
 // from the set.
 //
 // This function is safe for concurrent access.
-func (v *virtualBlock) AddTip(newTip *BlockNode) *chainUpdates {
+func (v *virtualBlock) AddTip(newTip *blocknode.BlockNode) *chainUpdates {
 	v.mtx.Lock()
 	defer v.mtx.Unlock()
 	return v.addTip(newTip)
@@ -149,6 +150,6 @@ func (v *virtualBlock) AddTip(newTip *BlockNode) *chainUpdates {
 // an empty BlockNodeSet if there is no tip.
 //
 // This function is safe for concurrent access.
-func (v *virtualBlock) tips() BlockNodeSet {
+func (v *virtualBlock) tips() blocknode.BlockNodeSet {
 	return v.parents
 }

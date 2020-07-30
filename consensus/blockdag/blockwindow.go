@@ -1,6 +1,7 @@
 package blockdag
 
 import (
+	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/util"
 	"github.com/kaspanet/kaspad/util/bigintpool"
 	"github.com/pkg/errors"
@@ -9,13 +10,13 @@ import (
 	"sort"
 )
 
-type blockWindow []*BlockNode
+type blockWindow []*blocknode.BlockNode
 
 // blueBlockWindow returns a blockWindow of the given size that contains the
 // blues in the past of startindNode, sorted by GHOSTDAG order.
 // If the number of blues in the past of startingNode is less then windowSize,
 // the window will be padded by genesis blocks to achieve a size of windowSize.
-func blueBlockWindow(startingNode *BlockNode, windowSize uint64) blockWindow {
+func blueBlockWindow(startingNode *blocknode.BlockNode, windowSize uint64) blockWindow {
 	window := make(blockWindow, 0, windowSize)
 	currentNode := startingNode
 	for uint64(len(window)) < windowSize && currentNode.selectedParent != nil {

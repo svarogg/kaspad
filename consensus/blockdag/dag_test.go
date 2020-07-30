@@ -6,6 +6,7 @@ package blockdag
 
 import (
 	"fmt"
+	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/consensus/blockstatus"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/merkle"
@@ -253,9 +254,9 @@ func TestCalcSequenceLock(t *testing.T) {
 	numBlocksToGenerate := 5
 	for i := 0; i < numBlocksToGenerate; i++ {
 		blockTime = blockTime.Add(time.Second)
-		node = newTestNode(dag, BlockNodeSetFromSlice(node), blockVersion, 0, blockTime)
+		node = newTestNode(dag, blocknode.BlockNodeSetFromSlice(node), blockVersion, 0, blockTime)
 		dag.index.AddNode(node)
-		dag.virtual.SetTips(BlockNodeSetFromSlice(node))
+		dag.virtual.SetTips(blocknode.BlockNodeSetFromSlice(node))
 	}
 
 	// Create a utxo view with a fake utxo for the inputs used in the
@@ -515,12 +516,12 @@ func TestCalcPastMedianTime(t *testing.T) {
 
 	dag := newTestDAG(netParams)
 	numBlocks := uint32(300)
-	nodes := make([]*BlockNode, numBlocks)
+	nodes := make([]*blocknode.BlockNode, numBlocks)
 	nodes[0] = dag.genesis
 	blockTime := dag.genesis.Header().Timestamp
 	for i := uint32(1); i < numBlocks; i++ {
 		blockTime = blockTime.Add(time.Second)
-		nodes[i] = newTestNode(dag, BlockNodeSetFromSlice(nodes[i-1]), blockVersion, 0, blockTime)
+		nodes[i] = newTestNode(dag, blocknode.BlockNodeSetFromSlice(nodes[i-1]), blockVersion, 0, blockTime)
 		dag.index.AddNode(nodes[i])
 	}
 
@@ -637,7 +638,7 @@ func TestAcceptingInInit(t *testing.T) {
 	if !ok {
 		t.Fatalf("genesis block does not exist in the DAG")
 	}
-	testNode, _ := dag.initBlockNode(&testBlock.MsgBlock().Header, BlockNodeSetFromSlice(genesisNode))
+	testNode, _ := dag.initBlockNode(&testBlock.MsgBlock().Header, blocknode.BlockNodeSetFromSlice(genesisNode))
 	testNode.status = blockstatus.StatusDataStored
 
 	// Manually add the test block to the database
@@ -800,7 +801,7 @@ func TestAcceptingBlock(t *testing.T) {
 	defer teardownFunc()
 	dag.TestSetCoinbaseMaturity(0)
 
-	acceptingBlockByMsgBlock := func(block *wire.MsgBlock) (*BlockNode, error) {
+	acceptingBlockByMsgBlock := func(block *wire.MsgBlock) (*blocknode.BlockNode, error) {
 		node := nodeByMsgBlock(t, dag, block)
 		return dag.acceptingBlock(node)
 	}
@@ -949,9 +950,9 @@ func testFinalizeNodesBelowFinalityPoint(t *testing.T, deleteDiffData bool) {
 		}
 	}
 
-	addNode := func(parent *BlockNode) *BlockNode {
+	addNode := func(parent *blocknode.BlockNode) *blocknode.BlockNode {
 		blockTime = blockTime.Add(time.Second)
-		node := newTestNode(dag, BlockNodeSetFromSlice(parent), blockVersion, 0, blockTime)
+		node := newTestNode(dag, blocknode.BlockNodeSetFromSlice(parent), blockVersion, 0, blockTime)
 		node.UpdateParentsChildren()
 		dag.index.AddNode(node)
 
@@ -964,7 +965,7 @@ func testFinalizeNodesBelowFinalityPoint(t *testing.T, deleteDiffData bool) {
 		return node
 	}
 	finalityInterval := dag.FinalityInterval()
-	nodes := make([]*BlockNode, 0, finalityInterval)
+	nodes := make([]*blocknode.BlockNode, 0, finalityInterval)
 	currentNode := dag.genesis
 	nodes = append(nodes, currentNode)
 	for i := uint64(0); i <= finalityInterval*2; i++ {

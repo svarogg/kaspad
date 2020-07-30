@@ -1,6 +1,7 @@
 package blockdag
 
 import (
+	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/util/daghash"
 	"github.com/pkg/errors"
 )
@@ -46,7 +47,7 @@ func (dag *BlockDAG) BlockLocatorFromHashes(highHash, lowHash *daghash.Hash) (Bl
 // See the BlockLocator type comments for more details.
 //
 // This function MUST be called with the DAG state lock held (for reads).
-func (dag *BlockDAG) blockLocator(highNode, lowNode *BlockNode) (BlockLocator, error) {
+func (dag *BlockDAG) blockLocator(highNode, lowNode *blocknode.BlockNode) (BlockLocator, error) {
 	// We use the selected parent of the high node, so the
 	// block locator won't contain the high node.
 	highNode = highNode.selectedParent

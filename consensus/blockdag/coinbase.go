@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
+	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"io"
 
@@ -77,7 +78,7 @@ func (cfr *compactFeeIterator) next() (uint64, error) {
 
 // getBluesFeeData returns the compactFeeData for all nodes's blues,
 // used to calculate the fees this BlockNode needs to pay
-func (dag *BlockDAG) getBluesFeeData(node *BlockNode) (map[daghash.Hash]compactFeeData, error) {
+func (dag *BlockDAG) getBluesFeeData(node *blocknode.BlockNode) (map[daghash.Hash]compactFeeData, error) {
 	bluesFeeData := make(map[daghash.Hash]compactFeeData)
 
 	for _, blueBlock := range node.blues {
@@ -94,7 +95,7 @@ func (dag *BlockDAG) getBluesFeeData(node *BlockNode) (map[daghash.Hash]compactF
 
 // The following functions deal with building and validating the coinbase transaction
 
-func (node *BlockNode) validateCoinbaseTransaction(dag *BlockDAG, block *util.Block, txsAcceptanceData MultiBlockTxsAcceptanceData) error {
+func (dag *BlockDAG) validateCoinbaseTransaction(node *blocknode.BlockNode, block *util.Block, txsAcceptanceData MultiBlockTxsAcceptanceData) error {
 	if node.IsGenesis() {
 		return nil
 	}
@@ -106,7 +107,7 @@ func (node *BlockNode) validateCoinbaseTransaction(dag *BlockDAG, block *util.Bl
 	if err != nil {
 		return err
 	}
-	expectedCoinbaseTransaction, err := node.expectedCoinbaseTransaction(dag, txsAcceptanceData, scriptPubKey, extraData)
+	expectedCoinbaseTransaction, err := dag.expectedCoinbaseTransaction(node, txsAcceptanceData, scriptPubKey, extraData)
 	if err != nil {
 		return err
 	}
@@ -119,7 +120,7 @@ func (node *BlockNode) validateCoinbaseTransaction(dag *BlockDAG, block *util.Bl
 }
 
 // expectedCoinbaseTransaction returns the coinbase transaction for the current block
-func (node *BlockNode) expectedCoinbaseTransaction(dag *BlockDAG, txsAcceptanceData MultiBlockTxsAcceptanceData, scriptPubKey []byte, extraData []byte) (*util.Tx, error) {
+func (dag *BlockDAG) expectedCoinbaseTransaction(node *blocknode.BlockNode, txsAcceptanceData MultiBlockTxsAcceptanceData, scriptPubKey []byte, extraData []byte) (*util.Tx, error) {
 	bluesFeeData, err := dag.getBluesFeeData(node)
 	if err != nil {
 		return nil, err
@@ -148,7 +149,7 @@ func (node *BlockNode) expectedCoinbaseTransaction(dag *BlockDAG, txsAcceptanceD
 
 // coinbaseOutputForBlueBlock calculates the output that should go into the coinbase transaction of blueBlock
 // If blueBlock gets no fee - returns nil for txOut
-func coinbaseOutputForBlueBlock(dag *BlockDAG, blueBlock *BlockNode,
+func coinbaseOutputForBlueBlock(dag *BlockDAG, blueBlock *blocknode.BlockNode,
 	txsAcceptanceData MultiBlockTxsAcceptanceData, feeData map[daghash.Hash]compactFeeData) (*wire.TxOut, error) {
 
 	blockTxsAcceptanceData, ok := txsAcceptanceData.FindAcceptanceData(blueBlock.hash)
