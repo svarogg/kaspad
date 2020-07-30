@@ -204,7 +204,7 @@ func (dag *BlockDAG) initBlockIndex() (unprocessedBlockNodes []*blocknode.BlockN
 		// If the node is known to be invalid add it as-is to the block
 		// index and continue.
 		if node.Status().KnownInvalid() {
-			dag.index.addNode(node)
+			dag.index.AddNode(node)
 			continue
 		}
 
@@ -212,19 +212,19 @@ func (dag *BlockDAG) initBlockIndex() (unprocessedBlockNodes []*blocknode.BlockN
 			if !node.Hash().IsEqual(dag.Params.GenesisHash) {
 				return nil, errors.Errorf("Expected "+
 					"first entry in block index to be genesis block, "+
-					"found %s", node.hash)
+					"found %s", node.Hash())
 			}
 		} else {
-			if len(node.parents) == 0 {
+			if len(node.Parents()) == 0 {
 				return nil, errors.Errorf("block %s "+
-					"has no parents but it's not the genesis block", node.hash)
+					"has no parents but it's not the genesis block", node.Hash())
 			}
 		}
 
 		// Add the node to its parents children, connect it,
 		// and add it to the block index.
 		node.UpdateParentsChildren()
-		dag.index.addNode(node)
+		dag.index.AddNode(node)
 
 		dag.blockCount++
 	}
@@ -249,25 +249,25 @@ func (dag *BlockDAG) processUnprocessedBlockNodes(unprocessedBlockNodes []*block
 	for _, node := range unprocessedBlockNodes {
 		// Check to see if the block exists in the block DB. If it
 		// doesn't, the database has certainly been corrupted.
-		blockExists, err := dbaccess.HasBlock(dag.databaseContext, node.hash)
+		blockExists, err := dbaccess.HasBlock(dag.databaseContext, node.Hash())
 		if err != nil {
 			return errors.Wrapf(err, "HasBlock "+
-				"for block %s failed: %s", node.hash, err)
+				"for block %s failed: %s", node.Hash(), err)
 		}
 		if !blockExists {
 			return errors.Errorf("block %s "+
-				"exists in block index but not in block db", node.hash)
+				"exists in block index but not in block db", node.Hash())
 		}
 
 		// Attempt to accept the block.
-		block, err := dag.fetchBlockByHash(node.hash)
+		block, err := dag.fetchBlockByHash(node.Hash())
 		if err != nil {
 			return err
 		}
 		isOrphan, isDelayed, err := dag.ProcessBlock(block, BFWasStored)
 		if err != nil {
 			log.Warnf("Block %s, which was not previously processed, "+
-				"failed to be accepted to the DAG: %s", node.hash, err)
+				"failed to be accepted to the DAG: %s", node.Hash(), err)
 			continue
 		}
 
@@ -276,12 +276,12 @@ func (dag *BlockDAG) processUnprocessedBlockNodes(unprocessedBlockNodes []*block
 		if isOrphan {
 			return errors.Errorf("Block %s, which was not "+
 				"previously processed, turned out to be an orphan, which is "+
-				"impossible.", node.hash)
+				"impossible.", node.Hash())
 		}
 		if isDelayed {
 			return errors.Errorf("Block %s, which was not "+
 				"previously processed, turned out to be delayed, which is "+
-				"impossible.", node.hash)
+				"impossible.", node.Hash())
 		}
 	}
 	return nil
@@ -405,75 +405,6 @@ func storeBlock(dbContext *dbaccess.TxContext, block *util.Block) error {
 		return err
 	}
 	return dbaccess.StoreBlock(dbContext, block.Hash(), blockBytes)
-}
-
-func serializeBlockNode(node *blocknode.BlockNode) ([]byte, error) {
-	w := bytes.NewBuffer(make([]byte, 0, wire.MaxBlockHeaderPayload+1))
-	header := node.Header()
-	err := header.Serialize(w)
-	if err != nil {
-		return nil, err
-	}
-
-	err = w.WriteByte(byte(node.status))
-	if err != nil {
-		return nil, err
-	}
-
-	// Because genesis doesn't have selected parent, it's serialized as zero hash
-	selectedParentHash := &daghash.ZeroHash
-	if node.selectedParent != nil {
-		selectedParentHash = node.selectedParent.hash
-	}
-	_, err = w.Write(selectedParentHash[:])
-	if err != nil {
-		return nil, err
-	}
-
-	err = binaryserializer.PutUint64(w, byteOrder, node.blueScore)
-	if err != nil {
-		return nil, err
-	}
-
-	err = wire.WriteVarInt(w, uint64(len(node.blues)))
-	if err != nil {
-		return nil, err
-	}
-
-	for _, blue := range node.blues {
-		_, err = w.Write(blue.hash[:])
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	err = wire.WriteVarInt(w, uint64(len(node.bluesAnticoneSizes)))
-	if err != nil {
-		return nil, err
-	}
-	for blue, blueAnticoneSize := range node.bluesAnticoneSizes {
-		_, err = w.Write(blue.hash[:])
-		if err != nil {
-			return nil, err
-		}
-
-		err = binaryserializer.PutUint8(w, uint8(blueAnticoneSize))
-		if err != nil {
-			return nil, err
-		}
-	}
-	return w.Bytes(), nil
-}
-
-// blockIndexKey generates the binary key for an entry in the block index
-// bucket. The key is composed of the block blue score encoded as a big-endian
-// 64-bit unsigned int followed by the 32 byte block hash.
-// The blue score component is important for iteration order.
-func blockIndexKey(blockHash *daghash.Hash, blueScore uint64) []byte {
-	indexKey := make([]byte, daghash.HashSize+8)
-	binary.BigEndian.PutUint64(indexKey[0:8], blueScore)
-	copy(indexKey[8:daghash.HashSize+8], blockHash[:])
-	return indexKey
 }
 
 func blockHashFromBlockIndexKey(BlockIndexKey []byte) (*daghash.Hash, error) {

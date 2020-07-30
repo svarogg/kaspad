@@ -5,6 +5,7 @@
 package blockdag
 
 import (
+	"github.com/kaspanet/kaspad/consensus/blockindex"
 	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/timesource"
@@ -31,7 +32,7 @@ func (dag *BlockDAG) TestSetCoinbaseMaturity(maturity uint64) {
 // it is not usable with all functions and the tests must take care when making
 // use of it.
 func newTestDAG(params *dagconfig.Params) *BlockDAG {
-	index := newBlockIndex(params)
+	index := blockindex.newBlockIndex(params)
 	dag := &BlockDAG{
 		Params:                         params,
 		timeSource:                     timesource.New(),

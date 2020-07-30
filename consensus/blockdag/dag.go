@@ -6,6 +6,7 @@ package blockdag
 
 import (
 	"fmt"
+	"github.com/kaspanet/kaspad/consensus/blockindex"
 	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/consensus/blockstatus"
 	"github.com/kaspanet/kaspad/consensus/common"
@@ -104,7 +105,7 @@ type BlockDAG struct {
 
 	// index houses the entire block index in memory. The block index is
 	// a tree-shaped structure.
-	index *blockIndex
+	index *blockindex.BlockIndex
 
 	// blockCount holds the number of blocks in the DAG
 	blockCount uint64
@@ -183,7 +184,7 @@ func New(config *Config) (*BlockDAG, error) {
 
 	params := config.DAGParams
 
-	index := newBlockIndex(params)
+	index := blockindex.NewBlockIndex(params)
 	dag := &BlockDAG{
 		Params:                         params,
 		databaseContext:                config.DatabaseContext,
@@ -603,7 +604,7 @@ func (dag *BlockDAG) addBlock(node *blocknode.BlockNode,
 				return nil, err
 			}
 			defer dbTx.RollbackUnlessClosed()
-			err = dag.index.flushToDB(dbTx)
+			err = dag.index.FlushToDB(dbTx)
 			if err != nil {
 				return nil, err
 			}
@@ -797,7 +798,7 @@ func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, virtualUTXODiff *ut
 	}
 	defer dbTx.RollbackUnlessClosed()
 
-	err = dag.index.flushToDB(dbTx)
+	err = dag.index.FlushToDB(dbTx)
 	if err != nil {
 		return err
 	}
@@ -864,7 +865,7 @@ func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, virtualUTXODiff *ut
 		return err
 	}
 
-	dag.index.clearDirtyEntries()
+	dag.index.ClearDirtyEntries()
 	dag.utxoDiffStore.clearDirtyEntries()
 	dag.utxoDiffStore.clearOldEntries()
 	dag.reachabilityTree.store.clearDirtyEntries()
@@ -2033,13 +2034,7 @@ func (dag *BlockDAG) SubnetworkID() *subnetworkid.SubnetworkID {
 // This function is NOT safe for concurrent access. It is meant to be
 // used either on initialization or when the dag lock is held for reads.
 func (dag *BlockDAG) ForEachHash(fn func(hash daghash.Hash) error) error {
-	for hash := range dag.index.index {
-		err := fn(hash)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return dag.index.ForEachHash(fn)
 }
 
 func (dag *BlockDAG) addDelayedBlock(block *util.Block, delay time.Duration) error {

@@ -27,7 +27,7 @@ func (dag *BlockDAG) addNodeToIndexWithInvalidAncestor(block *util.Block) error 
 		return err
 	}
 	defer dbTx.RollbackUnlessClosed()
-	err = dag.index.flushToDB(dbTx)
+	err = dag.index.FlushToDB(dbTx)
 	if err != nil {
 		return err
 	}
@@ -92,7 +92,7 @@ func (dag *BlockDAG) maybeAcceptBlock(block *util.Block, flags BehaviorFlags) er
 			return err
 		}
 	}
-	err = dag.index.flushToDB(dbTx)
+	err = dag.index.FlushToDB(dbTx)
 	if err != nil {
 		return err
 	}
