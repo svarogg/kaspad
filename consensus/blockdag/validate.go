@@ -652,7 +652,7 @@ func validateMedianTime(dag *BlockDAG, header *wire.BlockHeader, bluestParent *B
 	if !header.IsGenesis() {
 		// Ensure the timestamp for the block header is not before the
 		// median time of the last several blocks (medianTimeBlocks).
-		medianTime := bluestParent.PastMedianTime(dag)
+		medianTime := dag.PastMedianTime(bluestParent)
 		if header.Timestamp.Before(medianTime) {
 			str := fmt.Sprintf("block timestamp of %s is not after expected %s", header.Timestamp, medianTime)
 			return common.NewRuleError(common.ErrTimeTooOld, str)
@@ -742,7 +742,7 @@ func (dag *BlockDAG) checkBlockContext(block *util.Block, parents BlockNodeSet, 
 func (dag *BlockDAG) validateAllTxsFinalized(block *util.Block, node *BlockNode, bluestParent *BlockNode) error {
 	blockTime := block.MsgBlock().Header.Timestamp
 	if !block.IsGenesis() {
-		blockTime = bluestParent.PastMedianTime(dag)
+		blockTime = dag.PastMedianTime(bluestParent)
 	}
 
 	// Ensure all transactions in the block are finalized.
@@ -973,7 +973,7 @@ func (dag *BlockDAG) checkConnectToPastUTXO(block *BlockNode, pastUTXO utxo.UTXO
 		// in order to determine if transactions in the current block are final.
 		medianTime := block.Header().Timestamp
 		if !block.IsGenesis() {
-			medianTime = block.selectedParent.PastMedianTime(dag)
+			medianTime = dag.PastMedianTime(block.selectedParent)
 		}
 
 		// We also enforce the relative sequence number based

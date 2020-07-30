@@ -535,7 +535,7 @@ func (dag *BlockDAG) calcSequenceLock(node *BlockNode, utxoSet utxo.UTXOSet, tx 
 			for blockNode.selectedParent.blueScore > inputBlueScore {
 				blockNode = blockNode.selectedParent
 			}
-			medianTime := blockNode.PastMedianTime(dag)
+			medianTime := dag.PastMedianTime(blockNode)
 
 			// Time based relative time-locks have a time granularity of
 			// wire.SequenceLockTimeGranularity, so we shift left by this
@@ -1525,7 +1525,7 @@ func (dag *BlockDAG) UTXOSet() *utxo.FullUTXOSet {
 
 // CalcPastMedianTime returns the past median time of the DAG.
 func (dag *BlockDAG) CalcPastMedianTime() mstime.Time {
-	return dag.virtual.tips().Bluest().PastMedianTime(dag)
+	return dag.PastMedianTime(dag.virtual.tips().Bluest())
 }
 
 // GetUTXOEntry returns the requested unspent transaction output. The returned
@@ -2179,4 +2179,17 @@ func (dag *BlockDAG) Notifier() *notifications.ConsensusNotifier {
 
 func (dag *BlockDAG) FinalityScore(node *BlockNode) uint64 {
 	return node.blueScore / dag.FinalityInterval()
+}
+
+// CalcPastMedianTime returns the median time of the previous few blocks
+// prior to, and including, the block node.
+//
+// This function is safe for concurrent access.
+func (dag *BlockDAG) PastMedianTime(node *BlockNode) mstime.Time {
+	window := blueBlockWindow(node, 2*dag.TimestampDeviationTolerance-1)
+	medianTimestamp, err := window.medianTimestamp()
+	if err != nil {
+		panic(fmt.Sprintf("blueBlockWindow: %s", err))
+	}
+	return mstime.UnixMilliseconds(medianTimestamp)
 }

@@ -5,7 +5,6 @@
 package blockdag
 
 import (
-	"fmt"
 	"github.com/kaspanet/kaspad/consensus/blockstatus"
 	"github.com/kaspanet/kaspad/dagconfig"
 	"github.com/kaspanet/kaspad/util/daghash"
@@ -151,19 +150,6 @@ func (node *BlockNode) SelectedAncestor(blueScore uint64) *BlockNode {
 // This function is safe for concurrent access.
 func (node *BlockNode) RelativeAncestor(distance uint64) *BlockNode {
 	return node.SelectedAncestor(node.blueScore - distance)
-}
-
-// CalcPastMedianTime returns the median time of the previous few blocks
-// prior to, and including, the block node.
-//
-// This function is safe for concurrent access.
-func (node *BlockNode) PastMedianTime(dag *BlockDAG) mstime.Time {
-	window := blueBlockWindow(node, 2*dag.TimestampDeviationTolerance-1)
-	medianTimestamp, err := window.medianTimestamp()
-	if err != nil {
-		panic(fmt.Sprintf("blueBlockWindow: %s", err))
-	}
-	return mstime.UnixMilliseconds(medianTimestamp)
 }
 
 func (node *BlockNode) ParentHashes() []*daghash.Hash {
