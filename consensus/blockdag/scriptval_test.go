@@ -6,6 +6,7 @@ package blockdag
 
 import (
 	"fmt"
+	"github.com/kaspanet/kaspad/consensus/utxo"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -36,7 +37,7 @@ func TestCheckBlockScripts(t *testing.T) {
 	}
 
 	storeDataFile := fmt.Sprintf("%d.utxostore", testBlockNum)
-	utxoSet, err := loadUTXOSet(storeDataFile)
+	utxoSet, err := utxo.LoadUTXOSet(storeDataFile)
 	if err != nil {
 		t.Errorf("Error loading txstore: %v\n", err)
 		return
