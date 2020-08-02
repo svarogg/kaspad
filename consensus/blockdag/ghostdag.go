@@ -2,10 +2,23 @@ package blockdag
 
 import (
 	"github.com/kaspanet/kaspad/consensus/blocknode"
+	"github.com/kaspanet/kaspad/consensus/reachability"
 	"github.com/kaspanet/kaspad/dagconfig"
 	"github.com/pkg/errors"
 	"sort"
 )
+
+type GHOSTDAG struct {
+	reachabilityTree *reachability.ReachabilityTree
+	params           *dagconfig.Params
+}
+
+func NewGHOSTDAG(reachabilityTree *reachability.ReachabilityTree, params *dagconfig.Params) *GHOSTDAG {
+	return &GHOSTDAG{
+		reachabilityTree: reachabilityTree,
+		params:           params,
+	}
+}
 
 // ghostdag runs the GHOSTDAG protocol and updates newNode.blues,
 // newNode.selectedParent and newNode.bluesAnticoneSizes accordingly.
@@ -26,12 +39,12 @@ import (
 //    bluesAnticoneSizes.
 //
 // For further details see the article https://eprint.iacr.org/2018/104.pdf
-func (dag *BlockDAG) ghostdag(newNode *blocknode.BlockNode) (selectedParentAnticone []*blocknode.BlockNode, err error) {
+func (g *GHOSTDAG) run(newNode *blocknode.BlockNode) (selectedParentAnticone []*blocknode.BlockNode, err error) {
 	newNode.SetSelectedParent(newNode.Parents().Bluest())
 	newNode.SetBluesAnticoneSizes(make(map[*blocknode.BlockNode]dagconfig.KType))
 	newNode.BluesAnticoneSizes()[newNode.SelectedParent()] = 0
 	newNode.SetBlues([]*blocknode.BlockNode{newNode.SelectedParent()})
-	selectedParentAnticone, err = dag.selectedParentAnticone(newNode)
+	selectedParentAnticone, err = g.selectedParentAnticone(newNode)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +72,7 @@ func (dag *BlockDAG) ghostdag(newNode *blocknode.BlockNode) (selectedParentAntic
 			// newNode is always in the future of blueCandidate, so there's
 			// no point in checking it.
 			if chainBlock != newNode {
-				if isAncestorOfBlueCandidate, err := dag.isInPast(chainBlock, blueCandidate); err != nil {
+				if isAncestorOfBlueCandidate, err := g.isInPast(chainBlock, blueCandidate); err != nil {
 					return nil, err
 				} else if isAncestorOfBlueCandidate {
 					break
@@ -68,7 +81,7 @@ func (dag *BlockDAG) ghostdag(newNode *blocknode.BlockNode) (selectedParentAntic
 
 			for _, block := range chainBlock.Blues() {
 				// Skip blocks that exist in the past of blueCandidate.
-				if isAncestorOfBlueCandidate, err := dag.isInPast(block, blueCandidate); err != nil {
+				if isAncestorOfBlueCandidate, err := g.isInPast(block, blueCandidate); err != nil {
 					return nil, err
 				} else if isAncestorOfBlueCandidate {
 					continue
@@ -80,13 +93,13 @@ func (dag *BlockDAG) ghostdag(newNode *blocknode.BlockNode) (selectedParentAntic
 				}
 				candidateAnticoneSize++
 
-				if candidateAnticoneSize > dag.Params.K {
+				if candidateAnticoneSize > g.params.K {
 					// k-cluster violation: The candidate's blue anticone exceeded k
 					possiblyBlue = false
 					break
 				}
 
-				if candidateBluesAnticoneSizes[block] == dag.Params.K {
+				if candidateBluesAnticoneSizes[block] == g.params.K {
 					// k-cluster violation: A block in candidate's blue anticone already
 					// has k blue blocks in its own anticone
 					possiblyBlue = false
@@ -95,7 +108,7 @@ func (dag *BlockDAG) ghostdag(newNode *blocknode.BlockNode) (selectedParentAntic
 
 				// This is a sanity check that validates that a blue
 				// block's blue anticone is not already larger than K.
-				if candidateBluesAnticoneSizes[block] > dag.Params.K {
+				if candidateBluesAnticoneSizes[block] > g.params.K {
 					return nil, errors.New("found blue anticone size larger than k")
 				}
 			}
@@ -111,7 +124,7 @@ func (dag *BlockDAG) ghostdag(newNode *blocknode.BlockNode) (selectedParentAntic
 
 			// The maximum length of node.blues can be K+1 because
 			// it contains the selected parent.
-			if dagconfig.KType(len(newNode.Blues())) == dag.Params.K+1 {
+			if dagconfig.KType(len(newNode.Blues())) == g.params.K+1 {
 				break
 			}
 		}
@@ -127,7 +140,7 @@ func (dag *BlockDAG) ghostdag(newNode *blocknode.BlockNode) (selectedParentAntic
 // For each node in the queue:
 //   we check whether it is in the past of the selected parent.
 //   If not, we add the node to the resulting anticone-set and queue it for processing.
-func (dag *BlockDAG) selectedParentAnticone(node *blocknode.BlockNode) ([]*blocknode.BlockNode, error) {
+func (g *GHOSTDAG) selectedParentAnticone(node *blocknode.BlockNode) ([]*blocknode.BlockNode, error) {
 	anticoneSet := blocknode.NewBlockNodeSet()
 	var anticoneSlice []*blocknode.BlockNode
 	selectedParentPast := blocknode.NewBlockNodeSet()
@@ -150,7 +163,7 @@ func (dag *BlockDAG) selectedParentAnticone(node *blocknode.BlockNode) ([]*block
 			if anticoneSet.Contains(parent) || selectedParentPast.Contains(parent) {
 				continue
 			}
-			isAncestorOfSelectedParent, err := dag.isInPast(parent, node.SelectedParent())
+			isAncestorOfSelectedParent, err := g.isInPast(parent, node.SelectedParent())
 			if err != nil {
 				return nil, err
 			}
@@ -164,4 +177,8 @@ func (dag *BlockDAG) selectedParentAnticone(node *blocknode.BlockNode) ([]*block
 		}
 	}
 	return anticoneSlice, nil
+}
+
+func (g *GHOSTDAG) isInPast(this *blocknode.BlockNode, other *blocknode.BlockNode) (bool, error) {
+	return g.reachabilityTree.IsInPast(this, other)
 }

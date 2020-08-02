@@ -375,7 +375,7 @@ func TestGHOSTDAGErrors(t *testing.T) {
 	if !ok {
 		t.Fatalf("block %s does not exist in the DAG", block3.BlockHash())
 	}
-	_, err = dag.ghostdag(blockNode3)
+	_, err = dag.ghostdag.run(blockNode3)
 	if err == nil {
 		t.Fatalf("TestGHOSTDAGErrors: ghostdag unexpectedly succeeded")
 	}
