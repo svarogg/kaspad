@@ -12,7 +12,6 @@ import (
 	"github.com/kaspanet/kaspad/consensus/timesource"
 	"github.com/kaspanet/kaspad/consensus/utxo"
 	"github.com/kaspanet/kaspad/testdata"
-	"github.com/kaspanet/kaspad/util/mstime"
 	"math"
 	"os"
 	"path/filepath"
@@ -639,7 +638,7 @@ func TestAcceptingInInit(t *testing.T) {
 		t.Fatalf("genesis block does not exist in the DAG")
 	}
 	testNode, _ := dag.initBlockNode(&testBlock.MsgBlock().Header, blocknode.BlockNodeSetFromSlice(genesisNode))
-	testNode.status = blocknode.StatusDataStored
+	testNode.SetStatus(blocknode.StatusDataStored)
 
 	// Manually add the test block to the database
 	dbTx, err := databaseContext.NewTx()
@@ -652,11 +651,11 @@ func TestAcceptingInInit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to store block: %s", err)
 	}
-	dbTestNode, err := serializeBlockNode(testNode)
+	dbTestNode, err := blocknode.SerializeBlockNode(testNode)
 	if err != nil {
 		t.Fatalf("Failed to serialize BlockNode: %s", err)
 	}
-	key := blockIndexKey(testNode.hash, testNode.blueScore)
+	key := blocknode.BlockIndexKey(testNode.Hash(), testNode.BlueScore())
 	err = dbaccess.StoreIndexBlock(dbTx, key, dbTestNode)
 	if err != nil {
 		t.Fatalf("Failed to update block index: %s", err)
@@ -680,7 +679,7 @@ func TestAcceptingInInit(t *testing.T) {
 		t.Fatalf("block %s does not exist in the DAG", testBlock.Hash())
 	}
 
-	if testNode.status&blocknode.StatusValid == 0 {
+	if testNode.Status()&blocknode.StatusValid == 0 {
 		t.Fatalf("testNode is unexpectedly invalid")
 	}
 }
