@@ -1890,11 +1890,11 @@ func (dag *BlockDAG) antiPastBetween(lowHash, highHash *daghash.Hash, maxEntries
 	// NOT in the lowNode's past (excluding itself) into an up-heap
 	// (a heap sorted by blueScore from lowest to greatest).
 	visited := blocknode.NewBlockNodeSet()
-	candidateNodes := newUpHeap()
-	queue := newDownHeap()
+	candidateNodes := blocknode.NewUpHeap()
+	queue := blocknode.NewDownHeap()
 	queue.Push(highNode)
 	for queue.Len() > 0 {
-		current := queue.pop()
+		current := queue.Pop()
 		if visited.Contains(current) {
 			continue
 		}
@@ -1920,7 +1920,7 @@ func (dag *BlockDAG) antiPastBetween(lowHash, highHash *daghash.Hash, maxEntries
 	}
 	nodes := make([]*blocknode.BlockNode, nodesLen)
 	for i := 0; i < nodesLen; i++ {
-		nodes[i] = candidateNodes.pop()
+		nodes[i] = candidateNodes.Pop()
 	}
 	return nodes, nil
 }
@@ -1972,16 +1972,16 @@ func (dag *BlockDAG) GetTopHeaders(highHash *daghash.Hash, maxHeaders uint64) ([
 		}
 	}
 	headers := make([]*wire.BlockHeader, 0, highNode.BlueScore())
-	queue := newDownHeap()
-	queue.pushSet(highNode.Parents())
+	queue := blocknode.NewDownHeap()
+	queue.PushSet(highNode.Parents())
 
 	visited := blocknode.NewBlockNodeSet()
 	for i := uint32(0); queue.Len() > 0 && uint64(len(headers)) < maxHeaders; i++ {
-		current := queue.pop()
+		current := queue.Pop()
 		if !visited.Contains(current) {
 			visited.Add(current)
 			headers = append(headers, current.Header())
-			queue.pushSet(current.Parents())
+			queue.PushSet(current.Parents())
 		}
 	}
 	return headers, nil
