@@ -25,7 +25,7 @@ func TestUTXODiffStore(t *testing.T) {
 	nodeCounter := byte(0)
 	createNode := func() *blocknode.BlockNode {
 		nodeCounter++
-		node := &blocknode.BlockNode{hash: &daghash.Hash{nodeCounter}}
+		node := blocknode.NewBlockNodeForTest(&daghash.Hash{nodeCounter})
 		dag.blockNodeStore.AddNode(node)
 		return node
 	}
