@@ -225,16 +225,16 @@ func TestGHOSTDAG(t *testing.T) {
 				blockByIDMap[blockData.id] = node
 				idByBlockMap[node] = blockData.id
 
-				bluesIDs := make([]string, 0, len(node.blues))
-				for _, blue := range node.blues {
+				bluesIDs := make([]string, 0, len(node.Blues()))
+				for _, blue := range node.Blues() {
 					bluesIDs = append(bluesIDs, idByBlockMap[blue])
 				}
-				selectedParentID := idByBlockMap[node.selectedParent]
+				selectedParentID := idByBlockMap[node.SelectedParent()]
 				fullDataStr := fmt.Sprintf("blues: %v, selectedParent: %v, score: %v",
-					bluesIDs, selectedParentID, node.blueScore)
-				if blockData.expectedScore != node.blueScore {
+					bluesIDs, selectedParentID, node.BlueScore())
+				if blockData.expectedScore != node.BlueScore() {
 					t.Errorf("Test %d: Block %v expected to have score %v but got %v (fulldata: %v)",
-						i, blockData.id, blockData.expectedScore, node.blueScore, fullDataStr)
+						i, blockData.id, blockData.expectedScore, node.BlueScore(), fullDataStr)
 				}
 				if blockData.expectedSelectedParent != selectedParentID {
 					t.Errorf("Test %d: Block %v expected to have selected parent %v but got %v (fulldata: %v)",
@@ -252,10 +252,10 @@ func TestGHOSTDAG(t *testing.T) {
 				reds[id] = true
 			}
 
-			for tip := &dag.virtual.BlockNode; tip.selectedParent != nil; tip = tip.selectedParent {
+			for tip := &dag.virtual.BlockNode; tip.SelectedParent() != nil; tip = tip.SelectedParent() {
 				tipID := idByBlockMap[tip]
 				delete(reds, tipID)
-				for _, blue := range tip.blues {
+				for _, blue := range tip.Blues() {
 					blueID := idByBlockMap[blue]
 					delete(reds, blueID)
 				}
