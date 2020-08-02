@@ -16,7 +16,7 @@ import (
 // block given its bluest parent.
 func (dag *BlockDAG) requiredDifficulty(bluestParent *blocknode.BlockNode, newBlockTime mstime.Time) uint32 {
 	// Genesis block.
-	if bluestParent == nil || bluestParent.blueScore < dag.difficultyAdjustmentWindowSize+1 {
+	if bluestParent == nil || bluestParent.BlueScore() < dag.difficultyAdjustmentWindowSize+1 {
 		return dag.powMaxBits
 	}
 
@@ -57,6 +57,6 @@ func (dag *BlockDAG) requiredDifficulty(bluestParent *blocknode.BlockNode, newBl
 //
 // This function is safe for concurrent access.
 func (dag *BlockDAG) NextRequiredDifficulty(timestamp mstime.Time) uint32 {
-	difficulty := dag.requiredDifficulty(dag.virtual.parents.Bluest(), timestamp)
+	difficulty := dag.requiredDifficulty(dag.virtual.Parents().Bluest(), timestamp)
 	return difficulty
 }
