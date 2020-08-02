@@ -2,10 +2,9 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package blockindex
+package blocknode
 
 import (
-	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/consensus/blockstatus"
 	"github.com/kaspanet/kaspad/dbaccess"
 	"sync"
@@ -14,37 +13,34 @@ import (
 	"github.com/kaspanet/kaspad/util/daghash"
 )
 
-// BlockIndex provides facilities for keeping track of an in-memory index of the
+// BlockNodeStore provides facilities for keeping track of an in-memory store of the
 // block DAG.
-type BlockIndex struct {
-	// The following fields are set when the instance is created and can't
-	// be changed afterwards, so there is no need to protect them with a
-	// separate mutex.
+type BlockNodeStore struct {
 	dagParams *dagconfig.Params
 
 	sync.RWMutex
-	index map[daghash.Hash]*blocknode.BlockNode
-	dirty map[*blocknode.BlockNode]struct{}
+	blockNodes map[daghash.Hash]*BlockNode
+	dirty      map[*BlockNode]struct{}
 }
 
-// NewBlockIndex returns a new empty instance of a block index. The index will
+// NewBlockNodeStore returns a new empty instance of a blockNode store. The store will
 // be dynamically populated as block nodes are loaded from the database and
 // manually added.
-func NewBlockIndex(dagParams *dagconfig.Params) *BlockIndex {
-	return &BlockIndex{
-		dagParams: dagParams,
-		index:     make(map[daghash.Hash]*blocknode.BlockNode),
-		dirty:     make(map[*blocknode.BlockNode]struct{}),
+func NewBlockNodeStore(dagParams *dagconfig.Params) *BlockNodeStore {
+	return &BlockNodeStore{
+		dagParams:  dagParams,
+		blockNodes: make(map[daghash.Hash]*BlockNode),
+		dirty:      make(map[*BlockNode]struct{}),
 	}
 }
 
-// HaveBlock returns whether or not the block index contains the provided hash.
+// HaveNode returns whether or not the block store contains the provided hash.
 //
 // This function is safe for concurrent access.
-func (bi *BlockIndex) HaveBlock(hash *daghash.Hash) bool {
+func (bi *BlockNodeStore) HaveNode(hash *daghash.Hash) bool {
 	bi.RLock()
 	defer bi.RUnlock()
-	_, hasBlock := bi.index[*hash]
+	_, hasBlock := bi.blockNodes[*hash]
 	return hasBlock
 }
 
@@ -52,36 +48,36 @@ func (bi *BlockIndex) HaveBlock(hash *daghash.Hash) bool {
 // return nil if there is no entry for the hash.
 //
 // This function is safe for concurrent access.
-func (bi *BlockIndex) LookupNode(hash *daghash.Hash) (*blocknode.BlockNode, bool) {
+func (bi *BlockNodeStore) LookupNode(hash *daghash.Hash) (*BlockNode, bool) {
 	bi.RLock()
 	defer bi.RUnlock()
-	node, ok := bi.index[*hash]
+	node, ok := bi.blockNodes[*hash]
 	return node, ok
 }
 
-// AddNode adds the provided node to the block index and marks it as dirty.
+// AddNode adds the provided node to the store and marks it as dirty.
 // Duplicate entries are not checked so it is up to caller to avoid adding them.
 //
 // This function is safe for concurrent access.
-func (bi *BlockIndex) AddNode(node *blocknode.BlockNode) {
+func (bi *BlockNodeStore) AddNode(node *BlockNode) {
 	bi.Lock()
 	defer bi.Unlock()
 	bi.addNode(node)
 	bi.dirty[node] = struct{}{}
 }
 
-// addNode adds the provided node to the block index, but does not mark it as
+// addNode adds the provided node to the store, but does not mark it as
 // dirty. This can be used while initializing the block index.
 //
 // This function is NOT safe for concurrent access.
-func (bi *BlockIndex) addNode(node *blocknode.BlockNode) {
-	bi.index[*node.Hash()] = node
+func (bi *BlockNodeStore) addNode(node *BlockNode) {
+	bi.blockNodes[*node.Hash()] = node
 }
 
 // NodeStatus provides concurrent-safe access to the status field of a node.
 //
 // This function is safe for concurrent access.
-func (bi *BlockIndex) NodeStatus(node *blocknode.BlockNode) blockstatus.BlockStatus {
+func (bi *BlockNodeStore) NodeStatus(node *BlockNode) blockstatus.BlockStatus {
 	bi.RLock()
 	defer bi.RUnlock()
 	status := node.Status()
@@ -93,7 +89,7 @@ func (bi *BlockIndex) NodeStatus(node *blocknode.BlockNode) blockstatus.BlockSta
 // flags currently on.
 //
 // This function is safe for concurrent access.
-func (bi *BlockIndex) SetStatusFlags(node *blocknode.BlockNode, flags blockstatus.BlockStatus) {
+func (bi *BlockNodeStore) SetStatusFlags(node *BlockNode, flags blockstatus.BlockStatus) {
 	bi.Lock()
 	defer bi.Unlock()
 	node.AddStatus(flags)
@@ -104,7 +100,7 @@ func (bi *BlockIndex) SetStatusFlags(node *blocknode.BlockNode, flags blockstatu
 // regardless of whether they were on or off previously.
 //
 // This function is safe for concurrent access.
-func (bi *BlockIndex) UnsetStatusFlags(node *blocknode.BlockNode, flags blockstatus.BlockStatus) {
+func (bi *BlockNodeStore) UnsetStatusFlags(node *BlockNode, flags blockstatus.BlockStatus) {
 	bi.Lock()
 	defer bi.Unlock()
 	node.RemoveStatus(flags)
@@ -112,7 +108,7 @@ func (bi *BlockIndex) UnsetStatusFlags(node *blocknode.BlockNode, flags blocksta
 }
 
 // FlushToDB writes all dirty block nodes to the database.
-func (bi *BlockIndex) FlushToDB(dbContext *dbaccess.TxContext) error {
+func (bi *BlockNodeStore) FlushToDB(dbContext *dbaccess.TxContext) error {
 	bi.Lock()
 	defer bi.Unlock()
 	if len(bi.dirty) == 0 {
@@ -120,7 +116,7 @@ func (bi *BlockIndex) FlushToDB(dbContext *dbaccess.TxContext) error {
 	}
 
 	for node := range bi.dirty {
-		serializedBlockNode, err := blocknode.SerializeBlockNode(node)
+		serializedBlockNode, err := SerializeBlockNode(node)
 		if err != nil {
 			return err
 		}
@@ -133,16 +129,16 @@ func (bi *BlockIndex) FlushToDB(dbContext *dbaccess.TxContext) error {
 	return nil
 }
 
-func (bi *BlockIndex) ClearDirtyEntries() {
-	bi.dirty = make(map[*blocknode.BlockNode]struct{})
+func (bi *BlockNodeStore) ClearDirtyEntries() {
+	bi.dirty = make(map[*BlockNode]struct{})
 }
 
-// ForEachHash runs the given fn on every hash in the index
+// ForEachHash runs the given fn on every hash in the store
 //
 // This function is NOT safe for concurrent access. It is meant to be
 // used either on initialization or when the dag lock is held for reads.
-func (bi *BlockIndex) ForEachHash(fn func(hash daghash.Hash) error) error {
-	for hash := range bi.index {
+func (bi *BlockNodeStore) ForEachHash(fn func(hash daghash.Hash) error) error {
+	for hash := range bi.blockNodes {
 		err := fn(hash)
 		if err != nil {
 			return err

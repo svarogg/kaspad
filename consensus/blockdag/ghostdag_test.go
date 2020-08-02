@@ -217,7 +217,7 @@ func TestGHOSTDAG(t *testing.T) {
 					t.Fatalf("TestGHOSTDAG: block %v was unexpectedly orphan", blockData.id)
 				}
 
-				node, ok := dag.index.LookupNode(utilBlock.Hash())
+				node, ok := dag.blockNodeStore.LookupNode(utilBlock.Hash())
 				if !ok {
 					t.Fatalf("block %s does not exist in the DAG", utilBlock.Hash())
 				}
@@ -310,12 +310,12 @@ func TestBlueAnticoneSizeErrors(t *testing.T) {
 	}
 
 	// Get references to the tips of the two chains
-	blockNodeA, ok := dag.index.LookupNode(currentBlockA.BlockHash())
+	blockNodeA, ok := dag.blockNodeStore.LookupNode(currentBlockA.BlockHash())
 	if !ok {
 		t.Fatalf("block %s does not exist in the DAG", currentBlockA.BlockHash())
 	}
 
-	blockNodeB, ok := dag.index.LookupNode(currentBlockB.BlockHash())
+	blockNodeB, ok := dag.blockNodeStore.LookupNode(currentBlockB.BlockHash())
 	if !ok {
 		t.Fatalf("block %s does not exist in the DAG", currentBlockB.BlockHash())
 	}
@@ -371,7 +371,7 @@ func TestGHOSTDAGErrors(t *testing.T) {
 
 	// Try to rerun GHOSTDAG on the last block. GHOSTDAG uses
 	// reachability data, so we expect it to fail.
-	blockNode3, ok := dag.index.LookupNode(block3.BlockHash())
+	blockNode3, ok := dag.blockNodeStore.LookupNode(block3.BlockHash())
 	if !ok {
 		t.Fatalf("block %s does not exist in the DAG", block3.BlockHash())
 	}
@@ -407,7 +407,7 @@ func TestBlueAnticoneSizesSize(t *testing.T) {
 	blockHeader := dagconfig.SimnetParams.GenesisBlock.Header
 	node, _ := dag.initBlockNode(&blockHeader, blocknode.NewBlockNodeSet())
 	fakeBlue := &blocknode.BlockNode{hash: &daghash.Hash{1}}
-	dag.index.AddNode(fakeBlue)
+	dag.blockNodeStore.AddNode(fakeBlue)
 	// Setting maxKType to maximum value of KType.
 	// As we verify above that KType is unsigned we can be sure that maxKType is indeed the maximum value of KType.
 	maxKType := ^dagconfig.KType(0)

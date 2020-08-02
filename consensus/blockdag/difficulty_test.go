@@ -116,7 +116,7 @@ func TestDifficulty(t *testing.T) {
 		if isOrphan {
 			t.Fatalf("block was unexpectedly orphan")
 		}
-		node, ok := dag.index.LookupNode(block.BlockHash())
+		node, ok := dag.blockNodeStore.LookupNode(block.BlockHash())
 		if !ok {
 			t.Fatalf("block %s does not exist in the DAG", block.BlockHash())
 		}

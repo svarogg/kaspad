@@ -256,7 +256,7 @@ func TestCalcSequenceLock(t *testing.T) {
 	for i := 0; i < numBlocksToGenerate; i++ {
 		blockTime = blockTime.Add(time.Second)
 		node = newTestNode(dag, blocknode.BlockNodeSetFromSlice(node), blockVersion, 0, blockTime)
-		dag.index.AddNode(node)
+		dag.blockNodeStore.AddNode(node)
 		dag.virtual.SetTips(blocknode.BlockNodeSetFromSlice(node))
 	}
 
@@ -523,7 +523,7 @@ func TestCalcPastMedianTime(t *testing.T) {
 	for i := uint32(1); i < numBlocks; i++ {
 		blockTime = blockTime.Add(time.Second)
 		nodes[i] = newTestNode(dag, blocknode.BlockNodeSetFromSlice(nodes[i-1]), blockVersion, 0, blockTime)
-		dag.index.AddNode(nodes[i])
+		dag.blockNodeStore.AddNode(nodes[i])
 	}
 
 	tests := []struct {
@@ -635,7 +635,7 @@ func TestAcceptingInInit(t *testing.T) {
 	testBlock := blocks[1]
 
 	// Create a test BlockNode with an unvalidated status
-	genesisNode, ok := dag.index.LookupNode(genesisBlock.Hash())
+	genesisNode, ok := dag.blockNodeStore.LookupNode(genesisBlock.Hash())
 	if !ok {
 		t.Fatalf("genesis block does not exist in the DAG")
 	}
@@ -676,7 +676,7 @@ func TestAcceptingInInit(t *testing.T) {
 	}
 
 	// Make sure that the test node's status is valid
-	testNode, ok = dag.index.LookupNode(testBlock.Hash())
+	testNode, ok = dag.blockNodeStore.LookupNode(testBlock.Hash())
 	if !ok {
 		t.Fatalf("block %s does not exist in the DAG", testBlock.Hash())
 	}
@@ -955,7 +955,7 @@ func testFinalizeNodesBelowFinalityPoint(t *testing.T, deleteDiffData bool) {
 		blockTime = blockTime.Add(time.Second)
 		node := newTestNode(dag, blocknode.BlockNodeSetFromSlice(parent), blockVersion, 0, blockTime)
 		node.UpdateParentsChildren()
-		dag.index.AddNode(node)
+		dag.blockNodeStore.AddNode(node)
 
 		// Put dummy diff data in dag.utxoDiffStore
 		err := dag.utxoDiffStore.setBlockDiff(node, utxo.NewUTXODiff())
@@ -1066,7 +1066,7 @@ func TestDAGIndexFailedStatus(t *testing.T) {
 			"is an orphan\n")
 	}
 
-	invalidBlockNode, ok := dag.index.LookupNode(invalidBlock.Hash())
+	invalidBlockNode, ok := dag.blockNodeStore.LookupNode(invalidBlock.Hash())
 	if !ok {
 		t.Fatalf("invalidBlockNode wasn't added to the block index as expected")
 	}
@@ -1095,7 +1095,7 @@ func TestDAGIndexFailedStatus(t *testing.T) {
 		t.Fatalf("ProcessBlock incorrectly returned invalidBlockChild " +
 			"is an orphan\n")
 	}
-	invalidBlockChildNode, ok := dag.index.LookupNode(invalidBlockChild.Hash())
+	invalidBlockChildNode, ok := dag.blockNodeStore.LookupNode(invalidBlockChild.Hash())
 	if !ok {
 		t.Fatalf("invalidBlockChild wasn't added to the block index as expected")
 	}
@@ -1123,7 +1123,7 @@ func TestDAGIndexFailedStatus(t *testing.T) {
 		t.Fatalf("ProcessBlock incorrectly returned invalidBlockGrandChild " +
 			"is an orphan\n")
 	}
-	invalidBlockGrandChildNode, ok := dag.index.LookupNode(invalidBlockGrandChild.Hash())
+	invalidBlockGrandChildNode, ok := dag.blockNodeStore.LookupNode(invalidBlockGrandChild.Hash())
 	if !ok {
 		t.Fatalf("invalidBlockGrandChild wasn't added to the block index as expected")
 	}
@@ -1333,7 +1333,7 @@ func TestUTXOCommitment(t *testing.T) {
 	blockD := PrepareAndProcessBlockForTest(t, dag, []*daghash.Hash{blockB.BlockHash(), blockC.BlockHash()}, blockDTxs)
 
 	// Get the pastUTXO of blockD
-	blockNodeD, ok := dag.index.LookupNode(blockD.BlockHash())
+	blockNodeD, ok := dag.blockNodeStore.LookupNode(blockD.BlockHash())
 	if !ok {
 		t.Fatalf("TestUTXOCommitment: BlockNode for block D not found")
 	}
@@ -1393,7 +1393,7 @@ func TestPastUTXOMultiSet(t *testing.T) {
 	blockC := PrepareAndProcessBlockForTest(t, dag, []*daghash.Hash{blockB.BlockHash()}, nil)
 
 	// Take blockC's selectedParentMultiset
-	blockNodeC, ok := dag.index.LookupNode(blockC.BlockHash())
+	blockNodeC, ok := dag.blockNodeStore.LookupNode(blockC.BlockHash())
 	if !ok {
 		t.Fatalf("TestPastUTXOMultiSet: BlockNode for blockC not found")
 	}

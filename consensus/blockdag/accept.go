@@ -20,14 +20,14 @@ func (dag *BlockDAG) addNodeToIndexWithInvalidAncestor(block *util.Block) error 
 	blockHeader := &block.MsgBlock().Header
 	newNode, _ := dag.initBlockNode(blockHeader, blocknode.NewBlockNodeSet())
 	newNode.SetStatus(blockstatus.StatusInvalidAncestor)
-	dag.index.AddNode(newNode)
+	dag.blockNodeStore.AddNode(newNode)
 
 	dbTx, err := dag.databaseContext.NewTx()
 	if err != nil {
 		return err
 	}
 	defer dbTx.RollbackUnlessClosed()
-	err = dag.index.FlushToDB(dbTx)
+	err = dag.blockNodeStore.FlushToDB(dbTx)
 	if err != nil {
 		return err
 	}
@@ -66,7 +66,7 @@ func (dag *BlockDAG) maybeAcceptBlock(block *util.Block, flags BehaviorFlags) er
 	// Create a new block node for the block and add it to the node index.
 	newNode, selectedParentAnticone := dag.initBlockNode(&block.MsgBlock().Header, parents)
 	newNode.SetStatus(blockstatus.StatusDataStored)
-	dag.index.AddNode(newNode)
+	dag.blockNodeStore.AddNode(newNode)
 
 	// Insert the block into the database if it's not already there. Even
 	// though it is possible the block will ultimately fail to connect, it
@@ -92,7 +92,7 @@ func (dag *BlockDAG) maybeAcceptBlock(block *util.Block, flags BehaviorFlags) er
 			return err
 		}
 	}
-	err = dag.index.FlushToDB(dbTx)
+	err = dag.blockNodeStore.FlushToDB(dbTx)
 	if err != nil {
 		return err
 	}
@@ -142,11 +142,11 @@ func lookupParentNodes(block *util.Block, dag *BlockDAG) (blocknode.BlockNodeSet
 
 	nodes := blocknode.NewBlockNodeSet()
 	for _, parentHash := range parentHashes {
-		node, ok := dag.index.LookupNode(parentHash)
+		node, ok := dag.blockNodeStore.LookupNode(parentHash)
 		if !ok {
 			str := fmt.Sprintf("parent block %s is unknown", parentHash)
 			return nil, common.NewRuleError(common.ErrParentBlockUnknown, str)
-		} else if dag.index.NodeStatus(node).KnownInvalid() {
+		} else if dag.blockNodeStore.NodeStatus(node).KnownInvalid() {
 			str := fmt.Sprintf("parent block %s is known to be invalid", parentHash)
 			return nil, common.NewRuleError(common.ErrInvalidAncestorBlock, str)
 		}

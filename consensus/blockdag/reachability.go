@@ -908,7 +908,7 @@ func (rt *reachabilityTree) init(dbContext dbaccess.Context) error {
 	}
 
 	// Init the reindex root
-	reachabilityReindexRootNode, ok := rt.dag.index.LookupNode(reindexRootHash)
+	reachabilityReindexRootNode, ok := rt.dag.blockNodeStore.LookupNode(reindexRootHash)
 	if !ok {
 		return errors.Errorf("reachability reindex root block %s "+
 			"does not exist in the DAG", reindexRootHash)

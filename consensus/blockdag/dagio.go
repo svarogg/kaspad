@@ -8,7 +8,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/kaspanet/kaspad/consensus/blockindex"
 	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/consensus/utxo"
 	"github.com/kaspanet/kaspad/dbaccess"
@@ -112,8 +111,8 @@ func (dag *BlockDAG) initDAGState() error {
 		return err
 	}
 
-	log.Debugf("Loading block index...")
-	unprocessedBlockNodes, err := dag.index.InitBlockIndex(dag.databaseContext)
+	log.Debugf("Loading blockNode store...")
+	unprocessedBlockNodes, err := dag.blockNodeStore.Init(dag.databaseContext)
 	if err != nil {
 		return err
 	}
@@ -144,7 +143,7 @@ func (dag *BlockDAG) initDAGState() error {
 
 	log.Debugf("Setting the last finality point...")
 	var ok bool
-	dag.lastFinalityPoint, ok = dag.index.LookupNode(dagState.LastFinalityPoint)
+	dag.lastFinalityPoint, ok = dag.blockNodeStore.LookupNode(dagState.LastFinalityPoint)
 	if !ok {
 		return errors.Errorf("finality point block %s "+
 			"does not exist in the DAG", dagState.LastFinalityPoint)
@@ -175,7 +174,7 @@ func (dag *BlockDAG) validateLocalSubnetworkID(state *dagState) error {
 func (dag *BlockDAG) initVirtualBlockTips(state *dagState) error {
 	tips := blocknode.NewBlockNodeSet()
 	for _, tipHash := range state.TipHashes {
-		tip, ok := dag.index.LookupNode(tipHash)
+		tip, ok := dag.blockNodeStore.LookupNode(tipHash)
 		if !ok {
 			return errors.Errorf("cannot find "+
 				"DAG tip %s in block index", state.TipHashes)
@@ -255,7 +254,7 @@ func blockHashFromBlockIndexKey(BlockIndexKey []byte) (*daghash.Hash, error) {
 // This function is safe for concurrent access.
 func (dag *BlockDAG) BlockByHash(hash *daghash.Hash) (*util.Block, error) {
 	// Lookup the block hash in block index and ensure it is in the DAG
-	node, ok := dag.index.LookupNode(hash)
+	node, ok := dag.blockNodeStore.LookupNode(hash)
 	if !ok {
 		str := fmt.Sprintf("block %s is not in the DAG", hash)
 		return nil, ErrNotInDAG(str)
@@ -289,7 +288,7 @@ func (dag *BlockDAG) BlockHashesFrom(lowHash *daghash.Hash, limit int) ([]*dagha
 		return nil, err
 	}
 
-	key := blockindex.BlockIndexKey(lowHash, blueScore)
+	key := blocknode.BlockIndexKey(lowHash, blueScore)
 	cursor, err := dbaccess.BlockIndexCursorFrom(dag.databaseContext, key)
 	if dbaccess.IsNotFoundError(err) {
 		return nil, errors.Wrapf(err, "block %s not in block index", lowHash)

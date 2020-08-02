@@ -134,7 +134,7 @@ func TestBlueBlockWindow(t *testing.T) {
 			t.Fatalf("block %v was unexpectedly orphan", blockData.id)
 		}
 
-		node, ok := dag.index.LookupNode(utilBlock.Hash())
+		node, ok := dag.blockNodeStore.LookupNode(utilBlock.Hash())
 		if !ok {
 			t.Fatalf("block %s does not exist in the DAG", utilBlock.Hash())
 		}

@@ -30,12 +30,12 @@ func (dag *BlockDAG) BlockLocatorFromHashes(highHash, lowHash *daghash.Hash) (Bl
 	dag.dagLock.RLock()
 	defer dag.dagLock.RUnlock()
 
-	highNode, ok := dag.index.LookupNode(highHash)
+	highNode, ok := dag.blockNodeStore.LookupNode(highHash)
 	if !ok {
 		return nil, errors.Errorf("block %s is unknown", highHash)
 	}
 
-	lowNode, ok := dag.index.LookupNode(lowHash)
+	lowNode, ok := dag.blockNodeStore.LookupNode(lowHash)
 	if !ok {
 		return nil, errors.Errorf("block %s is unknown", lowHash)
 	}
@@ -96,7 +96,7 @@ func (dag *BlockDAG) FindNextLocatorBoundaries(locator BlockLocator) (highHash, 
 	lowNode := dag.genesis
 	nextBlockLocatorIndex := int64(len(locator) - 1)
 	for i, hash := range locator {
-		node, ok := dag.index.LookupNode(hash)
+		node, ok := dag.blockNodeStore.LookupNode(hash)
 		if ok {
 			lowNode = node
 			nextBlockLocatorIndex = int64(i) - 1

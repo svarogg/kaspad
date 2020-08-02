@@ -39,7 +39,7 @@ func newTestDAG(params *dagconfig.Params) *BlockDAG {
 		difficultyAdjustmentWindowSize: params.DifficultyAdjustmentWindowSize,
 		TimestampDeviationTolerance:    params.TimestampDeviationTolerance,
 		powMaxBits:                     util.BigToCompact(params.PowMax),
-		index:                          index,
+		blockNodeStore:                 index,
 		warningCaches:                  newThresholdCaches(vbNumBits),
 		deploymentCaches:               newThresholdCaches(dagconfig.DefinedDeployments),
 	}
@@ -114,7 +114,7 @@ func prepareAndProcessBlockByParentMsgBlocks(t *testing.T, dag *BlockDAG, parent
 }
 
 func nodeByMsgBlock(t *testing.T, dag *BlockDAG, block *wire.MsgBlock) *blocknode.BlockNode {
-	node, ok := dag.index.LookupNode(block.BlockHash())
+	node, ok := dag.blockNodeStore.LookupNode(block.BlockHash())
 	if !ok {
 		t.Fatalf("couldn't find block node with hash %s", block.BlockHash())
 	}

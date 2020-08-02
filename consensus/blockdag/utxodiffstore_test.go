@@ -26,7 +26,7 @@ func TestUTXODiffStore(t *testing.T) {
 	createNode := func() *blocknode.BlockNode {
 		nodeCounter++
 		node := &blocknode.BlockNode{hash: &daghash.Hash{nodeCounter}}
-		dag.index.AddNode(node)
+		dag.blockNodeStore.AddNode(node)
 		return node
 	}
 
@@ -128,7 +128,7 @@ func TestClearOldEntries(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		processedBlock := PrepareAndProcessBlockForTest(t, dag, dag.TipHashes(), nil)
 
-		node, ok := dag.index.LookupNode(processedBlock.BlockHash())
+		node, ok := dag.blockNodeStore.LookupNode(processedBlock.BlockHash())
 		if !ok {
 			t.Fatalf("TestClearOldEntries: missing BlockNode for hash %s", processedBlock.BlockHash())
 		}
@@ -158,7 +158,7 @@ func TestClearOldEntries(t *testing.T) {
 
 	// Add a block on top of the genesis to force the retrieval of all diffData
 	processedBlock := PrepareAndProcessBlockForTest(t, dag, []*daghash.Hash{dag.genesis.hash}, nil)
-	node, ok := dag.index.LookupNode(processedBlock.BlockHash())
+	node, ok := dag.blockNodeStore.LookupNode(processedBlock.BlockHash())
 	if !ok {
 		t.Fatalf("TestClearOldEntries: missing BlockNode for hash %s", processedBlock.BlockHash())
 	}

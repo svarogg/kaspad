@@ -181,7 +181,7 @@ func (store *reachabilityStore) loadReachabilityDataFromCursor(cursor database.C
 	}
 
 	// Connect the treeNode with its BlockNode
-	reachabilityData.treeNode.blockNode, ok = store.dag.index.LookupNode(hash)
+	reachabilityData.treeNode.blockNode, ok = store.dag.blockNodeStore.LookupNode(hash)
 	if !ok {
 		return errors.Errorf("block %s does not exist in the DAG", hash)
 	}

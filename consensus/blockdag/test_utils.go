@@ -160,7 +160,7 @@ func SetVirtualForTest(dag *BlockDAG, virtual VirtualForTest) VirtualForTest {
 func GetVirtualFromParentsForTest(dag *BlockDAG, parentHashes []*daghash.Hash) (VirtualForTest, error) {
 	parents := blocknode.NewBlockNodeSet()
 	for _, hash := range parentHashes {
-		parent, ok := dag.index.LookupNode(hash)
+		parent, ok := dag.blockNodeStore.LookupNode(hash)
 		if !ok {
 			return nil, errors.Errorf("GetVirtualFromParentsForTest: didn't found node for hash %s", hash)
 		}

@@ -6,7 +6,6 @@ package blockdag
 
 import (
 	"fmt"
-	"github.com/kaspanet/kaspad/consensus/blockindex"
 	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/consensus/blockstatus"
 	"github.com/kaspanet/kaspad/consensus/common"
@@ -105,7 +104,7 @@ type BlockDAG struct {
 
 	// index houses the entire block index in memory. The block index is
 	// a tree-shaped structure.
-	index *blockindex.BlockIndex
+	blockNodeStore *blocknode.BlockNodeStore
 
 	// blockCount holds the number of blocks in the DAG
 	blockCount uint64
@@ -184,7 +183,7 @@ func New(config *Config) (*BlockDAG, error) {
 
 	params := config.DAGParams
 
-	index := blockindex.NewBlockIndex(params)
+	index := blocknode.NewBlockNodeStore(params)
 	dag := &BlockDAG{
 		Params:                         params,
 		databaseContext:                config.DatabaseContext,
@@ -194,7 +193,7 @@ func New(config *Config) (*BlockDAG, error) {
 		difficultyAdjustmentWindowSize: params.DifficultyAdjustmentWindowSize,
 		TimestampDeviationTolerance:    params.TimestampDeviationTolerance,
 		powMaxBits:                     util.BigToCompact(params.PowMax),
-		index:                          index,
+		blockNodeStore:                 index,
 		orphans:                        make(map[daghash.Hash]*orphanBlock),
 		prevOrphans:                    make(map[daghash.Hash][]*orphanBlock),
 		delayedBlocks:                  make(map[daghash.Hash]*delayedBlock),
@@ -318,11 +317,11 @@ func (dag *BlockDAG) IsKnownOrphan(hash *daghash.Hash) bool {
 //
 // This function is safe for concurrent access.
 func (dag *BlockDAG) IsKnownInvalid(hash *daghash.Hash) bool {
-	node, ok := dag.index.LookupNode(hash)
+	node, ok := dag.blockNodeStore.LookupNode(hash)
 	if !ok {
 		return false
 	}
-	return dag.index.NodeStatus(node).KnownInvalid()
+	return dag.blockNodeStore.NodeStatus(node).KnownInvalid()
 }
 
 // GetOrphanMissingAncestorHashes returns all of the missing parents in the orphan's sub-DAG
@@ -591,20 +590,20 @@ func LockTimeToSequence(isMilliseconds bool, locktime uint64) uint64 {
 func (dag *BlockDAG) addBlock(node *blocknode.BlockNode,
 	block *util.Block, selectedParentAnticone []*blocknode.BlockNode, flags BehaviorFlags) (*chainUpdates, error) {
 	// Skip checks if node has already been fully validated.
-	fastAdd := flags&BFFastAdd == BFFastAdd || dag.index.NodeStatus(node).KnownValid()
+	fastAdd := flags&BFFastAdd == BFFastAdd || dag.blockNodeStore.NodeStatus(node).KnownValid()
 
 	// Connect the block to the DAG.
 	chainUpdates, err := dag.connectBlock(node, block, selectedParentAnticone, fastAdd)
 	if err != nil {
 		if errors.As(err, &common.RuleError{}) {
-			dag.index.SetStatusFlags(node, blockstatus.StatusValidateFailed)
+			dag.blockNodeStore.SetStatusFlags(node, blockstatus.StatusValidateFailed)
 
 			dbTx, err := dag.databaseContext.NewTx()
 			if err != nil {
 				return nil, err
 			}
 			defer dbTx.RollbackUnlessClosed()
-			err = dag.index.FlushToDB(dbTx)
+			err = dag.blockNodeStore.FlushToDB(dbTx)
 			if err != nil {
 				return nil, err
 			}
@@ -798,7 +797,7 @@ func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, virtualUTXODiff *ut
 	}
 	defer dbTx.RollbackUnlessClosed()
 
-	err = dag.index.FlushToDB(dbTx)
+	err = dag.blockNodeStore.FlushToDB(dbTx)
 	if err != nil {
 		return err
 	}
@@ -865,7 +864,7 @@ func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, virtualUTXODiff *ut
 		return err
 	}
 
-	dag.index.ClearDirtyEntries()
+	dag.blockNodeStore.ClearDirtyEntries()
 	dag.utxoDiffStore.clearDirtyEntries()
 	dag.utxoDiffStore.clearOldEntries()
 	dag.reachabilityTree.store.clearDirtyEntries()
@@ -1029,7 +1028,7 @@ func (dag *BlockDAG) finalizeNodesBelowFinalityPoint(deleteDiffData bool) {
 // updated in a separate goroutine. To get a definite answer if a block
 // is finalized or not, use dag.checkFinalityViolation.
 func (dag *BlockDAG) IsKnownFinalizedBlock(blockHash *daghash.Hash) bool {
-	node, ok := dag.index.LookupNode(blockHash)
+	node, ok := dag.blockNodeStore.LookupNode(blockHash)
 	return ok && node.IsFinalized()
 }
 
@@ -1078,7 +1077,7 @@ func (dag *BlockDAG) TxsAcceptedByVirtual() (MultiBlockTxsAcceptanceData, error)
 //
 // This function MUST be called with the DAG read-lock held
 func (dag *BlockDAG) TxsAcceptedByBlockHash(blockHash *daghash.Hash) (MultiBlockTxsAcceptanceData, error) {
-	node, ok := dag.index.LookupNode(blockHash)
+	node, ok := dag.blockNodeStore.LookupNode(blockHash)
 	if !ok {
 		return nil, errors.Errorf("Couldn't find block %s", blockHash)
 	}
@@ -1138,7 +1137,7 @@ func (dag *BlockDAG) applyDAGChanges(node *blocknode.BlockNode, newBlockPastUTXO
 		return nil, nil, errors.Wrap(err, "failed melding the virtual UTXO")
 	}
 
-	dag.index.SetStatusFlags(node, blockstatus.StatusValid)
+	dag.blockNodeStore.SetStatusFlags(node, blockstatus.StatusValid)
 
 	// And now we can update the finality point of the DAG (if required)
 	dag.updateFinalityPoint()
@@ -1541,7 +1540,7 @@ func (dag *BlockDAG) GetUTXOEntry(outpoint wire.Outpoint) (*utxo.UTXOEntry, bool
 
 // BlueScoreByBlockHash returns the blue score of a block with the given hash.
 func (dag *BlockDAG) BlueScoreByBlockHash(hash *daghash.Hash) (uint64, error) {
-	node, ok := dag.index.LookupNode(hash)
+	node, ok := dag.blockNodeStore.LookupNode(hash)
 	if !ok {
 		return 0, errors.Errorf("block %s is unknown", hash)
 	}
@@ -1551,7 +1550,7 @@ func (dag *BlockDAG) BlueScoreByBlockHash(hash *daghash.Hash) (uint64, error) {
 
 // BluesByBlockHash returns the blues of the block for the given hash.
 func (dag *BlockDAG) BluesByBlockHash(hash *daghash.Hash) ([]*daghash.Hash, error) {
-	node, ok := dag.index.LookupNode(hash)
+	node, ok := dag.blockNodeStore.LookupNode(hash)
 	if !ok {
 		return nil, errors.Errorf("block %s is unknown", hash)
 	}
@@ -1583,7 +1582,7 @@ func (dag *BlockDAG) BlockConfirmationsByHashNoLock(hash *daghash.Hash) (uint64,
 		return 0, nil
 	}
 
-	node, ok := dag.index.LookupNode(hash)
+	node, ok := dag.blockNodeStore.LookupNode(hash)
 	if !ok {
 		return 0, errors.Errorf("block %s is unknown", hash)
 	}
@@ -1699,7 +1698,7 @@ func (dag *BlockDAG) oldestChainBlockWithBlueScoreGreaterThan(blueScore uint64) 
 //
 // This method MUST be called with the DAG lock held
 func (dag *BlockDAG) IsInSelectedParentChain(blockHash *daghash.Hash) (bool, error) {
-	blockNode, ok := dag.index.LookupNode(blockHash)
+	blockNode, ok := dag.blockNodeStore.LookupNode(blockHash)
 	if !ok {
 		str := fmt.Sprintf("block %s is not in the DAG", blockHash)
 		return false, ErrNotInDAG(str)
@@ -1732,7 +1731,7 @@ func (dag *BlockDAG) SelectedParentChain(blockHash *daghash.Hash) ([]*daghash.Ha
 	for !isBlockInSelectedParentChain {
 		removedChainHashes = append(removedChainHashes, blockHash)
 
-		node, ok := dag.index.LookupNode(blockHash)
+		node, ok := dag.blockNodeStore.LookupNode(blockHash)
 		if !ok {
 			return nil, nil, errors.Errorf("block %s does not exist in the DAG", blockHash)
 		}
@@ -1798,7 +1797,7 @@ func (dag *BlockDAG) CurrentBits() uint32 {
 // HeaderByHash returns the block header identified by the given hash or an
 // error if it doesn't exist.
 func (dag *BlockDAG) HeaderByHash(hash *daghash.Hash) (*wire.BlockHeader, error) {
-	node, ok := dag.index.LookupNode(hash)
+	node, ok := dag.blockNodeStore.LookupNode(hash)
 	if !ok {
 		err := errors.Errorf("block %s is not known", hash)
 		return &wire.BlockHeader{}, err
@@ -1812,7 +1811,7 @@ func (dag *BlockDAG) HeaderByHash(hash *daghash.Hash) (*wire.BlockHeader, error)
 //
 // This function is safe for concurrent access.
 func (dag *BlockDAG) ChildHashesByHash(hash *daghash.Hash) ([]*daghash.Hash, error) {
-	node, ok := dag.index.LookupNode(hash)
+	node, ok := dag.blockNodeStore.LookupNode(hash)
 	if !ok {
 		str := fmt.Sprintf("block %s is not in the DAG", hash)
 		return nil, ErrNotInDAG(str)
@@ -1827,7 +1826,7 @@ func (dag *BlockDAG) ChildHashesByHash(hash *daghash.Hash) ([]*daghash.Hash, err
 //
 // This function is safe for concurrent access.
 func (dag *BlockDAG) SelectedParentHash(blockHash *daghash.Hash) (*daghash.Hash, error) {
-	node, ok := dag.index.LookupNode(blockHash)
+	node, ok := dag.blockNodeStore.LookupNode(blockHash)
 	if !ok {
 		str := fmt.Sprintf("block %s is not in the DAG", blockHash)
 		return nil, ErrNotInDAG(str)
@@ -1862,11 +1861,11 @@ func (dag *BlockDAG) antiPastHashesBetween(lowHash, highHash *daghash.Hash, maxH
 //
 // This function MUST be called with the DAG state lock held (for reads).
 func (dag *BlockDAG) antiPastBetween(lowHash, highHash *daghash.Hash, maxEntries uint64) ([]*blocknode.BlockNode, error) {
-	lowNode, ok := dag.index.LookupNode(lowHash)
+	lowNode, ok := dag.blockNodeStore.LookupNode(lowHash)
 	if !ok {
 		return nil, errors.Errorf("Couldn't find low hash %s", lowHash)
 	}
-	highNode, ok := dag.index.LookupNode(highHash)
+	highNode, ok := dag.blockNodeStore.LookupNode(highHash)
 	if !ok {
 		return nil, errors.Errorf("Couldn't find high hash %s", highHash)
 	}
@@ -1967,7 +1966,7 @@ func (dag *BlockDAG) GetTopHeaders(highHash *daghash.Hash, maxHeaders uint64) ([
 	highNode := &dag.virtual.BlockNode
 	if highHash != nil {
 		var ok bool
-		highNode, ok = dag.index.LookupNode(highHash)
+		highNode, ok = dag.blockNodeStore.LookupNode(highHash)
 		if !ok {
 			return nil, errors.Errorf("Couldn't find the high hash %s in the dag", highHash)
 		}
@@ -2034,7 +2033,7 @@ func (dag *BlockDAG) SubnetworkID() *subnetworkid.SubnetworkID {
 // This function is NOT safe for concurrent access. It is meant to be
 // used either on initialization or when the dag lock is held for reads.
 func (dag *BlockDAG) ForEachHash(fn func(hash daghash.Hash) error) error {
-	return dag.index.ForEachHash(fn)
+	return dag.blockNodeStore.ForEachHash(fn)
 }
 
 func (dag *BlockDAG) addDelayedBlock(block *util.Block, delay time.Duration) error {

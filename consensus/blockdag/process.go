@@ -63,7 +63,7 @@ const (
 //
 // This function is safe for concurrent access.
 func (dag *BlockDAG) IsInDAG(hash *daghash.Hash) bool {
-	return dag.index.HaveBlock(hash)
+	return dag.blockNodeStore.HaveNode(hash)
 }
 
 // processOrphans determines if there are any orphans which depend on the passed
