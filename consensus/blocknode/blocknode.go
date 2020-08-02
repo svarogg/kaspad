@@ -239,12 +239,23 @@ func (node *BlockNode) Version() int32 {
 	return node.version
 }
 
-func (node *BlockNode) SetGHOSTDAGData(selectedParent *BlockNode,
-	bluesAnticoneSizes map[*BlockNode]dagconfig.KType, blues []*BlockNode, blueScore uint64) {
-
+func (node *BlockNode) SetSelectedParent(selectedParent *BlockNode) {
 	node.selectedParent = selectedParent
+}
+
+func (node *BlockNode) SetBluesAnticoneSizes(bluesAnticoneSizes map[*BlockNode]dagconfig.KType) {
 	node.bluesAnticoneSizes = bluesAnticoneSizes
+}
+
+func (node *BlockNode) BluesAnticoneSizes() map[*BlockNode]dagconfig.KType {
+	return node.bluesAnticoneSizes
+}
+
+func (node *BlockNode) SetBlues(blues []*BlockNode) {
 	node.blues = blues
+}
+
+func (node *BlockNode) SetBlueScore(blueScore uint64) {
 	node.blueScore = blueScore
 }
 

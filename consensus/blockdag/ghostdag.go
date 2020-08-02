@@ -27,10 +27,10 @@ import (
 //
 // For further details see the article https://eprint.iacr.org/2018/104.pdf
 func (dag *BlockDAG) ghostdag(newNode *blocknode.BlockNode) (selectedParentAnticone []*blocknode.BlockNode, err error) {
-	newNodeSelectedParent := newNode.Parents().Bluest()
-	newNodeBluesAnticoneSizes := make(map[*blocknode.BlockNode]dagconfig.KType)
-	newNodeBluesAnticoneSizes[newNode.SelectedParent()] = 0
-	newNodeBlues := []*blocknode.BlockNode{newNode.SelectedParent()}
+	newNode.SetSelectedParent(newNode.Parents().Bluest())
+	newNode.SetBluesAnticoneSizes(make(map[*blocknode.BlockNode]dagconfig.KType))
+	newNode.BluesAnticoneSizes()[newNode.SelectedParent()] = 0
+	newNode.SetBlues([]*blocknode.BlockNode{newNode.SelectedParent()})
 	selectedParentAnticone, err = dag.selectedParentAnticone(newNode)
 	if err != nil {
 		return nil, err
@@ -103,10 +103,10 @@ func (dag *BlockDAG) ghostdag(newNode *blocknode.BlockNode) (selectedParentAntic
 
 		if possiblyBlue {
 			// No k-cluster violation found, we can now set the candidate block as blue
-			newNodeBlues = append(newNodeBlues, blueCandidate)
-			newNodeBluesAnticoneSizes[blueCandidate] = candidateAnticoneSize
+			newNode.SetBlues(append(newNode.Blues(), blueCandidate))
+			newNode.BluesAnticoneSizes()[blueCandidate] = candidateAnticoneSize
 			for blue, blueAnticoneSize := range candidateBluesAnticoneSizes {
-				newNodeBluesAnticoneSizes[blue] = blueAnticoneSize + 1
+				newNode.BluesAnticoneSizes()[blue] = blueAnticoneSize + 1
 			}
 
 			// The maximum length of node.blues can be K+1 because
@@ -117,10 +117,7 @@ func (dag *BlockDAG) ghostdag(newNode *blocknode.BlockNode) (selectedParentAntic
 		}
 	}
 
-	newNodeBlueScore := newNode.SelectedParent().BlueScore() + uint64(len(newNode.Blues()))
-
-	newNode.SetGHOSTDAGData(newNodeSelectedParent, newNodeBluesAnticoneSizes, newNodeBlues, newNodeBlueScore)
-
+	newNode.SetBlueScore(newNode.SelectedParent().BlueScore() + uint64(len(newNode.Blues())))
 	return selectedParentAnticone, nil
 }
 
