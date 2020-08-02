@@ -30,20 +30,24 @@ func BlockIndexKey(blockHash *daghash.Hash, blueScore uint64) []byte {
 	return indexKey
 }
 
-func (bi *BlockNodeStore) Init(dbContext *dbaccess.DatabaseContext) (unprocessedBlockNodes []*BlockNode, err error) {
+func (bi *BlockNodeStore) Init(dbContext *dbaccess.DatabaseContext) (
+	unprocessedBlockNodes []*BlockNode, blockCount uint64, err error) {
+
 	blockIndexCursor, err := dbaccess.BlockIndexCursor(dbContext)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer blockIndexCursor.Close()
+
+	blockCount = 0
 	for blockIndexCursor.Next() {
 		serializedDBNode, err := blockIndexCursor.Value()
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		node, err := bi.deserializeBlockNode(serializedDBNode)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 
 		// Check to see if this node had been stored in the the block DB
@@ -60,15 +64,15 @@ func (bi *BlockNodeStore) Init(dbContext *dbaccess.DatabaseContext) (unprocessed
 			continue
 		}
 
-		if dag.blockCount == 0 {
+		if blockCount == 0 {
 			if !node.Hash().IsEqual(bi.dagParams.GenesisHash) {
-				return nil, errors.Errorf("Expected "+
+				return nil, 0, errors.Errorf("Expected "+
 					"first entry in block index to be genesis block, "+
 					"found %s", node.Hash())
 			}
 		} else {
 			if len(node.Parents()) == 0 {
-				return nil, errors.Errorf("block %s "+
+				return nil, 0, errors.Errorf("block %s "+
 					"has no parents but it's not the genesis block", node.Hash())
 			}
 		}
@@ -78,9 +82,9 @@ func (bi *BlockNodeStore) Init(dbContext *dbaccess.DatabaseContext) (unprocessed
 		node.UpdateParentsChildren()
 		bi.addNode(node)
 
-		dag.blockCount++
+		blockCount++
 	}
-	return unprocessedBlockNodes, nil
+	return unprocessedBlockNodes, blockCount, nil
 }
 
 // deserializeBlockNode parses a value in the block index bucket and returns a block node.

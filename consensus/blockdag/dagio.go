@@ -112,10 +112,11 @@ func (dag *BlockDAG) initDAGState() error {
 	}
 
 	log.Debugf("Loading blockNode store...")
-	unprocessedBlockNodes, err := dag.blockNodeStore.Init(dag.databaseContext)
+	unprocessedBlockNodes, blockCount, err := dag.blockNodeStore.Init(dag.databaseContext)
 	if err != nil {
 		return err
 	}
+	dag.blockCount = blockCount
 
 	log.Debugf("Loading reachability data...")
 	err = dag.reachabilityTree.init(dag.databaseContext)
