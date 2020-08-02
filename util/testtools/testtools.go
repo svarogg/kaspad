@@ -1,6 +1,7 @@
 package testtools
 
 import (
+	"github.com/kaspanet/kaspad/consensus/subnetworks"
 	"time"
 
 	"github.com/kaspanet/kaspad/dagconfig"
@@ -90,7 +91,7 @@ func RegisterSubnetworkForTest(dag *blockdag.BlockDAG, params *dagconfig.Params,
 	}
 
 	// Build a subnetwork ID from the registry transaction
-	subnetworkID, err := blockdag.TxToSubnetworkID(registryTx)
+	subnetworkID, err := subnetworks.TxToSubnetworkID(registryTx)
 	if err != nil {
 		return nil, errors.Errorf("could not build subnetwork ID: %s", err)
 	}

@@ -10,6 +10,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/merkle"
 	"github.com/kaspanet/kaspad/consensus/scriptvalidation"
+	"github.com/kaspanet/kaspad/consensus/subnetworks"
 	"github.com/kaspanet/kaspad/consensus/utxo"
 	"github.com/kaspanet/kaspad/util/mstime"
 	"math"
@@ -226,7 +227,7 @@ func CheckTransactionSanity(tx *util.Tx, subnetworkID *subnetworkid.SubnetworkID
 	}
 
 	if msgTx.SubnetworkID.IsEqual(subnetworkid.SubnetworkIDRegistry) {
-		err := validateSubnetworkRegistryTransaction(msgTx)
+		err := subnetworks.ValidateSubnetworkRegistryTransaction(msgTx)
 		if err != nil {
 			return err
 		}

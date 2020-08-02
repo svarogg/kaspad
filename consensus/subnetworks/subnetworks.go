@@ -1,4 +1,4 @@
-package blockdag
+package subnetworks
 
 import (
 	"bytes"
@@ -15,11 +15,17 @@ import (
 	"github.com/kaspanet/kaspad/wire"
 )
 
-// registerSubnetworks scans a list of transactions, singles out
+var (
+	// byteOrder is the preferred byte order used for serializing numeric
+	// fields for storage in the database.
+	byteOrder = binary.LittleEndian
+)
+
+// RegisterSubnetworks scans a list of transactions, singles out
 // subnetwork registry transactions, validates them, and registers a new
 // subnetwork based on it.
 // This function returns an error if one or more transactions are invalid
-func registerSubnetworks(dbContext dbaccess.Context, txs []*util.Tx) error {
+func RegisterSubnetworks(dbContext dbaccess.Context, txs []*util.Tx) error {
 	subnetworkRegistryTxs := make([]*wire.MsgTx, 0)
 	for _, tx := range txs {
 		msgTx := tx.MsgTx()
@@ -58,10 +64,10 @@ func registerSubnetworks(dbContext dbaccess.Context, txs []*util.Tx) error {
 	return nil
 }
 
-// validateSubnetworkRegistryTransaction makes sure that a given subnetwork registry
+// ValidateSubnetworkRegistryTransaction makes sure that a given subnetwork registry
 // transaction is valid. Such a transaction is valid iff:
 // - Its entire payload is a uint64 (8 bytes)
-func validateSubnetworkRegistryTransaction(tx *wire.MsgTx) error {
+func ValidateSubnetworkRegistryTransaction(tx *wire.MsgTx) error {
 	if len(tx.Payload) != 8 {
 		return common.NewRuleError(common.ErrSubnetworkRegistry, fmt.Sprintf("validation failed: subnetwork registry"+
 			"tx '%s' has an invalid payload", tx.TxHash()))
@@ -77,8 +83,8 @@ func TxToSubnetworkID(tx *wire.MsgTx) (*subnetworkid.SubnetworkID, error) {
 }
 
 // fetchSubnetwork returns a registered subnetwork.
-func (dag *BlockDAG) fetchSubnetwork(subnetworkID *subnetworkid.SubnetworkID) (*subnetwork, error) {
-	serializedSubnetwork, err := dbaccess.FetchSubnetworkData(dag.databaseContext, subnetworkID)
+func fetchSubnetwork(dbContext dbaccess.Context, subnetworkID *subnetworkid.SubnetworkID) (*subnetwork, error) {
+	serializedSubnetwork, err := dbaccess.FetchSubnetworkData(dbContext, subnetworkID)
 	if err != nil {
 		return nil, err
 	}
@@ -93,8 +99,8 @@ func (dag *BlockDAG) fetchSubnetwork(subnetworkID *subnetworkid.SubnetworkID) (*
 
 // GasLimit returns the gas limit of a registered subnetwork. If the subnetwork does not
 // exist this method returns an error.
-func (dag *BlockDAG) GasLimit(subnetworkID *subnetworkid.SubnetworkID) (uint64, error) {
-	sNet, err := dag.fetchSubnetwork(subnetworkID)
+func GasLimit(dbContext dbaccess.Context, subnetworkID *subnetworkid.SubnetworkID) (uint64, error) {
+	sNet, err := fetchSubnetwork(dbContext, subnetworkID)
 	if err != nil {
 		return 0, err
 	}

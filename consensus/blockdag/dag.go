@@ -11,6 +11,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/merkle"
 	"github.com/kaspanet/kaspad/consensus/multiset"
 	"github.com/kaspanet/kaspad/consensus/notifications"
+	"github.com/kaspanet/kaspad/consensus/subnetworks"
 	"github.com/kaspanet/kaspad/consensus/timesource"
 	"github.com/kaspanet/kaspad/consensus/utxo"
 	"math"
@@ -837,7 +838,7 @@ func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, virtualUTXODiff *ut
 	// Scan all accepted transactions and register any subnetwork registry
 	// transaction. If any subnetwork registry transaction is not well-formed,
 	// fail the entire block.
-	err = registerSubnetworks(dbTx, block.Transactions())
+	err = subnetworks.RegisterSubnetworks(dbTx, block.Transactions())
 	if err != nil {
 		return err
 	}
@@ -892,7 +893,7 @@ func (dag *BlockDAG) validateGasLimit(block *util.Block) error {
 		if !msgTx.SubnetworkID.IsEqual(currentSubnetworkID) {
 			currentSubnetworkID = &msgTx.SubnetworkID
 			currentGasUsage = 0
-			currentSubnetworkGasLimit, err = dag.GasLimit(currentSubnetworkID)
+			currentSubnetworkGasLimit, err = subnetworks.GasLimit(dag.databaseContext, currentSubnetworkID)
 			if err != nil {
 				return errors.Errorf("Error getting gas limit for subnetworkID '%s': %s", currentSubnetworkID, err)
 			}
@@ -2184,4 +2185,10 @@ func (dag *BlockDAG) PastMedianTime(node *blocknode.BlockNode) mstime.Time {
 		panic(fmt.Sprintf("blueBlockWindow: %s", err))
 	}
 	return mstime.UnixMilliseconds(medianTimestamp)
+}
+
+// GasLimit returns the gas limit of a registered subnetwork. If the subnetwork does not
+// exist this method returns an error.
+func (dag *BlockDAG) GasLimit(subnetworkID *subnetworkid.SubnetworkID) (uint64, error) {
+	return subnetworks.GasLimit(dag.databaseContext, subnetworkID)
 }

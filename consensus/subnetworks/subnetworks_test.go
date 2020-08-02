@@ -1,4 +1,4 @@
-package blockdag
+package subnetworks
 
 import (
 	"reflect"
