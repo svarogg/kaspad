@@ -3,6 +3,7 @@ package blockdag
 import (
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/blocknode"
+	"github.com/kaspanet/kaspad/consensus/reachability"
 	"reflect"
 	"sort"
 	"strings"
@@ -11,7 +12,6 @@ import (
 	"github.com/kaspanet/kaspad/dagconfig"
 	"github.com/kaspanet/kaspad/dbaccess"
 	"github.com/kaspanet/kaspad/util"
-	"github.com/kaspanet/kaspad/util/daghash"
 )
 
 type testBlockData struct {
@@ -351,7 +351,7 @@ func TestGHOSTDAGErrors(t *testing.T) {
 	block3 := prepareAndProcessBlockByParentMsgBlocks(t, dag, block1, block2)
 
 	// Clear the reachability store
-	dag.reachabilityTree.store.loaded = map[daghash.Hash]*reachabilityData{}
+	dag.reachabilityTree = reachability.NewReachabilityTree(dag.blockNodeStore, dag.Params)
 
 	dbTx, err := dag.databaseContext.NewTx()
 	if err != nil {

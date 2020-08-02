@@ -119,7 +119,7 @@ func (dag *BlockDAG) initDAGState() error {
 	dag.blockCount = blockCount
 
 	log.Debugf("Loading reachability data...")
-	err = dag.reachabilityTree.init(dag.databaseContext)
+	err = dag.reachabilityTree.Init(dag.databaseContext)
 	if err != nil {
 		return err
 	}

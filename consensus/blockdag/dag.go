@@ -14,6 +14,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/merkle"
 	"github.com/kaspanet/kaspad/consensus/multiset"
 	"github.com/kaspanet/kaspad/consensus/notifications"
+	"github.com/kaspanet/kaspad/consensus/reachability"
 	"github.com/kaspanet/kaspad/consensus/subnetworks"
 	"github.com/kaspanet/kaspad/consensus/timesource"
 	"github.com/kaspanet/kaspad/consensus/utxo"
@@ -155,7 +156,7 @@ type BlockDAG struct {
 	utxoDiffStore *utxoDiffStore
 	multisetStore *multiset.MultisetStore
 
-	reachabilityTree *reachabilityTree
+	reachabilityTree *reachability.ReachabilityTree
 
 	recentBlockProcessingTimestamps []mstime.Time
 	startTime                       mstime.Time
@@ -202,7 +203,7 @@ func New(config *Config) (*BlockDAG, error) {
 	dag.virtual = newVirtualBlock(dag, nil)
 	dag.utxoDiffStore = newUTXODiffStore(dag)
 	dag.multisetStore = multiset.NewMultisetStore()
-	dag.reachabilityTree = newReachabilityTree(blockNodeStore, params)
+	dag.reachabilityTree = reachability.NewReachabilityTree(blockNodeStore, params)
 
 	// Initialize the DAG state from the passed database. When the db
 	// does not yet contain any DAG state, both it and the DAG state
@@ -800,7 +801,7 @@ func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, virtualUTXODiff *ut
 		return err
 	}
 
-	err = dag.reachabilityTree.storeState(dbTx)
+	err = dag.reachabilityTree.StoreState(dbTx)
 	if err != nil {
 		return err
 	}
@@ -860,7 +861,7 @@ func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, virtualUTXODiff *ut
 	dag.blockNodeStore.ClearDirtyEntries()
 	dag.utxoDiffStore.clearDirtyEntries()
 	dag.utxoDiffStore.clearOldEntries()
-	dag.reachabilityTree.store.clearDirtyEntries()
+	dag.reachabilityTree.ClearDirtyEntries()
 	dag.multisetStore.ClearNewEntries()
 
 	return nil
@@ -923,7 +924,7 @@ func (dag *BlockDAG) isInSelectedParentChainOf(node *blocknode.BlockNode, other 
 		return false, nil
 	}
 
-	return dag.reachabilityTree.isReachabilityTreeAncestorOf(node, other)
+	return dag.reachabilityTree.IsReachabilityTreeAncestorOf(node, other)
 }
 
 // FinalityInterval is the interval that determines the finality window of the DAG.
@@ -1096,7 +1097,7 @@ func (dag *BlockDAG) applyDAGChanges(node *blocknode.BlockNode, newBlockPastUTXO
 	virtualUTXODiff *utxo.UTXODiff, chainUpdates *chainUpdates, err error) {
 
 	// Add the block to the reachability tree
-	err = dag.reachabilityTree.addBlock(node, selectedParentAnticone, dag.SelectedTipBlueScore())
+	err = dag.reachabilityTree.AddBlock(node, selectedParentAnticone, dag.SelectedTipBlueScore())
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed adding block to the reachability tree")
 	}
@@ -1896,7 +1897,7 @@ func (dag *BlockDAG) antiPastBetween(lowHash, highHash *daghash.Hash, maxEntries
 }
 
 func (dag *BlockDAG) isInPast(this *blocknode.BlockNode, other *blocknode.BlockNode) (bool, error) {
-	return dag.reachabilityTree.isInPast(this, other)
+	return dag.reachabilityTree.IsInPast(this, other)
 }
 
 // AntiPastHashesBetween returns the hashes of the blocks between the

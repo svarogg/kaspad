@@ -1,4 +1,4 @@
-package blockdag
+package reachability
 
 import (
 	"fmt"
@@ -703,7 +703,7 @@ type orderedTreeNodeSet []*reachabilityTreeNode
 // a reachability tree descendant of the block in question, as reachability
 // tree queries are always O(1).
 //
-// See insertNode, hasAncestorOf, and reachabilityTree.isInPast for further
+// See insertNode, hasAncestorOf, and ReachabilityTree.IsInPast for further
 // details.
 type futureCoveringTreeNodeSet orderedTreeNodeSet
 
@@ -811,7 +811,7 @@ func (fb futureCoveringTreeNodeSet) String() string {
 	return intervalsString
 }
 
-func (rt *reachabilityTree) addBlock(node *blocknode.BlockNode,
+func (rt *ReachabilityTree) AddBlock(node *blocknode.BlockNode,
 	selectedParentAnticone []*blocknode.BlockNode, selectedTipBlueScore uint64) error {
 
 	// Allocate a new reachability tree node
@@ -879,7 +879,7 @@ func (rt *reachabilityTree) addBlock(node *blocknode.BlockNode,
 	return nil
 }
 
-type reachabilityTree struct {
+type ReachabilityTree struct {
 	blockNodeStore *blocknode.BlockNodeStore
 	params         *dagconfig.Params
 
@@ -887,9 +887,9 @@ type reachabilityTree struct {
 	reindexRoot *reachabilityTreeNode
 }
 
-func newReachabilityTree(blockNodeStore *blocknode.BlockNodeStore, params *dagconfig.Params) *reachabilityTree {
+func NewReachabilityTree(blockNodeStore *blocknode.BlockNodeStore, params *dagconfig.Params) *ReachabilityTree {
 	store := newReachabilityStore(blockNodeStore)
-	return &reachabilityTree{
+	return &ReachabilityTree{
 		blockNodeStore: blockNodeStore,
 		params:         params,
 		store:          store,
@@ -897,7 +897,7 @@ func newReachabilityTree(blockNodeStore *blocknode.BlockNodeStore, params *dagco
 	}
 }
 
-func (rt *reachabilityTree) init(dbContext dbaccess.Context) error {
+func (rt *ReachabilityTree) Init(dbContext dbaccess.Context) error {
 	// Init the store
 	err := rt.store.init(dbContext)
 	if err != nil {
@@ -927,7 +927,7 @@ func (rt *reachabilityTree) init(dbContext dbaccess.Context) error {
 	return nil
 }
 
-func (rt *reachabilityTree) storeState(dbTx *dbaccess.TxContext) error {
+func (rt *ReachabilityTree) StoreState(dbTx *dbaccess.TxContext) error {
 	// Flush the store
 	err := rt.store.flushToDB(dbTx)
 	if err != nil {
@@ -943,7 +943,11 @@ func (rt *reachabilityTree) storeState(dbTx *dbaccess.TxContext) error {
 	return nil
 }
 
-func (rt *reachabilityTree) updateReindexRoot(newTreeNode *reachabilityTreeNode,
+func (rt *ReachabilityTree) ClearDirtyEntries() {
+	rt.store.clearDirtyEntries()
+}
+
+func (rt *ReachabilityTree) updateReindexRoot(newTreeNode *reachabilityTreeNode,
 	modifiedNodes modifiedTreeNodes) error {
 
 	nextReindexRoot := rt.reindexRoot
@@ -962,7 +966,7 @@ func (rt *reachabilityTree) updateReindexRoot(newTreeNode *reachabilityTreeNode,
 	return nil
 }
 
-func (rt *reachabilityTree) maybeMoveReindexRoot(
+func (rt *ReachabilityTree) maybeMoveReindexRoot(
 	reindexRoot *reachabilityTreeNode, newTreeNode *reachabilityTreeNode, modifiedNodes modifiedTreeNodes) (
 	newReindexRoot *reachabilityTreeNode, found bool, err error) {
 
@@ -997,7 +1001,7 @@ func (rtn *reachabilityTreeNode) findAncestorAmongChildren(node *reachabilityTre
 	return ancestor, nil
 }
 
-func (rt *reachabilityTree) concentrateIntervalAroundReindexRootChosenChild(
+func (rt *ReachabilityTree) concentrateIntervalAroundReindexRootChosenChild(
 	reindexRoot *reachabilityTreeNode, reindexRootChosenChild *reachabilityTreeNode,
 	modifiedNodes modifiedTreeNodes) error {
 
@@ -1041,7 +1045,7 @@ func (rtn *reachabilityTreeNode) splitChildrenAroundChild(child *reachabilityTre
 	return nil, nil, errors.Errorf("child not a child of rtn")
 }
 
-func (rt *reachabilityTree) tightenIntervalsBeforeReindexRootChosenChild(
+func (rt *ReachabilityTree) tightenIntervalsBeforeReindexRootChosenChild(
 	reindexRoot *reachabilityTreeNode, reindexRootChildNodesBeforeChosen []*reachabilityTreeNode,
 	modifiedNodes modifiedTreeNodes) (reindexRootChildNodesBeforeChosenSizesSum uint64, err error) {
 
@@ -1061,7 +1065,7 @@ func (rt *reachabilityTree) tightenIntervalsBeforeReindexRootChosenChild(
 	return reindexRootChildNodesBeforeChosenSizesSum, nil
 }
 
-func (rt *reachabilityTree) tightenIntervalsAfterReindexRootChosenChild(
+func (rt *ReachabilityTree) tightenIntervalsAfterReindexRootChosenChild(
 	reindexRoot *reachabilityTreeNode, reindexRootChildNodesAfterChosen []*reachabilityTreeNode,
 	modifiedNodes modifiedTreeNodes) (reindexRootChildNodesAfterChosenSizesSum uint64, err error) {
 
@@ -1081,7 +1085,7 @@ func (rt *reachabilityTree) tightenIntervalsAfterReindexRootChosenChild(
 	return reindexRootChildNodesAfterChosenSizesSum, nil
 }
 
-func (rt *reachabilityTree) expandIntervalInReindexRootChosenChild(reindexRoot *reachabilityTreeNode,
+func (rt *ReachabilityTree) expandIntervalInReindexRootChosenChild(reindexRoot *reachabilityTreeNode,
 	reindexRootChosenChild *reachabilityTreeNode, reindexRootChildNodesBeforeChosenSizesSum uint64,
 	reindexRootChildNodesAfterChosenSizesSum uint64, modifiedNodes modifiedTreeNodes) error {
 
@@ -1138,7 +1142,7 @@ func calcReachabilityTreeNodeSizes(treeNodes []*reachabilityTreeNode) (
 	return sizes, subtreeSizeMaps, sum
 }
 
-func (rt *reachabilityTree) propagateChildIntervals(interval *reachabilityInterval,
+func (rt *ReachabilityTree) propagateChildIntervals(interval *reachabilityInterval,
 	childNodes []*reachabilityTreeNode, sizes []uint64, subtreeSizeMaps []map[*reachabilityTreeNode]uint64,
 	modifiedNodes modifiedTreeNodes) error {
 
@@ -1161,10 +1165,10 @@ func (rt *reachabilityTree) propagateChildIntervals(interval *reachabilityInterv
 	return nil
 }
 
-// isInPast returns true if `this` is in the past (exclusive) of `other`
+// IsInPast returns true if `this` is in the past (exclusive) of `other`
 // in the DAG.
 // The complexity of this method is O(log(|this.futureCoveringTreeNodeSet|))
-func (rt *reachabilityTree) isInPast(this *blocknode.BlockNode, other *blocknode.BlockNode) (bool, error) {
+func (rt *ReachabilityTree) IsInPast(this *blocknode.BlockNode, other *blocknode.BlockNode) (bool, error) {
 	// By definition, a node is not in the past of itself.
 	if this == other {
 		return false, nil
@@ -1172,7 +1176,7 @@ func (rt *reachabilityTree) isInPast(this *blocknode.BlockNode, other *blocknode
 
 	// Check if this node is a reachability tree ancestor of the
 	// other node
-	isReachabilityTreeAncestor, err := rt.isReachabilityTreeAncestorOf(this, other)
+	isReachabilityTreeAncestor, err := rt.IsReachabilityTreeAncestorOf(this, other)
 	if err != nil {
 		return false, err
 	}
@@ -1193,8 +1197,8 @@ func (rt *reachabilityTree) isInPast(this *blocknode.BlockNode, other *blocknode
 	return thisFutureCoveringSet.hasAncestorOf(otherTreeNode), nil
 }
 
-// isReachabilityTreeAncestorOf returns whether `this` is in the selected parent chain of `other`.
-func (rt *reachabilityTree) isReachabilityTreeAncestorOf(this *blocknode.BlockNode, other *blocknode.BlockNode) (bool, error) {
+// IsReachabilityTreeAncestorOf returns whether `this` is in the selected parent chain of `other`.
+func (rt *ReachabilityTree) IsReachabilityTreeAncestorOf(this *blocknode.BlockNode, other *blocknode.BlockNode) (bool, error) {
 	thisTreeNode, err := rt.store.treeNodeByBlockNode(this)
 	if err != nil {
 		return false, err
