@@ -9,6 +9,7 @@ import (
 	"github.com/kaspanet/kaspad/util/daghash"
 	"github.com/kaspanet/kaspad/util/mstime"
 	"github.com/kaspanet/kaspad/wire"
+	"github.com/pkg/errors"
 	"math"
 )
 
@@ -236,4 +237,24 @@ func (node *BlockNode) Children() BlockNodeSet {
 
 func (node *BlockNode) Version() int32 {
 	return node.version
+}
+
+func (node *BlockNode) SetGHOSTDAGData(selectedParent *BlockNode,
+	bluesAnticoneSizes map[*BlockNode]dagconfig.KType, blues []*BlockNode, blueScore uint64) {
+
+	node.selectedParent = selectedParent
+	node.bluesAnticoneSizes = bluesAnticoneSizes
+	node.blues = blues
+	node.blueScore = blueScore
+}
+
+// BlueAnticoneSize returns the blue anticone size of 'block' from the worldview of 'context'.
+// Expects 'block' to be in the blue set of 'context'
+func BlueAnticoneSize(block, context *BlockNode) (dagconfig.KType, error) {
+	for current := context; current != nil; current = current.SelectedParent() {
+		if blueAnticoneSize, ok := current.bluesAnticoneSizes[block]; ok {
+			return blueAnticoneSize, nil
+		}
+	}
+	return 0, errors.Errorf("block %s is not in blue set of %s", block.Hash(), context.Hash())
 }

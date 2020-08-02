@@ -322,7 +322,7 @@ func TestBlueAnticoneSizeErrors(t *testing.T) {
 
 	// Try getting the blueAnticoneSize between them. Since the two
 	// blocks are not in the anticones of eachother, this should fail.
-	_, err = dag.blueAnticoneSize(blockNodeA, blockNodeB)
+	_, err = blocknode.BlueAnticoneSize(blockNodeA, blockNodeB)
 	if err == nil {
 		t.Fatalf("TestBlueAnticoneSizeErrors: blueAnticoneSize unexpectedly succeeded")
 	}
