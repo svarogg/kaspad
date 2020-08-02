@@ -78,7 +78,7 @@ func (diffStore *utxoDiffStore) removeBlockDiffData(dbContext dbaccess.Context, 
 	diffStore.mtx.LowPriorityWriteLock()
 	defer diffStore.mtx.LowPriorityWriteUnlock()
 	delete(diffStore.loaded, node)
-	err := dbaccess.RemoveDiffData(dbContext, node.hash)
+	err := dbaccess.RemoveDiffData(dbContext, node.Hash())
 	if err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func (diffStore *utxoDiffStore) diffDataByBlockNode(node *blocknode.BlockNode) (
 	if diffData, ok := diffStore.loaded[node]; ok {
 		return diffData, nil
 	}
-	diffData, err := diffStore.diffDataFromDB(node.hash)
+	diffData, err := diffStore.diffDataFromDB(node.Hash())
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +176,7 @@ func (diffStore *utxoDiffStore) flushToDB(dbContext *dbaccess.TxContext) error {
 	for node := range diffStore.dirty {
 		buffer.Reset()
 		diffData := diffStore.loaded[node]
-		err := storeDiffData(dbContext, buffer, node.hash, diffData)
+		err := storeDiffData(dbContext, buffer, node.Hash(), diffData)
 		if err != nil {
 			return err
 		}
@@ -211,7 +211,7 @@ func (diffStore *utxoDiffStore) clearOldEntries() {
 
 	toRemove := make(map[*blocknode.BlockNode]struct{})
 	for node := range diffStore.loaded {
-		if node.blueScore < minBlueScore && !tips.Contains(node) {
+		if node.BlueScore() < minBlueScore && !tips.Contains(node) {
 			toRemove[node] = struct{}{}
 		}
 	}
@@ -249,7 +249,7 @@ func serializeBlockUTXODiffData(w io.Writer, diffData *blockUTXODiffData) error 
 		return err
 	}
 	if hasDiffChild {
-		err := wire.WriteElement(w, diffData.diffChild.hash)
+		err := wire.WriteElement(w, diffData.diffChild.Hash())
 		if err != nil {
 			return err
 		}

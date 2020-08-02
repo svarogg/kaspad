@@ -132,15 +132,15 @@ func (dag *BlockDAG) thresholdState(prevNode *blocknode.BlockNode, checker thres
 	// The threshold state for the window that contains the genesis block is
 	// defined by definition.
 	confirmationWindow := checker.MinerConfirmationWindow()
-	if prevNode == nil || (prevNode.blueScore+1) < confirmationWindow {
+	if prevNode == nil || (prevNode.BlueScore()+1) < confirmationWindow {
 		return ThresholdDefined, nil
 	}
 
 	// Get the ancestor that is the last block of the previous confirmation
 	// window in order to get its threshold state. This can be done because
 	// the state is the same for all blocks within a given window.
-	prevNode = prevNode.SelectedAncestor(prevNode.blueScore -
-		(prevNode.blueScore+1)%confirmationWindow)
+	prevNode = prevNode.SelectedAncestor(prevNode.BlueScore() -
+		(prevNode.BlueScore()+1)%confirmationWindow)
 
 	// Iterate backwards through each of the previous confirmation windows
 	// to find the most recently cached threshold state.
@@ -148,7 +148,7 @@ func (dag *BlockDAG) thresholdState(prevNode *blocknode.BlockNode, checker thres
 	for prevNode != nil {
 		// Nothing more to do if the state of the block is already
 		// cached.
-		if _, ok := cache.Lookup(prevNode.hash); ok {
+		if _, ok := cache.Lookup(prevNode.Hash()); ok {
 			break
 		}
 
@@ -159,7 +159,7 @@ func (dag *BlockDAG) thresholdState(prevNode *blocknode.BlockNode, checker thres
 		// The state is simply defined if the start time hasn't been
 		// been reached yet.
 		if uint64(medianTime.UnixMilliseconds()) < checker.BeginTime() {
-			cache.Update(prevNode.hash, ThresholdDefined)
+			cache.Update(prevNode.Hash(), ThresholdDefined)
 			break
 		}
 
@@ -177,11 +177,11 @@ func (dag *BlockDAG) thresholdState(prevNode *blocknode.BlockNode, checker thres
 	state := ThresholdDefined
 	if prevNode != nil {
 		var ok bool
-		state, ok = cache.Lookup(prevNode.hash)
+		state, ok = cache.Lookup(prevNode.Hash())
 		if !ok {
 			return ThresholdFailed, errors.Errorf(
 				"thresholdState: cache lookup failed for %s",
-				prevNode.hash)
+				prevNode.Hash())
 		}
 	}
 
@@ -254,7 +254,7 @@ func (dag *BlockDAG) thresholdState(prevNode *blocknode.BlockNode, checker thres
 
 		// Update the cache to avoid recalculating the state in the
 		// future.
-		cache.Update(prevNode.hash, state)
+		cache.Update(prevNode.Hash(), state)
 	}
 
 	return state, nil
@@ -317,7 +317,7 @@ func (dag *BlockDAG) initThresholdCaches() error {
 	// threshold state for each of them. This will ensure the caches are
 	// populated and any states that needed to be recalculated due to
 	// definition changes is done now.
-	prevNode := dag.selectedTip().selectedParent
+	prevNode := dag.selectedTip().SelectedParent()
 	for bit := uint32(0); bit < vbNumBits; bit++ {
 		checker := bitConditionChecker{bit: bit, dag: dag}
 		cache := &dag.warningCaches[bit]

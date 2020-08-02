@@ -684,9 +684,9 @@ func (dag *BlockDAG) validateParents(blockHeader *wire.BlockHeader, parents bloc
 		// isFinalized might be false-negative because node finality status is
 		// updated in a separate goroutine. This is why later the block is
 		// checked more thoroughly on the finality rules in dag.checkFinalityViolation.
-		if parentA.isFinalized {
+		if parentA.IsFinalized() {
 			return common.NewRuleError(common.ErrFinality, fmt.Sprintf("block %s is a finalized "+
-				"parent of block %s", parentA.hash, blockHeader.BlockHash()))
+				"parent of block %s", parentA.Hash(), blockHeader.BlockHash()))
 		}
 
 		for parentB := range parents {
@@ -701,9 +701,9 @@ func (dag *BlockDAG) validateParents(blockHeader *wire.BlockHeader, parents bloc
 			if isAncestorOf {
 				return common.NewRuleError(common.ErrInvalidParentsRelation, fmt.Sprintf("block %s is both a parent of %s and an"+
 					" ancestor of another parent %s",
-					parentA.hash,
+					parentA.Hash(),
 					blockHeader.BlockHash(),
-					parentB.hash,
+					parentB.Hash(),
 				))
 			}
 		}
@@ -748,7 +748,7 @@ func (dag *BlockDAG) validateAllTxsFinalized(block *util.Block, node *blocknode.
 
 	// Ensure all transactions in the block are finalized.
 	for _, tx := range block.Transactions() {
-		if !IsFinalizedTransaction(tx, node.blueScore, blockTime) {
+		if !IsFinalizedTransaction(tx, node.BlueScore(), blockTime) {
 			str := fmt.Sprintf("block contains unfinalized "+
 				"transaction %s", tx.ID())
 			return common.NewRuleError(common.ErrUnfinalizedTx, str)
@@ -942,7 +942,7 @@ func (dag *BlockDAG) checkConnectToPastUTXO(block *blocknode.BlockNode, pastUTXO
 	compactFeeFactory := newCompactFeeFactory()
 
 	for _, tx := range transactions {
-		txFee, err := CheckTransactionInputsAndCalulateFee(tx, block.blueScore, pastUTXO,
+		txFee, err := CheckTransactionInputsAndCalulateFee(tx, block.BlueScore(), pastUTXO,
 			dag.Params, fastAdd)
 		if err != nil {
 			return nil, err
@@ -974,7 +974,7 @@ func (dag *BlockDAG) checkConnectToPastUTXO(block *blocknode.BlockNode, pastUTXO
 		// in order to determine if transactions in the current block are final.
 		medianTime := block.Header().Timestamp
 		if !block.IsGenesis() {
-			medianTime = dag.PastMedianTime(block.selectedParent)
+			medianTime = dag.PastMedianTime(block.SelectedParent())
 		}
 
 		// We also enforce the relative sequence number based
@@ -988,7 +988,7 @@ func (dag *BlockDAG) checkConnectToPastUTXO(block *blocknode.BlockNode, pastUTXO
 			if err != nil {
 				return nil, err
 			}
-			if !SequenceLockActive(sequenceLock, block.blueScore,
+			if !SequenceLockActive(sequenceLock, block.BlueScore(),
 				medianTime) {
 				str := fmt.Sprintf("block contains " +
 					"transaction whose input sequence " +
@@ -1001,7 +1001,7 @@ func (dag *BlockDAG) checkConnectToPastUTXO(block *blocknode.BlockNode, pastUTXO
 		// transactions are actually allowed to spend the coins by running the
 		// expensive SCHNORR signature check scripts. Doing this last helps
 		// prevent CPU exhaustion attacks.
-		err := scriptvalidation.CheckBlockScripts(block.hash, pastUTXO, transactions, scriptFlags, dag.sigCache)
+		err := scriptvalidation.CheckBlockScripts(block.Hash(), pastUTXO, transactions, scriptFlags, dag.sigCache)
 		if err != nil {
 			return nil, err
 		}

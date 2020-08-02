@@ -814,7 +814,7 @@ func TestAcceptingBlock(t *testing.T) {
 	}
 	if genesisAcceptingBlock != nil {
 		t.Fatalf("TestAcceptingBlock: unexpected acceptingBlock for genesis block. "+
-			"Want: nil, got: %s", genesisAcceptingBlock.hash)
+			"Want: nil, got: %s", genesisAcceptingBlock.Hash())
 	}
 
 	numChainBlocks := uint32(10)
@@ -833,7 +833,7 @@ func TestAcceptingBlock(t *testing.T) {
 		}
 		if expectedAcceptingBlockNode != chainAcceptingBlockNode {
 			t.Fatalf("TestAcceptingBlock: unexpected acceptingBlock for chain block. "+
-				"Want: %s, got: %s", expectedAcceptingBlockNode.hash, chainAcceptingBlockNode.hash)
+				"Want: %s, got: %s", expectedAcceptingBlockNode.Hash(), chainAcceptingBlockNode.Hash())
 		}
 	}
 
@@ -844,7 +844,7 @@ func TestAcceptingBlock(t *testing.T) {
 	}
 	if tipAcceptingBlock != nil {
 		t.Fatalf("TestAcceptingBlock: unexpected acceptingBlock for tip. "+
-			"Want: nil, got: %s", tipAcceptingBlock.hash)
+			"Want: nil, got: %s", tipAcceptingBlock.Hash())
 	}
 
 	// Generate a chain tip that will be in the anticone of the selected tip and
@@ -862,8 +862,8 @@ func TestAcceptingBlock(t *testing.T) {
 
 	// Make sure that branchingChainTip is in the virtual blues
 	isVirtualBlue := false
-	for _, virtualBlue := range dag.virtual.blues {
-		if branchingChainTip.BlockHash().IsEqual(virtualBlue.hash) {
+	for _, virtualBlue := range dag.virtual.Blues() {
+		if branchingChainTip.BlockHash().IsEqual(virtualBlue.Hash()) {
 			isVirtualBlue = true
 			break
 		}
@@ -880,7 +880,7 @@ func TestAcceptingBlock(t *testing.T) {
 	}
 	if branchingChainTipAcceptionBlock != nil {
 		t.Fatalf("TestAcceptingBlock: unexpected acceptingBlock for branchingChainTipAcceptionBlock. "+
-			"Want: nil, got: %s", branchingChainTipAcceptionBlock.hash)
+			"Want: nil, got: %s", branchingChainTipAcceptionBlock.Hash())
 	}
 
 	// Add shorter side-chain
@@ -898,7 +898,7 @@ func TestAcceptingBlock(t *testing.T) {
 	}
 	if expectedAcceptingBlock != intersectionAcceptingBlock {
 		t.Fatalf("TestAcceptingBlock: unexpected acceptingBlock for intersection block. "+
-			"Want: %s, got: %s", expectedAcceptingBlock.hash, intersectionAcceptingBlock.hash)
+			"Want: %s, got: %s", expectedAcceptingBlock.Hash(), intersectionAcceptingBlock.Hash())
 	}
 
 	// Make sure that a block that is found in the red set of the selected tip
@@ -911,7 +911,7 @@ func TestAcceptingBlock(t *testing.T) {
 	}
 	if sideChainTipAcceptingBlock != nil {
 		t.Fatalf("TestAcceptingBlock: unexpected acceptingBlock for sideChainTip. "+
-			"Want: nil, got: %s", intersectionAcceptingBlock.hash)
+			"Want: nil, got: %s", intersectionAcceptingBlock.Hash())
 	}
 }
 
@@ -986,16 +986,16 @@ func testFinalizeNodesBelowFinalityPoint(t *testing.T, deleteDiffData bool) {
 	flushUTXODiffStore()
 
 	for _, node := range nodes[:finalityInterval-1] {
-		if !node.isFinalized {
-			t.Errorf("Node with blue score %d expected to be finalized", node.blueScore)
+		if !node.IsFinalized() {
+			t.Errorf("Node with blue score %d expected to be finalized", node.BlueScore())
 		}
 		if _, ok := dag.utxoDiffStore.loaded[node]; deleteDiffData && ok {
-			t.Errorf("The diff data of node with blue score %d should have been unloaded if deleteDiffData is %T", node.blueScore, deleteDiffData)
+			t.Errorf("The diff data of node with blue score %d should have been unloaded if deleteDiffData is %T", node.BlueScore(), deleteDiffData)
 		} else if !deleteDiffData && !ok {
-			t.Errorf("The diff data of node with blue score %d shouldn't have been unloaded if deleteDiffData is %T", node.blueScore, deleteDiffData)
+			t.Errorf("The diff data of node with blue score %d shouldn't have been unloaded if deleteDiffData is %T", node.BlueScore(), deleteDiffData)
 		}
 
-		_, err := dag.utxoDiffStore.diffDataFromDB(node.hash)
+		_, err := dag.utxoDiffStore.diffDataFromDB(node.Hash())
 		exists := !dbaccess.IsNotFoundError(err)
 		if exists && err != nil {
 			t.Errorf("diffDataFromDB: %s", err)
@@ -1003,27 +1003,27 @@ func testFinalizeNodesBelowFinalityPoint(t *testing.T, deleteDiffData bool) {
 		}
 
 		if deleteDiffData && exists {
-			t.Errorf("The diff data of node with blue score %d should have been deleted from the database if deleteDiffData is %T", node.blueScore, deleteDiffData)
+			t.Errorf("The diff data of node with blue score %d should have been deleted from the database if deleteDiffData is %T", node.BlueScore(), deleteDiffData)
 			continue
 		}
 
 		if !deleteDiffData && !exists {
-			t.Errorf("The diff data of node with blue score %d shouldn't have been deleted from the database if deleteDiffData is %T", node.blueScore, deleteDiffData)
+			t.Errorf("The diff data of node with blue score %d shouldn't have been deleted from the database if deleteDiffData is %T", node.BlueScore(), deleteDiffData)
 			continue
 		}
 	}
 
 	for _, node := range nodes[finalityInterval-1:] {
-		if node.isFinalized {
-			t.Errorf("Node with blue score %d wasn't expected to be finalized", node.blueScore)
+		if node.IsFinalized() {
+			t.Errorf("Node with blue score %d wasn't expected to be finalized", node.BlueScore())
 		}
 		if _, ok := dag.utxoDiffStore.loaded[node]; !ok {
-			t.Errorf("The diff data of node with blue score %d shouldn't have been unloaded", node.blueScore)
+			t.Errorf("The diff data of node with blue score %d shouldn't have been unloaded", node.BlueScore())
 		}
-		if diffData, err := dag.utxoDiffStore.diffDataFromDB(node.hash); err != nil {
+		if diffData, err := dag.utxoDiffStore.diffDataFromDB(node.Hash()); err != nil {
 			t.Errorf("diffDataFromDB: %s", err)
 		} else if diffData == nil {
-			t.Errorf("The diff data of node with blue score %d shouldn't have been deleted from the database", node.blueScore)
+			t.Errorf("The diff data of node with blue score %d shouldn't have been deleted from the database", node.BlueScore())
 		}
 	}
 }
@@ -1047,7 +1047,7 @@ func TestDAGIndexFailedStatus(t *testing.T) {
 			[]*daghash.Hash{params.GenesisHash}, hashMerkleRoot,
 			&daghash.Hash{},
 			&daghash.Hash{},
-			dag.genesis.bits,
+			dag.genesis.Bits(),
 			0),
 	)
 	invalidMsgBlock.AddTransaction(invalidCbTx)
@@ -1070,14 +1070,14 @@ func TestDAGIndexFailedStatus(t *testing.T) {
 	if !ok {
 		t.Fatalf("invalidBlockNode wasn't added to the block index as expected")
 	}
-	if invalidBlockNode.status&blockstatus.StatusValidateFailed != blockstatus.StatusValidateFailed {
-		t.Fatalf("invalidBlockNode status to have %b flags raised (got: %b)", blockstatus.StatusValidateFailed, invalidBlockNode.status)
+	if invalidBlockNode.Status()&blockstatus.StatusValidateFailed != blockstatus.StatusValidateFailed {
+		t.Fatalf("invalidBlockNode status to have %b flags raised (got: %b)", blockstatus.StatusValidateFailed, invalidBlockNode.Status())
 	}
 
 	invalidMsgBlockChild := wire.NewMsgBlock(
 		wire.NewBlockHeader(1, []*daghash.Hash{
 			invalidBlock.Hash(),
-		}, hashMerkleRoot, &daghash.Hash{}, &daghash.Hash{}, dag.genesis.bits, 0),
+		}, hashMerkleRoot, &daghash.Hash{}, &daghash.Hash{}, dag.genesis.Bits(), 0),
 	)
 	invalidMsgBlockChild.AddTransaction(invalidCbTx)
 	invalidBlockChild := util.NewBlock(invalidMsgBlockChild)
@@ -1099,14 +1099,14 @@ func TestDAGIndexFailedStatus(t *testing.T) {
 	if !ok {
 		t.Fatalf("invalidBlockChild wasn't added to the block index as expected")
 	}
-	if invalidBlockChildNode.status&blockstatus.StatusInvalidAncestor != blockstatus.StatusInvalidAncestor {
-		t.Fatalf("invalidBlockNode status to have %b flags raised (got %b)", blockstatus.StatusInvalidAncestor, invalidBlockChildNode.status)
+	if invalidBlockChildNode.Status()&blockstatus.StatusInvalidAncestor != blockstatus.StatusInvalidAncestor {
+		t.Fatalf("invalidBlockNode status to have %b flags raised (got %b)", blockstatus.StatusInvalidAncestor, invalidBlockChildNode.Status())
 	}
 
 	invalidMsgBlockGrandChild := wire.NewMsgBlock(
 		wire.NewBlockHeader(1, []*daghash.Hash{
 			invalidBlockChild.Hash(),
-		}, hashMerkleRoot, &daghash.Hash{}, &daghash.Hash{}, dag.genesis.bits, 0),
+		}, hashMerkleRoot, &daghash.Hash{}, &daghash.Hash{}, dag.genesis.Bits(), 0),
 	)
 	invalidMsgBlockGrandChild.AddTransaction(invalidCbTx)
 	invalidBlockGrandChild := util.NewBlock(invalidMsgBlockGrandChild)
@@ -1127,8 +1127,8 @@ func TestDAGIndexFailedStatus(t *testing.T) {
 	if !ok {
 		t.Fatalf("invalidBlockGrandChild wasn't added to the block index as expected")
 	}
-	if invalidBlockGrandChildNode.status&blockstatus.StatusInvalidAncestor != blockstatus.StatusInvalidAncestor {
-		t.Fatalf("invalidBlockGrandChildNode status to have %b flags raised (got %b)", blockstatus.StatusInvalidAncestor, invalidBlockGrandChildNode.status)
+	if invalidBlockGrandChildNode.Status()&blockstatus.StatusInvalidAncestor != blockstatus.StatusInvalidAncestor {
+		t.Fatalf("invalidBlockGrandChildNode status to have %b flags raised (got %b)", blockstatus.StatusInvalidAncestor, invalidBlockGrandChildNode.Status())
 	}
 }
 
@@ -1368,10 +1368,10 @@ func TestUTXOCommitment(t *testing.T) {
 	utxoCommitment := daghash.Hash(*multiset.Finalize())
 
 	// Make sure that the two commitments are equal
-	if !utxoCommitment.IsEqual(blockNodeD.utxoCommitment) {
+	if !utxoCommitment.IsEqual(blockNodeD.UTXOCommitment()) {
 		t.Fatalf("TestUTXOCommitment: calculated UTXO commitment and "+
 			"actual UTXO commitment don't match. Want: %s, got: %s",
-			utxoCommitment, blockNodeD.utxoCommitment)
+			utxoCommitment, blockNodeD.UTXOCommitment())
 	}
 }
 
@@ -1397,7 +1397,7 @@ func TestPastUTXOMultiSet(t *testing.T) {
 	if !ok {
 		t.Fatalf("TestPastUTXOMultiSet: BlockNode for blockC not found")
 	}
-	blockCSelectedParentMultiset, err := blockNodeC.selectedParentMultiset(dag)
+	blockCSelectedParentMultiset, err := dag.selectedParentMultiset(blockNodeC)
 	if err != nil {
 		t.Fatalf("TestPastUTXOMultiSet: selectedParentMultiset unexpectedly failed: %s", err)
 	}
@@ -1410,7 +1410,7 @@ func TestPastUTXOMultiSet(t *testing.T) {
 	PrepareAndProcessBlockForTest(t, dag, []*daghash.Hash{blockC.BlockHash()}, nil)
 
 	// Get blockC's selectedParentMultiset again
-	blockCSelectedParentMultiSetAfterAnotherBlock, err := blockNodeC.selectedParentMultiset(dag)
+	blockCSelectedParentMultiSetAfterAnotherBlock, err := dag.selectedParentMultiset(blockNodeC)
 	if err != nil {
 		t.Fatalf("TestPastUTXOMultiSet: selectedParentMultiset unexpectedly failed: %s", err)
 	}

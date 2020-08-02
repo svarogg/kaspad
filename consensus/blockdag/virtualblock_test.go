@@ -123,7 +123,7 @@ func TestVirtualBlock(t *testing.T) {
 		}
 
 		// Ensure that the virtual block's selectedParent is now equal to expectedSelectedParent
-		resultSelectedTip := virtual.selectedParent
+		resultSelectedTip := virtual.SelectedParent()
 		if !reflect.DeepEqual(resultSelectedTip, test.expectedSelectedParent) {
 			t.Errorf("unexpected selected tip in test \"%s\". "+
 				"Expected: %v, got: %v.", test.name, test.expectedSelectedParent, resultSelectedTip)
@@ -164,7 +164,7 @@ func TestSelectedPath(t *testing.T) {
 	}
 	// For now we don't have any DAG, just chain, the selected path should include all the blocks on the chain.
 	if !reflect.DeepEqual(virtual.selectedParentChainSet, firstPath) {
-		t.Fatalf("TestSelectedPath: selectedPathSet doesn't include the expected values. got %v, want %v", virtual.selectedParent, firstPath)
+		t.Fatalf("TestSelectedPath: selectedPathSet doesn't include the expected values. got %v, want %v", virtual.SelectedParent(), firstPath)
 	}
 	// We expect that selectedParentChainSlice should have all the blocks we've added so far
 	wantLen := 11
@@ -182,7 +182,7 @@ func TestSelectedPath(t *testing.T) {
 	}
 	// Because we added a chain that is much longer than the previous chain, the selected path should be re-organized.
 	if !reflect.DeepEqual(virtual.selectedParentChainSet, secondPath) {
-		t.Fatalf("TestSelectedPath: selectedPathSet didn't handle the re-org as expected. got %v, want %v", virtual.selectedParent, firstPath)
+		t.Fatalf("TestSelectedPath: selectedPathSet didn't handle the re-org as expected. got %v, want %v", virtual.SelectedParent(), firstPath)
 	}
 	// We expect that selectedParentChainSlice should have all the blocks we've added so far except the old chain
 	wantLen = 106
@@ -199,7 +199,7 @@ func TestSelectedPath(t *testing.T) {
 	}
 	// Because we added a very short chain, the selected path should not be affected.
 	if !reflect.DeepEqual(virtual.selectedParentChainSet, secondPath) {
-		t.Fatalf("TestSelectedPath: selectedPathSet did an unexpected re-org. got %v, want %v", virtual.selectedParent, firstPath)
+		t.Fatalf("TestSelectedPath: selectedPathSet did an unexpected re-org. got %v, want %v", virtual.SelectedParent(), firstPath)
 	}
 	// We expect that selectedParentChainSlice not to change
 	wantLen = 106
@@ -262,9 +262,9 @@ func TestChainUpdates(t *testing.T) {
 	}
 	for i, removedHash := range chainUpdates.removedChainBlockHashes {
 		correspondingRemovedNode := toBeRemovedNodes[len(toBeRemovedNodes)-1-i]
-		if !removedHash.IsEqual(correspondingRemovedNode.hash) {
+		if !removedHash.IsEqual(correspondingRemovedNode.Hash()) {
 			t.Fatalf("TestChainUpdates: wrong removed hash. "+
-				"Got: %s, want: %s", removedHash, correspondingRemovedNode.hash)
+				"Got: %s, want: %s", removedHash, correspondingRemovedNode.Hash())
 		}
 	}
 
@@ -275,9 +275,9 @@ func TestChainUpdates(t *testing.T) {
 	}
 	for i, addedHash := range chainUpdates.addedChainBlockHashes {
 		correspondingAddedNode := toBeAddedNodes[i]
-		if !addedHash.IsEqual(correspondingAddedNode.hash) {
+		if !addedHash.IsEqual(correspondingAddedNode.Hash()) {
 			t.Fatalf("TestChainUpdates: wrong added hash. "+
-				"Got: %s, want: %s", addedHash, correspondingAddedNode.hash)
+				"Got: %s, want: %s", addedHash, correspondingAddedNode.Hash())
 		}
 	}
 }

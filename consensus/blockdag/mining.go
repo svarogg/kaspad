@@ -68,7 +68,7 @@ func (dag *BlockDAG) NextBlockMultiset() (*secp256k1.MultiSet, error) {
 		return nil, err
 	}
 
-	return dag.virtual.BlockNode.calcMultiset(dag, txsAcceptanceData, selectedParentPastUTXO)
+	return dag.calcMultiset(&dag.virtual.BlockNode, txsAcceptanceData, selectedParentPastUTXO)
 }
 
 // CoinbasePayloadExtraData returns coinbase payload extra data parameter

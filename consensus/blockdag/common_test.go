@@ -70,8 +70,8 @@ func newTestNode(dag *BlockDAG, parents blocknode.BlockNodeSet, blockVersion int
 }
 
 func addNodeAsChildToParents(node *blocknode.BlockNode) {
-	for parent := range node.parents {
-		parent.children.Add(node)
+	for parent := range node.Parents() {
+		parent.Children().Add(node)
 	}
 }
 

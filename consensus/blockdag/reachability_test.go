@@ -796,11 +796,11 @@ func TestIsInPast(t *testing.T) {
 
 	// Add a chain of two blocks above the genesis. This will be the
 	// selected parent chain.
-	blockA := PrepareAndProcessBlockForTest(t, dag, []*daghash.Hash{dag.genesis.hash}, nil)
+	blockA := PrepareAndProcessBlockForTest(t, dag, []*daghash.Hash{dag.genesis.Hash()}, nil)
 	blockB := PrepareAndProcessBlockForTest(t, dag, []*daghash.Hash{blockA.BlockHash()}, nil)
 
 	// Add another block above the genesis
-	blockC := PrepareAndProcessBlockForTest(t, dag, []*daghash.Hash{dag.genesis.hash}, nil)
+	blockC := PrepareAndProcessBlockForTest(t, dag, []*daghash.Hash{dag.genesis.Hash()}, nil)
 	nodeC, ok := dag.blockNodeStore.LookupNode(blockC.BlockHash())
 	if !ok {
 		t.Fatalf("TestIsInPast: block C is not in the block index")
@@ -840,7 +840,7 @@ func TestAddChildThatPointsDirectlyToTheSelectedParentChainBelowReindexRoot(t *t
 	}()
 
 	// Add a block on top of the genesis block
-	chainRootBlock := PrepareAndProcessBlockForTest(t, dag, []*daghash.Hash{dag.genesis.hash}, nil)
+	chainRootBlock := PrepareAndProcessBlockForTest(t, dag, []*daghash.Hash{dag.genesis.Hash()}, nil)
 
 	// Add chain of reachabilityReindexWindow blocks above chainRootBlock.
 	// This should move the reindex root
@@ -851,7 +851,7 @@ func TestAddChildThatPointsDirectlyToTheSelectedParentChainBelowReindexRoot(t *t
 	}
 
 	// Add another block over genesis
-	PrepareAndProcessBlockForTest(t, dag, []*daghash.Hash{dag.genesis.hash}, nil)
+	PrepareAndProcessBlockForTest(t, dag, []*daghash.Hash{dag.genesis.Hash()}, nil)
 }
 
 func TestUpdateReindexRoot(t *testing.T) {
@@ -872,14 +872,14 @@ func TestUpdateReindexRoot(t *testing.T) {
 	}()
 
 	// Add two blocks on top of the genesis block
-	chain1RootBlock := PrepareAndProcessBlockForTest(t, dag, []*daghash.Hash{dag.genesis.hash}, nil)
-	chain2RootBlock := PrepareAndProcessBlockForTest(t, dag, []*daghash.Hash{dag.genesis.hash}, nil)
+	chain1RootBlock := PrepareAndProcessBlockForTest(t, dag, []*daghash.Hash{dag.genesis.Hash()}, nil)
+	chain2RootBlock := PrepareAndProcessBlockForTest(t, dag, []*daghash.Hash{dag.genesis.Hash()}, nil)
 
 	// Add chain of reachabilityReindexWindow - 1 blocks above chain1RootBlock and
 	// chain2RootBlock, respectively. This should not move the reindex root
 	chain1RootBlockTipHash := chain1RootBlock.BlockHash()
 	chain2RootBlockTipHash := chain2RootBlock.BlockHash()
-	genesisTreeNode, err := dag.reachabilityTree.store.treeNodeByBlockHash(dag.genesis.hash)
+	genesisTreeNode, err := dag.reachabilityTree.store.treeNodeByBlockHash(dag.genesis.Hash())
 	if err != nil {
 		t.Fatalf("failed to get tree node: %s", err)
 	}
@@ -951,9 +951,9 @@ func TestReindexIntervalsEarlierThanReindexRoot(t *testing.T) {
 	}()
 
 	// Add three children to the genesis: leftBlock, centerBlock, rightBlock
-	leftBlock := PrepareAndProcessBlockForTest(t, dag, []*daghash.Hash{dag.genesis.hash}, nil)
-	centerBlock := PrepareAndProcessBlockForTest(t, dag, []*daghash.Hash{dag.genesis.hash}, nil)
-	rightBlock := PrepareAndProcessBlockForTest(t, dag, []*daghash.Hash{dag.genesis.hash}, nil)
+	leftBlock := PrepareAndProcessBlockForTest(t, dag, []*daghash.Hash{dag.genesis.Hash()}, nil)
+	centerBlock := PrepareAndProcessBlockForTest(t, dag, []*daghash.Hash{dag.genesis.Hash()}, nil)
+	rightBlock := PrepareAndProcessBlockForTest(t, dag, []*daghash.Hash{dag.genesis.Hash()}, nil)
 
 	// Add a chain of reachabilityReindexWindow blocks above centerBlock.
 	// This will move the reindex root to centerBlock
@@ -994,7 +994,7 @@ func TestReindexIntervalsEarlierThanReindexRoot(t *testing.T) {
 
 	// Get the current interval for centerBlock. Its interval should be:
 	// genesisInterval - 1 - leftInterval - leftSlack - rightInterval - rightSlack
-	genesisTreeNode, err := dag.reachabilityTree.store.treeNodeByBlockHash(dag.genesis.hash)
+	genesisTreeNode, err := dag.reachabilityTree.store.treeNodeByBlockHash(dag.genesis.Hash())
 	if err != nil {
 		t.Fatalf("failed to get tree node: %s", err)
 	}

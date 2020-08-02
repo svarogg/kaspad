@@ -139,7 +139,7 @@ func TestClearOldEntries(t *testing.T) {
 	for _, node := range blockNodes {
 		_, ok := dag.utxoDiffStore.loaded[node]
 		if !ok {
-			t.Fatalf("TestClearOldEntries: diffData for node %s is not in the loaded set", node.hash)
+			t.Fatalf("TestClearOldEntries: diffData for node %s is not in the loaded set", node.Hash())
 		}
 	}
 
@@ -152,12 +152,12 @@ func TestClearOldEntries(t *testing.T) {
 	for _, node := range blockNodes {
 		_, ok := dag.utxoDiffStore.loaded[node]
 		if ok {
-			t.Fatalf("TestClearOldEntries: diffData for node %s is in the loaded set", node.hash)
+			t.Fatalf("TestClearOldEntries: diffData for node %s is in the loaded set", node.Hash())
 		}
 	}
 
 	// Add a block on top of the genesis to force the retrieval of all diffData
-	processedBlock := PrepareAndProcessBlockForTest(t, dag, []*daghash.Hash{dag.genesis.hash}, nil)
+	processedBlock := PrepareAndProcessBlockForTest(t, dag, []*daghash.Hash{dag.genesis.Hash()}, nil)
 	node, ok := dag.blockNodeStore.LookupNode(processedBlock.BlockHash())
 	if !ok {
 		t.Fatalf("TestClearOldEntries: missing BlockNode for hash %s", processedBlock.BlockHash())
@@ -167,14 +167,14 @@ func TestClearOldEntries(t *testing.T) {
 	// is a tip.
 	_, ok = dag.utxoDiffStore.loaded[node]
 	if !ok {
-		t.Fatalf("TestClearOldEntries: diffData for node %s is not in the loaded set", node.hash)
+		t.Fatalf("TestClearOldEntries: diffData for node %s is not in the loaded set", node.Hash())
 	}
 
 	// Make sure that all the old nodes still do not exist in the loaded set
 	for _, node := range blockNodes {
 		_, ok := dag.utxoDiffStore.loaded[node]
 		if ok {
-			t.Fatalf("TestClearOldEntries: diffData for node %s is in the loaded set", node.hash)
+			t.Fatalf("TestClearOldEntries: diffData for node %s is in the loaded set", node.Hash())
 		}
 	}
 }

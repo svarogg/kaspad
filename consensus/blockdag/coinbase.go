@@ -53,7 +53,7 @@ func (cfw *compactFeeFactory) add(txFee uint64) error {
 func (cfw *compactFeeFactory) data() (compactFeeData, error) {
 	err := cfw.writer.Flush()
 
-	return compactFeeData(cfw.buffer.Bytes()), err
+	return cfw.buffer.Bytes(), err
 }
 
 type compactFeeIterator struct {
@@ -76,7 +76,7 @@ func (cfr *compactFeeIterator) next() (uint64, error) {
 
 // The following functions relate to storing and retrieving fee data from the database
 
-// getBluesFeeData returns the compactFeeData for all nodes's blues,
+// getBluesFeeData returns the compactFeeData for all nodes' blues,
 // used to calculate the fees this BlockNode needs to pay
 func (dag *BlockDAG) getBluesFeeData(node *blocknode.BlockNode) (map[daghash.Hash]compactFeeData, error) {
 	bluesFeeData := make(map[daghash.Hash]compactFeeData)
@@ -126,8 +126,8 @@ func (dag *BlockDAG) expectedCoinbaseTransaction(node *blocknode.BlockNode, txsA
 		return nil, err
 	}
 
-	txIns := []*wire.TxIn{}
-	txOuts := []*wire.TxOut{}
+	var txIns []*wire.TxIn
+	var txOuts []*wire.TxOut
 
 	for _, blue := range node.Blues() {
 		txOut, err := coinbaseOutputForBlueBlock(dag, blue, txsAcceptanceData, bluesFeeData)

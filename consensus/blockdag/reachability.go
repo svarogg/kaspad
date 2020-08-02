@@ -282,7 +282,7 @@ func (rtn *reachabilityTreeNode) addChild(child *reachabilityTreeNode, reindexRo
 		log.Debugf("Reachability reindex triggered for "+
 			"block %s. This block is not a child of the current "+
 			"reindex root %s. Modified %d tree nodes and took %dms.",
-			rtn.blockNode.hash, reindexRoot.blockNode.hash,
+			rtn.blockNode.Hash(), reindexRoot.blockNode.Hash(),
 			len(modifiedNodes), reindexTimeElapsed.Milliseconds())
 		return nil
 	}
@@ -297,7 +297,7 @@ func (rtn *reachabilityTreeNode) addChild(child *reachabilityTreeNode, reindexRo
 		reindexTimeElapsed := time.Since(reindexStartTime)
 		log.Debugf("Reachability reindex triggered for "+
 			"block %s. Modified %d tree nodes and took %dms.",
-			rtn.blockNode.hash, len(modifiedNodes), reindexTimeElapsed.Milliseconds())
+			rtn.blockNode.Hash(), len(modifiedNodes), reindexTimeElapsed.Milliseconds())
 		return nil
 	}
 
@@ -822,7 +822,7 @@ func (rt *reachabilityTree) addBlock(node *blocknode.BlockNode, selectedParentAn
 	}
 
 	// Insert the node into the selected parent's reachability tree
-	selectedParentTreeNode, err := rt.store.treeNodeByBlockNode(node.selectedParent)
+	selectedParentTreeNode, err := rt.store.treeNodeByBlockNode(node.SelectedParent())
 	if err != nil {
 		return err
 	}
@@ -854,7 +854,7 @@ func (rt *reachabilityTree) addBlock(node *blocknode.BlockNode, selectedParentAn
 	// whether the new node is going to be the virtual's selected
 	// parent. We don't check node == virtual.selectedParent because
 	// at this stage the virtual had not yet been updated.
-	if node.blueScore > rt.dag.SelectedTipBlueScore() {
+	if node.BlueScore() > rt.dag.SelectedTipBlueScore() {
 		updateStartTime := time.Now()
 		modifiedNodes := newModifiedTreeNodes()
 		err := rt.updateReindexRoot(newTreeNode, modifiedNodes)
@@ -865,7 +865,7 @@ func (rt *reachabilityTree) addBlock(node *blocknode.BlockNode, selectedParentAn
 			updateTimeElapsed := time.Since(updateStartTime)
 			log.Debugf("Reachability reindex root updated to %s. "+
 				"Modified %d tree nodes and took %dms.",
-				rt.reindexRoot.blockNode.hash,
+				rt.reindexRoot.blockNode.Hash(),
 				len(modifiedNodes), updateTimeElapsed.Milliseconds())
 			for modifiedNode := range modifiedNodes {
 				rt.store.setTreeNode(modifiedNode)
@@ -929,7 +929,7 @@ func (rt *reachabilityTree) storeState(dbTx *dbaccess.TxContext) error {
 	}
 
 	// Store the reindex root
-	err = dbaccess.StoreReachabilityReindexRoot(dbTx, rt.reindexRoot.blockNode.hash)
+	err = dbaccess.StoreReachabilityReindexRoot(dbTx, rt.reindexRoot.blockNode.Hash())
 	if err != nil {
 		return err
 	}
@@ -969,7 +969,7 @@ func (rt *reachabilityTree) maybeMoveReindexRoot(
 	if err != nil {
 		return nil, false, err
 	}
-	if newTreeNode.blockNode.blueScore-reindexRootChosenChild.blockNode.blueScore < reachabilityReindexWindow {
+	if newTreeNode.blockNode.BlueScore()-reindexRootChosenChild.blockNode.BlueScore() < reachabilityReindexWindow {
 		return nil, false, nil
 	}
 	err = rt.concentrateIntervalAroundReindexRootChosenChild(reindexRoot, reindexRootChosenChild, modifiedNodes)

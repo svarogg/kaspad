@@ -102,7 +102,7 @@ func (c bitConditionChecker) MinerConfirmationWindow() uint64 {
 // This is part of the thresholdConditionChecker interface implementation.
 func (c bitConditionChecker) Condition(node *blocknode.BlockNode) (bool, error) {
 	conditionMask := uint32(1) << c.bit
-	version := uint32(node.version)
+	version := uint32(node.Version())
 	if version&vbTopMask != vbTopBits {
 		return false, nil
 	}
@@ -110,7 +110,7 @@ func (c bitConditionChecker) Condition(node *blocknode.BlockNode) (bool, error) 
 		return false, nil
 	}
 
-	expectedVersion, err := c.dag.calcNextBlockVersion(node.selectedParent)
+	expectedVersion, err := c.dag.calcNextBlockVersion(node.SelectedParent())
 	if err != nil {
 		return false, err
 	}
@@ -180,7 +180,7 @@ func (c deploymentChecker) MinerConfirmationWindow() uint64 {
 // This is part of the thresholdConditionChecker interface implementation.
 func (c deploymentChecker) Condition(node *blocknode.BlockNode) (bool, error) {
 	conditionMask := uint32(1) << c.deployment.BitNumber
-	version := uint32(node.version)
+	version := uint32(node.Version())
 	return (version&vbTopMask == vbTopBits) && (version&conditionMask != 0),
 		nil
 }
@@ -236,7 +236,7 @@ func (dag *BlockDAG) warnUnknownRuleActivations(node *blocknode.BlockNode) error
 	for bit := uint32(0); bit < vbNumBits; bit++ {
 		checker := bitConditionChecker{bit: bit, dag: dag}
 		cache := &dag.warningCaches[bit]
-		state, err := dag.thresholdState(node.selectedParent, checker, cache)
+		state, err := dag.thresholdState(node.SelectedParent(), checker, cache)
 		if err != nil {
 			return err
 		}
@@ -251,7 +251,7 @@ func (dag *BlockDAG) warnUnknownRuleActivations(node *blocknode.BlockNode) error
 
 		case ThresholdLockedIn:
 			window := checker.MinerConfirmationWindow()
-			activationBlueScore := window - (node.blueScore % window)
+			activationBlueScore := window - (node.BlueScore() % window)
 			log.Warnf("Unknown new rules are about to activate in "+
 				"%d blueScore (bit %d)", activationBlueScore, bit)
 		}
@@ -273,16 +273,16 @@ func (dag *BlockDAG) warnUnknownVersions(node *blocknode.BlockNode) error {
 	// Warn if enough previous blocks have unexpected versions.
 	numUpgraded := uint32(0)
 	for i := uint32(0); i < unknownVerNumToCheck && node != nil; i++ {
-		expectedVersion, err := dag.calcNextBlockVersion(node.selectedParent)
+		expectedVersion, err := dag.calcNextBlockVersion(node.SelectedParent())
 		if err != nil {
 			return err
 		}
-		if (node.version & ^expectedVersion) != 0 {
+		if (node.Version() & ^expectedVersion) != 0 {
 
 			numUpgraded++
 		}
 
-		node = node.selectedParent
+		node = node.SelectedParent()
 	}
 	if numUpgraded > unknownVerWarnNum {
 		log.Warn("Unknown block versions are being mined, so new " +

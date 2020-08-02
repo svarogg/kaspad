@@ -515,7 +515,7 @@ func TestPastMedianTime(t *testing.T) {
 		dag.PastMedianTime(tip))
 
 	header := node.Header()
-	err := dag.checkBlockHeaderContext(header, node.parents.Bluest(), false)
+	err := dag.checkBlockHeaderContext(header, node.Parents().Bluest(), false)
 	if err != nil {
 		t.Errorf("TestPastMedianTime: unexpected error from checkBlockHeaderContext: %v"+
 			"(a block with timestamp equals to past median time should be valid)", err)
@@ -528,7 +528,7 @@ func TestPastMedianTime(t *testing.T) {
 		dag.PastMedianTime(tip).Add(time.Second))
 
 	header = node.Header()
-	err = dag.checkBlockHeaderContext(header, node.parents.Bluest(), false)
+	err = dag.checkBlockHeaderContext(header, node.Parents().Bluest(), false)
 	if err != nil {
 		t.Errorf("TestPastMedianTime: unexpected error from checkBlockHeaderContext: %v"+
 			"(a block with timestamp bigger than past median time should be valid)", err)
@@ -541,7 +541,7 @@ func TestPastMedianTime(t *testing.T) {
 		dag.PastMedianTime(tip).Add(-time.Second))
 
 	header = node.Header()
-	err = dag.checkBlockHeaderContext(header, node.parents.Bluest(), false)
+	err = dag.checkBlockHeaderContext(header, node.Parents().Bluest(), false)
 	if err == nil {
 		t.Errorf("TestPastMedianTime: unexpected success: block should be invalid if its timestamp is before past median time")
 	}

@@ -234,3 +234,7 @@ func (node *BlockNode) UTXOCommitment() *daghash.Hash {
 func (node *BlockNode) Children() BlockNodeSet {
 	return node.children
 }
+
+func (node *BlockNode) Version() int32 {
+	return node.version
+}

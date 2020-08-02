@@ -47,7 +47,7 @@ func newVirtualBlock(dag *BlockDAG, tips blocknode.BlockNodeSet) *virtualBlock {
 //
 // This function MUST be called with the view mutex locked (for writes).
 func (v *virtualBlock) setTips(tips blocknode.BlockNodeSet) *chainUpdates {
-	oldSelectedParent := v.selectedParent
+	oldSelectedParent := v.SelectedParent()
 	node, _ := v.dag.initBlockNode(nil, tips)
 	v.BlockNode = *node
 	return v.updateSelectedParentSet(oldSelectedParent)
@@ -64,7 +64,7 @@ func (v *virtualBlock) setTips(tips blocknode.BlockNodeSet) *chainUpdates {
 func (v *virtualBlock) updateSelectedParentSet(oldSelectedParent *blocknode.BlockNode) *chainUpdates {
 	var intersectionNode *blocknode.BlockNode
 	nodesToAdd := make([]*blocknode.BlockNode, 0)
-	for node := v.BlockNode.selectedParent; intersectionNode == nil && node != nil; node = node.selectedParent {
+	for node := v.BlockNode.SelectedParent(); intersectionNode == nil && node != nil; node = node.SelectedParent() {
 		if v.selectedParentChainSet.Contains(node) {
 			intersectionNode = node
 		} else {
@@ -81,9 +81,9 @@ func (v *virtualBlock) updateSelectedParentSet(oldSelectedParent *blocknode.Bloc
 	removeCount := 0
 	var removedChainBlockHashes []*daghash.Hash
 	if intersectionNode != nil {
-		for node := oldSelectedParent; !node.hash.IsEqual(intersectionNode.hash); node = node.selectedParent {
+		for node := oldSelectedParent; !node.Hash().IsEqual(intersectionNode.Hash()); node = node.SelectedParent() {
 			v.selectedParentChainSet.Remove(node)
-			removedChainBlockHashes = append(removedChainBlockHashes, node.hash)
+			removedChainBlockHashes = append(removedChainBlockHashes, node.Hash())
 			removeCount++
 		}
 	}
@@ -99,7 +99,7 @@ func (v *virtualBlock) updateSelectedParentSet(oldSelectedParent *blocknode.Bloc
 	var addedChainBlockHashes []*daghash.Hash
 	for _, node := range nodesToAdd {
 		v.selectedParentChainSet.Add(node)
-		addedChainBlockHashes = append(addedChainBlockHashes, node.hash)
+		addedChainBlockHashes = append(addedChainBlockHashes, node.Hash())
 	}
 	v.selectedParentChainSlice = append(v.selectedParentChainSlice, nodesToAdd...)
 
@@ -127,7 +127,7 @@ func (v *virtualBlock) SetTips(tips blocknode.BlockNodeSet) {
 // This function MUST be called with the view mutex locked (for writes).
 func (v *virtualBlock) addTip(newTip *blocknode.BlockNode) *chainUpdates {
 	updatedTips := v.tips().Clone()
-	for parent := range newTip.parents {
+	for parent := range newTip.Parents() {
 		updatedTips.Remove(parent)
 	}
 
@@ -151,5 +151,5 @@ func (v *virtualBlock) AddTip(newTip *blocknode.BlockNode) *chainUpdates {
 //
 // This function is safe for concurrent access.
 func (v *virtualBlock) tips() blocknode.BlockNodeSet {
-	return v.parents
+	return v.Parents()
 }
