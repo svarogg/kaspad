@@ -172,7 +172,7 @@ func (dag *BlockDAG) processBlockNoLock(block *util.Block, flags BehaviorFlags) 
 		return false, false, common.NewRuleError(common.ErrDuplicateBlock, str)
 	}
 
-	if dag.isKnownDelayedBlock(blockHash) {
+	if dag.delayedBlocks.IsKnownDelayed(blockHash) {
 		str := fmt.Sprintf("already have block (delayed) %s", blockHash)
 		return false, false, common.NewRuleError(common.ErrDuplicateBlock, str)
 	}
@@ -273,9 +273,9 @@ func (dag *BlockDAG) processBlockNoLock(block *util.Block, flags BehaviorFlags) 
 // Note that delay could be 0, but isDelayed will return true. This is the case where the parent process time is due.
 func (dag *BlockDAG) maxDelayOfParents(parentHashes []*daghash.Hash) (delay time.Duration, isDelayed bool) {
 	for _, parentHash := range parentHashes {
-		if delayedParent, exists := dag.delayedBlocks[*parentHash]; exists {
+		if delayedParent, exists := dag.delayedBlocks.Get(parentHash); exists {
 			isDelayed = true
-			parentDelay := delayedParent.processTime.Sub(dag.Now())
+			parentDelay := delayedParent.ProcessTime().Sub(dag.Now())
 			if parentDelay > delay {
 				delay = parentDelay
 			}

@@ -1,10 +1,10 @@
-package blockdag
+package delayedblocks
 
 import (
 	"container/heap"
 )
 
-type baseDelayedBlocksHeap []*delayedBlock
+type baseDelayedBlocksHeap []*DelayedBlock
 
 func (h baseDelayedBlocksHeap) Len() int {
 	return len(h)
@@ -14,7 +14,7 @@ func (h baseDelayedBlocksHeap) Swap(i, j int) {
 }
 
 func (h *baseDelayedBlocksHeap) Push(x interface{}) {
-	*h = append(*h, x.(*delayedBlock))
+	*h = append(*h, x.(*DelayedBlock))
 }
 
 func (h *baseDelayedBlocksHeap) Pop() interface{} {
@@ -50,12 +50,12 @@ func newDelayedBlocksHeap() delayedBlocksHeap {
 }
 
 // pop removes the block with lowest height from this heap and returns it
-func (dbh delayedBlocksHeap) pop() *delayedBlock {
-	return heap.Pop(dbh.impl).(*delayedBlock)
+func (dbh delayedBlocksHeap) pop() *DelayedBlock {
+	return heap.Pop(dbh.impl).(*DelayedBlock)
 }
 
 // Push pushes the block onto the heap
-func (dbh delayedBlocksHeap) Push(block *delayedBlock) {
+func (dbh delayedBlocksHeap) Push(block *DelayedBlock) {
 	heap.Push(dbh.impl, block)
 }
 
@@ -65,9 +65,9 @@ func (dbh delayedBlocksHeap) Len() int {
 }
 
 // peek returns the topmost element in the queue without poping it
-func (dbh delayedBlocksHeap) peek() *delayedBlock {
+func (dbh delayedBlocksHeap) peek() *DelayedBlock {
 	if dbh.baseDelayedBlocksHeap.peek() == nil {
 		return nil
 	}
-	return dbh.baseDelayedBlocksHeap.peek().(*delayedBlock)
+	return dbh.baseDelayedBlocksHeap.peek().(*DelayedBlock)
 }
