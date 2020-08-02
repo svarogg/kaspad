@@ -11,6 +11,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/coinbase"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/delayedblocks"
+	ghostdag2 "github.com/kaspanet/kaspad/consensus/ghostdag"
 	"github.com/kaspanet/kaspad/consensus/merkle"
 	"github.com/kaspanet/kaspad/consensus/multiset"
 	"github.com/kaspanet/kaspad/consensus/notifications"
@@ -79,7 +80,7 @@ type BlockDAG struct {
 	genesis         *blocknode.BlockNode
 	notifier        *notifications.ConsensusNotifier
 	coinbase        *coinbase.Coinbase
-	ghostdag        *GHOSTDAG
+	ghostdag        *ghostdag2.GHOSTDAG
 
 	// The following fields are calculated based upon the provided DAG
 	// parameters. They are also set when the instance is created and
@@ -205,7 +206,7 @@ func New(config *Config) (*BlockDAG, error) {
 	dag.utxoDiffStore = newUTXODiffStore(dag)
 	dag.multisetStore = multiset.NewMultisetStore()
 	dag.reachabilityTree = reachability.NewReachabilityTree(blockNodeStore, params)
-	dag.ghostdag = NewGHOSTDAG(dag.reachabilityTree, params)
+	dag.ghostdag = ghostdag2.NewGHOSTDAG(dag.reachabilityTree, params)
 
 	// Initialize the DAG state from the passed database. When the db
 	// does not yet contain any DAG state, both it and the DAG state
@@ -2112,7 +2113,7 @@ func (dag *BlockDAG) initBlockNode(blockHeader *wire.BlockHeader, parents blockn
 		return node, nil
 	}
 
-	selectedParentAnticone, err := dag.ghostdag.run(node)
+	selectedParentAnticone, err := dag.ghostdag.Run(node)
 	if err != nil {
 		panic(errors.Wrap(err, "unexpected error in GHOSTDAG"))
 	}

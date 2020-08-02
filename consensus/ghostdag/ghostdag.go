@@ -1,4 +1,4 @@
-package blockdag
+package ghostdag
 
 import (
 	"github.com/kaspanet/kaspad/consensus/blocknode"
@@ -39,7 +39,7 @@ func NewGHOSTDAG(reachabilityTree *reachability.ReachabilityTree, params *dagcon
 //    bluesAnticoneSizes.
 //
 // For further details see the article https://eprint.iacr.org/2018/104.pdf
-func (g *GHOSTDAG) run(newNode *blocknode.BlockNode) (selectedParentAnticone []*blocknode.BlockNode, err error) {
+func (g *GHOSTDAG) Run(newNode *blocknode.BlockNode) (selectedParentAnticone []*blocknode.BlockNode, err error) {
 	newNode.SetSelectedParent(newNode.Parents().Bluest())
 	newNode.SetBluesAnticoneSizes(make(map[*blocknode.BlockNode]dagconfig.KType))
 	newNode.BluesAnticoneSizes()[newNode.SelectedParent()] = 0
