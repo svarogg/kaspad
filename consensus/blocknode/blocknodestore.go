@@ -5,7 +5,6 @@
 package blocknode
 
 import (
-	"github.com/kaspanet/kaspad/consensus/blockstatus"
 	"github.com/kaspanet/kaspad/dbaccess"
 	"sync"
 
@@ -77,7 +76,7 @@ func (bi *BlockNodeStore) addNode(node *BlockNode) {
 // NodeStatus provides concurrent-safe access to the status field of a node.
 //
 // This function is safe for concurrent access.
-func (bi *BlockNodeStore) NodeStatus(node *BlockNode) blockstatus.BlockStatus {
+func (bi *BlockNodeStore) NodeStatus(node *BlockNode) BlockStatus {
 	bi.RLock()
 	defer bi.RUnlock()
 	status := node.Status()
@@ -89,7 +88,7 @@ func (bi *BlockNodeStore) NodeStatus(node *BlockNode) blockstatus.BlockStatus {
 // flags currently on.
 //
 // This function is safe for concurrent access.
-func (bi *BlockNodeStore) SetStatusFlags(node *BlockNode, flags blockstatus.BlockStatus) {
+func (bi *BlockNodeStore) SetStatusFlags(node *BlockNode, flags BlockStatus) {
 	bi.Lock()
 	defer bi.Unlock()
 	node.AddStatus(flags)
@@ -100,7 +99,7 @@ func (bi *BlockNodeStore) SetStatusFlags(node *BlockNode, flags blockstatus.Bloc
 // regardless of whether they were on or off previously.
 //
 // This function is safe for concurrent access.
-func (bi *BlockNodeStore) UnsetStatusFlags(node *BlockNode, flags blockstatus.BlockStatus) {
+func (bi *BlockNodeStore) UnsetStatusFlags(node *BlockNode, flags BlockStatus) {
 	bi.Lock()
 	defer bi.Unlock()
 	node.RemoveStatus(flags)

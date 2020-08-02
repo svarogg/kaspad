@@ -3,7 +3,6 @@ package blocknode
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/kaspanet/kaspad/consensus/blockstatus"
 	"github.com/kaspanet/kaspad/dagconfig"
 	"github.com/kaspanet/kaspad/dbaccess"
 	"github.com/kaspanet/kaspad/util/binaryserializer"
@@ -52,7 +51,7 @@ func (bi *BlockNodeStore) Init(dbContext *dbaccess.DatabaseContext) (
 
 		// Check to see if this node had been stored in the the block DB
 		// but not yet accepted. If so, add it to a slice to be processed later.
-		if node.Status() == blockstatus.StatusDataStored {
+		if node.Status() == StatusDataStored {
 			unprocessedBlockNodes = append(unprocessedBlockNodes, node)
 			continue
 		}
@@ -124,7 +123,7 @@ func (bi *BlockNodeStore) deserializeBlockNode(blockRow []byte) (*BlockNode, err
 	if err != nil {
 		return nil, err
 	}
-	node.status = blockstatus.BlockStatus(statusByte)
+	node.status = BlockStatus(statusByte)
 
 	selectedParentHash := &daghash.Hash{}
 	if _, err := io.ReadFull(buffer, selectedParentHash[:]); err != nil {

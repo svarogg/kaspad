@@ -7,7 +7,6 @@ package blockdag
 import (
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/blocknode"
-	"github.com/kaspanet/kaspad/consensus/blockstatus"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/notifications"
 
@@ -19,7 +18,7 @@ import (
 func (dag *BlockDAG) addNodeToIndexWithInvalidAncestor(block *util.Block) error {
 	blockHeader := &block.MsgBlock().Header
 	newNode, _ := dag.initBlockNode(blockHeader, blocknode.NewBlockNodeSet())
-	newNode.SetStatus(blockstatus.StatusInvalidAncestor)
+	newNode.SetStatus(blocknode.StatusInvalidAncestor)
 	dag.blockNodeStore.AddNode(newNode)
 
 	dbTx, err := dag.databaseContext.NewTx()
@@ -65,7 +64,7 @@ func (dag *BlockDAG) maybeAcceptBlock(block *util.Block, flags BehaviorFlags) er
 
 	// Create a new block node for the block and add it to the node index.
 	newNode, selectedParentAnticone := dag.initBlockNode(&block.MsgBlock().Header, parents)
-	newNode.SetStatus(blockstatus.StatusDataStored)
+	newNode.SetStatus(blocknode.StatusDataStored)
 	dag.blockNodeStore.AddNode(newNode)
 
 	// Insert the block into the database if it's not already there. Even

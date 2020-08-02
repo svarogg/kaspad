@@ -5,7 +5,6 @@
 package blocknode
 
 import (
-	"github.com/kaspanet/kaspad/consensus/blockstatus"
 	"github.com/kaspanet/kaspad/dagconfig"
 	"github.com/kaspanet/kaspad/util/daghash"
 	"github.com/kaspanet/kaspad/util/mstime"
@@ -61,7 +60,7 @@ type BlockNode struct {
 	// status field, unlike the other fields, may be written to and so should
 	// only be accessed using the concurrent-safe NodeStatus method on
 	// blockIndex once the node has been added to the global index.
-	status blockstatus.BlockStatus
+	status BlockStatus
 
 	// isFinalized determines whether the node is below the finality point.
 	isFinalized bool
@@ -175,19 +174,19 @@ func (node *BlockNode) Time() mstime.Time {
 	return mstime.UnixMilliseconds(node.timestamp)
 }
 
-func (node *BlockNode) Status() blockstatus.BlockStatus {
+func (node *BlockNode) Status() BlockStatus {
 	return node.status
 }
 
-func (node *BlockNode) SetStatus(status blockstatus.BlockStatus) {
+func (node *BlockNode) SetStatus(status BlockStatus) {
 	node.status = status
 }
 
-func (node *BlockNode) AddStatus(status blockstatus.BlockStatus) {
+func (node *BlockNode) AddStatus(status BlockStatus) {
 	node.status |= status
 }
 
-func (node *BlockNode) RemoveStatus(status blockstatus.BlockStatus) {
+func (node *BlockNode) RemoveStatus(status BlockStatus) {
 	node.status &^= status
 }
 

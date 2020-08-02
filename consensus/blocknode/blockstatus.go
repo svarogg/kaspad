@@ -1,4 +1,4 @@
-package blockstatus
+package blocknode
 
 // BlockStatus is a bit field representing the validation state of the block.
 type BlockStatus byte

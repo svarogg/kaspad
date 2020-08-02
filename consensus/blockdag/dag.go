@@ -7,7 +7,6 @@ package blockdag
 import (
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/blocknode"
-	"github.com/kaspanet/kaspad/consensus/blockstatus"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/merkle"
 	"github.com/kaspanet/kaspad/consensus/multiset"
@@ -596,7 +595,7 @@ func (dag *BlockDAG) addBlock(node *blocknode.BlockNode,
 	chainUpdates, err := dag.connectBlock(node, block, selectedParentAnticone, fastAdd)
 	if err != nil {
 		if errors.As(err, &common.RuleError{}) {
-			dag.blockNodeStore.SetStatusFlags(node, blockstatus.StatusValidateFailed)
+			dag.blockNodeStore.SetStatusFlags(node, blocknode.StatusValidateFailed)
 
 			dbTx, err := dag.databaseContext.NewTx()
 			if err != nil {
@@ -1137,7 +1136,7 @@ func (dag *BlockDAG) applyDAGChanges(node *blocknode.BlockNode, newBlockPastUTXO
 		return nil, nil, errors.Wrap(err, "failed melding the virtual UTXO")
 	}
 
-	dag.blockNodeStore.SetStatusFlags(node, blockstatus.StatusValid)
+	dag.blockNodeStore.SetStatusFlags(node, blocknode.StatusValid)
 
 	// And now we can update the finality point of the DAG (if required)
 	dag.updateFinalityPoint()
