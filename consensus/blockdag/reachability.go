@@ -3,6 +3,7 @@ package blockdag
 import (
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/blocknode"
+	"github.com/kaspanet/kaspad/dagconfig"
 	"github.com/kaspanet/kaspad/dbaccess"
 	"github.com/pkg/errors"
 	"math"
@@ -810,7 +811,9 @@ func (fb futureCoveringTreeNodeSet) String() string {
 	return intervalsString
 }
 
-func (rt *reachabilityTree) addBlock(node *blocknode.BlockNode, selectedParentAnticone []*blocknode.BlockNode) error {
+func (rt *reachabilityTree) addBlock(node *blocknode.BlockNode,
+	selectedParentAnticone []*blocknode.BlockNode, selectedTipBlueScore uint64) error {
+
 	// Allocate a new reachability tree node
 	newTreeNode := newReachabilityTreeNode(node)
 
@@ -854,7 +857,7 @@ func (rt *reachabilityTree) addBlock(node *blocknode.BlockNode, selectedParentAn
 	// whether the new node is going to be the virtual's selected
 	// parent. We don't check node == virtual.selectedParent because
 	// at this stage the virtual had not yet been updated.
-	if node.BlueScore() > rt.dag.SelectedTipBlueScore() {
+	if node.BlueScore() > selectedTipBlueScore {
 		updateStartTime := time.Now()
 		modifiedNodes := newModifiedTreeNodes()
 		err := rt.updateReindexRoot(newTreeNode, modifiedNodes)
@@ -877,17 +880,20 @@ func (rt *reachabilityTree) addBlock(node *blocknode.BlockNode, selectedParentAn
 }
 
 type reachabilityTree struct {
-	dag         *BlockDAG
+	blockNodeStore *blocknode.BlockNodeStore
+	params         *dagconfig.Params
+
 	store       *reachabilityStore
 	reindexRoot *reachabilityTreeNode
 }
 
-func newReachabilityTree(dag *BlockDAG) *reachabilityTree {
-	store := newReachabilityStore(dag)
+func newReachabilityTree(blockNodeStore *blocknode.BlockNodeStore, params *dagconfig.Params) *reachabilityTree {
+	store := newReachabilityStore(blockNodeStore)
 	return &reachabilityTree{
-		dag:         dag,
-		store:       store,
-		reindexRoot: nil,
+		blockNodeStore: blockNodeStore,
+		params:         params,
+		store:          store,
+		reindexRoot:    nil,
 	}
 }
 
@@ -904,11 +910,11 @@ func (rt *reachabilityTree) init(dbContext dbaccess.Context) error {
 		if !dbaccess.IsNotFoundError(err) {
 			return err
 		}
-		reindexRootHash = rt.dag.Params.GenesisHash
+		reindexRootHash = rt.params.GenesisHash
 	}
 
 	// Init the reindex root
-	reachabilityReindexRootNode, ok := rt.dag.blockNodeStore.LookupNode(reindexRootHash)
+	reachabilityReindexRootNode, ok := rt.blockNodeStore.LookupNode(reindexRootHash)
 	if !ok {
 		return errors.Errorf("reachability reindex root block %s "+
 			"does not exist in the DAG", reindexRootHash)

@@ -176,7 +176,7 @@ func New(config *Config) (*BlockDAG, error) {
 
 	params := config.DAGParams
 
-	index := blocknode.NewBlockNodeStore(params)
+	blockNodeStore := blocknode.NewBlockNodeStore(params)
 	dag := &BlockDAG{
 		Params:                         params,
 		databaseContext:                config.DatabaseContext,
@@ -186,7 +186,7 @@ func New(config *Config) (*BlockDAG, error) {
 		difficultyAdjustmentWindowSize: params.DifficultyAdjustmentWindowSize,
 		TimestampDeviationTolerance:    params.TimestampDeviationTolerance,
 		powMaxBits:                     util.BigToCompact(params.PowMax),
-		blockNodeStore:                 index,
+		blockNodeStore:                 blockNodeStore,
 		orphans:                        make(map[daghash.Hash]*orphanBlock),
 		prevOrphans:                    make(map[daghash.Hash][]*orphanBlock),
 		delayedBlocks:                  delayedblocks.New(),
@@ -202,7 +202,7 @@ func New(config *Config) (*BlockDAG, error) {
 	dag.virtual = newVirtualBlock(dag, nil)
 	dag.utxoDiffStore = newUTXODiffStore(dag)
 	dag.multisetStore = multiset.NewMultisetStore()
-	dag.reachabilityTree = newReachabilityTree(dag)
+	dag.reachabilityTree = newReachabilityTree(blockNodeStore, params)
 
 	// Initialize the DAG state from the passed database. When the db
 	// does not yet contain any DAG state, both it and the DAG state
@@ -221,7 +221,7 @@ func New(config *Config) (*BlockDAG, error) {
 		}
 	}
 
-	genesis, ok := index.LookupNode(params.GenesisHash)
+	genesis, ok := blockNodeStore.LookupNode(params.GenesisHash)
 
 	if !ok {
 		genesisBlock := util.NewBlock(dag.Params.GenesisBlock)
@@ -238,7 +238,7 @@ func New(config *Config) (*BlockDAG, error) {
 		if isOrphan {
 			return nil, errors.New("genesis block is unexpectedly orphan")
 		}
-		genesis, ok = index.LookupNode(params.GenesisHash)
+		genesis, ok = blockNodeStore.LookupNode(params.GenesisHash)
 		if !ok {
 			return nil, errors.New("genesis is not found in the DAG after it was proccessed")
 		}
@@ -1096,7 +1096,7 @@ func (dag *BlockDAG) applyDAGChanges(node *blocknode.BlockNode, newBlockPastUTXO
 	virtualUTXODiff *utxo.UTXODiff, chainUpdates *chainUpdates, err error) {
 
 	// Add the block to the reachability tree
-	err = dag.reachabilityTree.addBlock(node, selectedParentAnticone)
+	err = dag.reachabilityTree.addBlock(node, selectedParentAnticone, dag.SelectedTipBlueScore())
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed adding block to the reachability tree")
 	}
@@ -1727,9 +1727,14 @@ func (dag *BlockDAG) SelectedParentChain(blockHash *daghash.Hash) ([]*daghash.Ha
 	return removedChainHashes, addedChainHashes, nil
 }
 
-// SelectedTipBlueScore returns the blue score of the selected tip.
+// SelectedTipBlueScore returns the blue score of the selected tip. Returns zero
+// if we hadn't accepted the genesis block yet.
 func (dag *BlockDAG) SelectedTipBlueScore() uint64 {
-	return dag.selectedTip().BlueScore()
+	selectedTip := dag.selectedTip()
+	if selectedTip == nil {
+		return 0
+	}
+	return selectedTip.BlueScore()
 }
 
 // VirtualBlueScore returns the blue score of the current virtual block

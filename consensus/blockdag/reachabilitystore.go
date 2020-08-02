@@ -17,16 +17,16 @@ type reachabilityData struct {
 }
 
 type reachabilityStore struct {
-	dag    *BlockDAG
-	dirty  map[daghash.Hash]struct{}
-	loaded map[daghash.Hash]*reachabilityData
+	blockNodeStore *blocknode.BlockNodeStore
+	dirty          map[daghash.Hash]struct{}
+	loaded         map[daghash.Hash]*reachabilityData
 }
 
-func newReachabilityStore(dag *BlockDAG) *reachabilityStore {
+func newReachabilityStore(blockNodeStore *blocknode.BlockNodeStore) *reachabilityStore {
 	return &reachabilityStore{
-		dag:    dag,
-		dirty:  make(map[daghash.Hash]struct{}),
-		loaded: make(map[daghash.Hash]*reachabilityData),
+		blockNodeStore: blockNodeStore,
+		dirty:          make(map[daghash.Hash]struct{}),
+		loaded:         make(map[daghash.Hash]*reachabilityData),
 	}
 }
 
@@ -181,7 +181,7 @@ func (store *reachabilityStore) loadReachabilityDataFromCursor(cursor database.C
 	}
 
 	// Connect the treeNode with its BlockNode
-	reachabilityData.treeNode.blockNode, ok = store.dag.blockNodeStore.LookupNode(hash)
+	reachabilityData.treeNode.blockNode, ok = store.blockNodeStore.LookupNode(hash)
 	if !ok {
 		return errors.Errorf("block %s does not exist in the DAG", hash)
 	}
