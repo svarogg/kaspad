@@ -7,6 +7,7 @@ package blockdag
 import (
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/blocknode"
+	"github.com/kaspanet/kaspad/consensus/coinbase"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/merkle"
 	"github.com/kaspanet/kaspad/consensus/scriptvalidation"
@@ -30,10 +31,6 @@ import (
 const (
 	// MaxCoinbasePayloadLen is the maximum length a coinbase payload can be.
 	MaxCoinbasePayloadLen = 150
-
-	// baseSubsidy is the starting subsidy amount for mined blocks. This
-	// value is halved every SubsidyHalvingInterval blocks.
-	baseSubsidy = 50 * util.SompiPerKaspa
 
 	// the following are used when calculating a transaction's mass
 
@@ -109,25 +106,6 @@ func IsFinalizedTransaction(tx *util.Tx, blockBlueScore uint64, blockTime mstime
 		}
 	}
 	return true
-}
-
-// CalcBlockSubsidy returns the subsidy amount a block at the provided blue score
-// should have. This is mainly used for determining how much the coinbase for
-// newly generated blocks awards as well as validating the coinbase for blocks
-// has the expected value.
-//
-// The subsidy is halved every SubsidyReductionInterval blocks. Mathematically
-// this is: baseSubsidy / 2^(blueScore/SubsidyReductionInterval)
-//
-// At the target block generation rate for the main network, this is
-// approximately every 4 years.
-func CalcBlockSubsidy(blueScore uint64, dagParams *dagconfig.Params) uint64 {
-	if dagParams.SubsidyReductionInterval == 0 {
-		return baseSubsidy
-	}
-
-	// Equivalent to: baseSubsidy / 2^(blueScore/subsidyHalvingInterval)
-	return baseSubsidy >> uint(blueScore/dagParams.SubsidyReductionInterval)
 }
 
 // CheckTransactionSanity performs some preliminary checks on a transaction to
@@ -912,7 +890,7 @@ func validateCoinbaseMaturity(dagParams *dagconfig.Params, entry *utxo.UTXOEntry
 //
 // This function MUST be called with the dag state lock held (for writes).
 func (dag *BlockDAG) checkConnectToPastUTXO(block *blocknode.BlockNode, pastUTXO utxo.UTXOSet,
-	transactions []*util.Tx, fastAdd bool) (compactFeeData, error) {
+	transactions []*util.Tx, fastAdd bool) (coinbase.CompactFeeData, error) {
 
 	if !fastAdd {
 		err := ensureNoDuplicateTx(pastUTXO, transactions)
@@ -940,7 +918,7 @@ func (dag *BlockDAG) checkConnectToPastUTXO(block *blocknode.BlockNode, pastUTXO
 	// In addition - add all fees into a fee accumulator, to be stored and checked
 	// when validating descendants' coinbase transactions.
 	var totalFees uint64
-	compactFeeFactory := newCompactFeeFactory()
+	compactFeeFactory := coinbase.NewCompactFeeFactory()
 
 	for _, tx := range transactions {
 		txFee, err := CheckTransactionInputsAndCalulateFee(tx, block.BlueScore(), pastUTXO,
@@ -958,12 +936,12 @@ func (dag *BlockDAG) checkConnectToPastUTXO(block *blocknode.BlockNode, pastUTXO
 				"overflows accumulator")
 		}
 
-		err = compactFeeFactory.add(txFee)
+		err = compactFeeFactory.Add(txFee)
 		if err != nil {
 			return nil, errors.Errorf("error adding tx %s fee to compactFeeFactory: %s", tx.ID(), err)
 		}
 	}
-	feeData, err := compactFeeFactory.data()
+	feeData, err := compactFeeFactory.Data()
 	if err != nil {
 		return nil, errors.Errorf("error getting bytes of fee data: %s", err)
 	}

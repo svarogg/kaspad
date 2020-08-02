@@ -1,4 +1,4 @@
-package blockdag
+package coinbase
 
 import (
 	"io"
@@ -9,16 +9,16 @@ import (
 func TestFeeAccumulators(t *testing.T) {
 	fees := []uint64{1, 2, 3, 4, 5, 6, 7, 0xffffffffffffffff}
 
-	factory := newCompactFeeFactory()
+	factory := NewCompactFeeFactory()
 
 	for _, fee := range fees {
-		err := factory.add(fee)
+		err := factory.Add(fee)
 		if err != nil {
 			t.Fatalf("Error writing %d as tx fee: %s", fee, err)
 		}
 	}
 
-	expectedData := compactFeeData{
+	expectedData := CompactFeeData{
 		1, 0, 0, 0, 0, 0, 0, 0,
 		2, 0, 0, 0, 0, 0, 0, 0,
 		3, 0, 0, 0, 0, 0, 0, 0,
@@ -28,7 +28,7 @@ func TestFeeAccumulators(t *testing.T) {
 		7, 0, 0, 0, 0, 0, 0, 0,
 		255, 255, 255, 255, 255, 255, 255, 255,
 	}
-	actualData, err := factory.data()
+	actualData, err := factory.Data()
 
 	if err != nil {
 		t.Fatalf("Error getting bytes from writer: %s", err)

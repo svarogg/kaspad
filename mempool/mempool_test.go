@@ -7,6 +7,7 @@ package mempool
 import (
 	"bytes"
 	"fmt"
+	"github.com/kaspanet/kaspad/consensus/coinbase"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/utxo"
 	"math"
@@ -137,7 +138,7 @@ func (p *poolHarness) CreateCoinbaseTx(blueScore uint64, numOutputs uint32) (*ut
 	}}
 
 	txOuts := []*wire.TxOut{}
-	totalInput := blockdag.CalcBlockSubsidy(blueScore, p.dagParams)
+	totalInput := coinbase.CalcBlockSubsidy(blueScore, p.dagParams.SubsidyReductionInterval)
 	amountPerOutput := totalInput / uint64(numOutputs)
 	remainder := totalInput - amountPerOutput*uint64(numOutputs)
 	for i := uint32(0); i < numOutputs; i++ {

@@ -1,6 +1,7 @@
 package indexers
 
 import (
+	"github.com/kaspanet/kaspad/consensus/accpetancedata"
 	"github.com/kaspanet/kaspad/testdata"
 	"io"
 	"io/ioutil"
@@ -26,9 +27,9 @@ func TestAcceptanceIndexSerializationAndDeserialization(t *testing.T) {
 	txIn2 := &wire.TxIn{SignatureScript: []byte{2}, PreviousOutpoint: wire.Outpoint{Index: 2}, Sequence: 0}
 	txOut1 := &wire.TxOut{ScriptPubKey: []byte{1}, Value: 10}
 	txOut2 := &wire.TxOut{ScriptPubKey: []byte{2}, Value: 20}
-	blockTxsAcceptanceData := blockdag.BlockTxsAcceptanceData{
+	blockTxsAcceptanceData := accpetancedata.BlockTxsAcceptanceData{
 		BlockHash: *hash,
-		TxAcceptanceData: []blockdag.TxAcceptanceData{
+		TxAcceptanceData: []accpetancedata.TxAcceptanceData{
 			{
 				Tx:         util.NewTx(wire.NewNativeMsgTx(wire.TxVersion, []*wire.TxIn{txIn1}, []*wire.TxOut{txOut1})),
 				IsAccepted: true,
@@ -39,7 +40,7 @@ func TestAcceptanceIndexSerializationAndDeserialization(t *testing.T) {
 			},
 		},
 	}
-	multiBlockTxsAcceptanceData := blockdag.MultiBlockTxsAcceptanceData{blockTxsAcceptanceData}
+	multiBlockTxsAcceptanceData := accpetancedata.MultiBlockTxsAcceptanceData{blockTxsAcceptanceData}
 
 	// Serialize
 	serializedTxsAcceptanceData, err := serializeMultiBlockTxsAcceptanceData(multiBlockTxsAcceptanceData)

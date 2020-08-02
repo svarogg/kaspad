@@ -5,6 +5,7 @@
 package indexers
 
 import (
+	"github.com/kaspanet/kaspad/consensus/accpetancedata"
 	"github.com/kaspanet/kaspad/consensus/blockdag"
 	"github.com/kaspanet/kaspad/dbaccess"
 	"github.com/kaspanet/kaspad/util/daghash"
@@ -37,7 +38,7 @@ func (m *Manager) Init(dag *blockdag.BlockDAG, databaseContext *dbaccess.Databas
 // checks, and invokes each indexer.
 //
 // This is part of the blockdag.IndexManager interface.
-func (m *Manager) ConnectBlock(dbContext *dbaccess.TxContext, blockHash *daghash.Hash, txsAcceptanceData blockdag.MultiBlockTxsAcceptanceData) error {
+func (m *Manager) ConnectBlock(dbContext *dbaccess.TxContext, blockHash *daghash.Hash, txsAcceptanceData accpetancedata.MultiBlockTxsAcceptanceData) error {
 
 	// Call each of the currently active optional indexes with the block
 	// being connected so they can update accordingly.
