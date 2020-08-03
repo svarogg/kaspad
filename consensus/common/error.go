@@ -287,3 +287,19 @@ func (e RuleError) Error() string {
 func NewRuleError(c ErrorCode, desc string) error {
 	return errors.WithStack(RuleError{ErrorCode: c, Description: desc})
 }
+
+// ErrNotInDAG signifies that a block hash that is not in the
+// DAG was requested.
+type ErrNotInDAG string
+
+// Error implements the error interface.
+func (e ErrNotInDAG) Error() string {
+	return string(e)
+}
+
+// IsNotInDAGErr returns whether or not the passed error is an
+// ErrNotInDAG error.
+func IsNotInDAGErr(err error) bool {
+	var notInDAGErr ErrNotInDAG
+	return errors.As(err, &notInDAGErr)
+}

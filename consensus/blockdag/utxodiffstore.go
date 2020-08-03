@@ -207,7 +207,7 @@ func (diffStore *utxoDiffStore) clearOldEntries() {
 		minBlueScore = 0
 	}
 
-	tips := diffStore.dag.virtual.tips()
+	tips := diffStore.dag.virtual.Tips()
 
 	toRemove := make(map[*blocknode.BlockNode]struct{})
 	for node := range diffStore.loaded {

@@ -6,6 +6,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/consensus/timesource"
 	"github.com/kaspanet/kaspad/consensus/utxo"
+	"github.com/kaspanet/kaspad/consensus/virtualblock"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -147,7 +148,7 @@ func createTxForTest(numInputs uint32, numOutputs uint32, outputValue uint64, su
 }
 
 // VirtualForTest is an exported version for virtualBlock, so that it can be returned by exported test_util methods
-type VirtualForTest *virtualBlock
+type VirtualForTest *virtualblock.VirtualBlock
 
 // SetVirtualForTest replaces the dag's virtual block. This function is used for test purposes only
 func SetVirtualForTest(dag *BlockDAG, virtual VirtualForTest) VirtualForTest {
@@ -166,7 +167,7 @@ func GetVirtualFromParentsForTest(dag *BlockDAG, parentHashes []*daghash.Hash) (
 		}
 		parents.Add(parent)
 	}
-	virtual := newVirtualBlock(dag.ghostdag, parents)
+	virtual := virtualblock.NewVirtualBlock(dag.ghostdag, dag.Params, dag.blockNodeStore, parents)
 
 	pastUTXO, _, _, err := dag.pastUTXO(&virtual.BlockNode)
 	if err != nil {
@@ -177,7 +178,7 @@ func GetVirtualFromParentsForTest(dag *BlockDAG, parentHashes []*daghash.Hash) (
 	if err != nil {
 		return nil, err
 	}
-	virtual.utxoSet = diffUTXO.Base()
+	virtual.SetUTXOSet(diffUTXO.Base())
 
 	return virtual, nil
 }

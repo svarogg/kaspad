@@ -10,6 +10,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/ghostdag"
 	"github.com/kaspanet/kaspad/consensus/reachability"
 	"github.com/kaspanet/kaspad/consensus/timesource"
+	"github.com/kaspanet/kaspad/consensus/virtualblock"
 	"testing"
 
 	"github.com/kaspanet/kaspad/util/mstime"
@@ -52,7 +53,7 @@ func newTestDAG(params *dagconfig.Params) *BlockDAG {
 	dag.genesis, _ = dag.initBlockNode(&params.GenesisBlock.Header, blocknode.NewBlockNodeSet())
 	blockNodeStore.AddNode(dag.genesis)
 
-	dag.virtual = newVirtualBlock(dag.ghostdag, blocknode.BlockNodeSetFromSlice(dag.genesis))
+	dag.virtual = virtualblock.NewVirtualBlock(dag.ghostdag, dag.Params, dag.blockNodeStore, blocknode.BlockNodeSetFromSlice(dag.genesis))
 	return dag
 }
 

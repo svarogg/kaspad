@@ -5,6 +5,7 @@
 package common
 
 import (
+	"github.com/pkg/errors"
 	"testing"
 )
 
@@ -96,5 +97,27 @@ func TestRuleError(t *testing.T) {
 				test.want)
 			continue
 		}
+	}
+}
+
+// TestErrNotInDAG ensures the functions related to ErrNotInDAG work
+// as expected.
+func TestErrNotInDAG(t *testing.T) {
+	errStr := "no block at height 1 exists"
+	err := error(ErrNotInDAG(errStr))
+
+	// Ensure the stringized output for the error is as expected.
+	if err.Error() != errStr {
+		t.Fatalf("ErrNotInDAG retuned unexpected error string - "+
+			"got %q, want %q", err.Error(), errStr)
+	}
+
+	// Ensure error is detected as the correct type.
+	if !IsNotInDAGErr(err) {
+		t.Fatalf("IsNotInDAGErr did not detect as expected type")
+	}
+	err = errors.New("something else")
+	if IsNotInDAGErr(err) {
+		t.Fatalf("IsNotInDAGErr detected incorrect type")
 	}
 }

@@ -2,22 +2,28 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package blockdag
+package virtualblock
 
 import (
+	"fmt"
 	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/ghostdag"
 	"github.com/kaspanet/kaspad/consensus/utxo"
+	"github.com/kaspanet/kaspad/dagconfig"
+	"github.com/kaspanet/kaspad/util"
 	"github.com/kaspanet/kaspad/util/daghash"
+	"github.com/pkg/errors"
 	"sync"
 )
 
-// virtualBlock is a virtual block whose parents are the tips of the DAG.
-type virtualBlock struct {
-	mtx      sync.Mutex
-	ghostdag *ghostdag.GHOSTDAG
-	utxoSet  *utxo.FullUTXOSet
+// VirtualBlock is a virtual block whose parents are the tips of the DAG.
+type VirtualBlock struct {
+	mtx            sync.Mutex
+	ghostdag       *ghostdag.GHOSTDAG
+	params         *dagconfig.Params
+	blockNodeStore *blocknode.BlockNodeStore
+	utxoSet        *utxo.FullUTXOSet
 	blocknode.BlockNode
 
 	// selectedParentChainSet is a block set that includes all the blocks
@@ -30,11 +36,15 @@ type virtualBlock struct {
 	selectedParentChainSlice []*blocknode.BlockNode
 }
 
-// newVirtualBlock creates and returns a new VirtualBlock.
-func newVirtualBlock(ghostdag *ghostdag.GHOSTDAG, tips blocknode.BlockNodeSet) *virtualBlock {
+// NewVirtualBlock creates and returns a new VirtualBlock.
+func NewVirtualBlock(ghostdag *ghostdag.GHOSTDAG, params *dagconfig.Params,
+	blockNodeStore *blocknode.BlockNodeStore, tips blocknode.BlockNodeSet) *VirtualBlock {
+
 	// The mutex is intentionally not held since this is a constructor.
-	var virtual virtualBlock
+	var virtual VirtualBlock
 	virtual.ghostdag = ghostdag
+	virtual.params = params
+	virtual.blockNodeStore = blockNodeStore
 	virtual.utxoSet = utxo.NewFullUTXOSet()
 	virtual.selectedParentChainSet = blocknode.NewBlockNodeSet()
 	virtual.selectedParentChainSlice = nil
@@ -43,12 +53,16 @@ func newVirtualBlock(ghostdag *ghostdag.GHOSTDAG, tips blocknode.BlockNodeSet) *
 	return &virtual
 }
 
+func (v *VirtualBlock) SetUTXOSet(utxoSet *utxo.FullUTXOSet) {
+	v.utxoSet = utxoSet
+}
+
 // setTips replaces the tips of the virtual block with the blocks in the
 // given BlockNodeSet. This only differs from the exported version in that it
 // is up to the caller to ensure the lock is held.
 //
 // This function MUST be called with the view mutex locked (for writes).
-func (v *virtualBlock) setTips(tips blocknode.BlockNodeSet) *common.ChainUpdates {
+func (v *VirtualBlock) setTips(tips blocknode.BlockNodeSet) *common.ChainUpdates {
 	oldSelectedParent := v.SelectedParent()
 	node, _ := v.ghostdag.InitBlockNode(nil, tips)
 	v.BlockNode = *node
@@ -63,7 +77,7 @@ func (v *virtualBlock) setTips(tips blocknode.BlockNodeSet) *common.ChainUpdates
 // parent and are not selected ancestors of the new one, and adding
 // blocks that are selected ancestors of the new selected parent
 // and aren't selected ancestors of the old one.
-func (v *virtualBlock) updateSelectedParentSet(oldSelectedParent *blocknode.BlockNode) *common.ChainUpdates {
+func (v *VirtualBlock) updateSelectedParentSet(oldSelectedParent *blocknode.BlockNode) *common.ChainUpdates {
 	var intersectionNode *blocknode.BlockNode
 	nodesToAdd := make([]*blocknode.BlockNode, 0)
 	for node := v.BlockNode.SelectedParent(); intersectionNode == nil && node != nil; node = node.SelectedParent() {
@@ -115,7 +129,7 @@ func (v *virtualBlock) updateSelectedParentSet(oldSelectedParent *blocknode.Bloc
 // given BlockNodeSet.
 //
 // This function is safe for concurrent access.
-func (v *virtualBlock) SetTips(tips blocknode.BlockNodeSet) {
+func (v *VirtualBlock) SetTips(tips blocknode.BlockNodeSet) {
 	v.mtx.Lock()
 	defer v.mtx.Unlock()
 	v.setTips(tips)
@@ -127,8 +141,8 @@ func (v *virtualBlock) SetTips(tips blocknode.BlockNodeSet) {
 // is up to the caller to ensure the lock is held.
 //
 // This function MUST be called with the view mutex locked (for writes).
-func (v *virtualBlock) addTip(newTip *blocknode.BlockNode) *common.ChainUpdates {
-	updatedTips := v.tips().Clone()
+func (v *VirtualBlock) addTip(newTip *blocknode.BlockNode) *common.ChainUpdates {
+	updatedTips := v.Tips().Clone()
 	for parent := range newTip.Parents() {
 		updatedTips.Remove(parent)
 	}
@@ -142,16 +156,99 @@ func (v *virtualBlock) addTip(newTip *blocknode.BlockNode) *common.ChainUpdates 
 // from the set.
 //
 // This function is safe for concurrent access.
-func (v *virtualBlock) AddTip(newTip *blocknode.BlockNode) *common.ChainUpdates {
+func (v *VirtualBlock) AddTip(newTip *blocknode.BlockNode) *common.ChainUpdates {
 	v.mtx.Lock()
 	defer v.mtx.Unlock()
 	return v.addTip(newTip)
 }
 
-// tips returns the current tip block nodes for the DAG. It will return
+// Tips returns the current tip block nodes for the DAG. It will return
 // an empty BlockNodeSet if there is no tip.
 //
 // This function is safe for concurrent access.
-func (v *virtualBlock) tips() blocknode.BlockNodeSet {
+func (v *VirtualBlock) Tips() blocknode.BlockNodeSet {
 	return v.Parents()
+}
+
+func (v *VirtualBlock) UTXOSet() *utxo.FullUTXOSet {
+	return v.utxoSet
+}
+
+// OldestChainBlockWithBlueScoreGreaterThan finds the oldest chain block with a blue score
+// greater than blueScore. If no such block exists, this method returns nil
+func (v *VirtualBlock) OldestChainBlockWithBlueScoreGreaterThan(blueScore uint64) *blocknode.BlockNode {
+	chainBlockIndex, ok := util.SearchSlice(len(v.selectedParentChainSlice), func(i int) bool {
+		selectedPathNode := v.selectedParentChainSlice[i]
+		return selectedPathNode.BlueScore() > blueScore
+	})
+	if !ok {
+		return nil
+	}
+	return v.selectedParentChainSlice[chainBlockIndex]
+}
+
+// IsInSelectedParentChain returns whether or not a block hash is found in the selected
+// parent chain. Note that this method returns an error if the given blockHash does not
+// exist within the block node store.
+func (v *VirtualBlock) IsInSelectedParentChain(blockHash *daghash.Hash) (bool, error) {
+	blockNode, ok := v.blockNodeStore.LookupNode(blockHash)
+	if !ok {
+		str := fmt.Sprintf("block %s is not in the DAG", blockHash)
+		return false, common.ErrNotInDAG(str)
+	}
+	return v.selectedParentChainSet.Contains(blockNode), nil
+}
+
+// SelectedParentChain returns the selected parent chain starting from blockHash (exclusive)
+// up to the virtual (exclusive). If blockHash is nil then the genesis block is used. If
+// blockHash is not within the select parent chain, go down its own selected parent chain,
+// while collecting each block hash in removedChainHashes, until reaching a block within
+// the main selected parent chain.
+func (v *VirtualBlock) SelectedParentChain(blockHash *daghash.Hash) ([]*daghash.Hash, []*daghash.Hash, error) {
+	if blockHash == nil {
+		blockHash = v.params.GenesisHash
+	}
+	if !v.blockNodeStore.HaveNode(blockHash) {
+		return nil, nil, errors.Errorf("blockHash %s does not exist in the DAG", blockHash)
+	}
+
+	// If blockHash is not in the selected parent chain, go down its selected parent chain
+	// until we find a block that is in the main selected parent chain.
+	var removedChainHashes []*daghash.Hash
+	isBlockInSelectedParentChain, err := v.IsInSelectedParentChain(blockHash)
+	if err != nil {
+		return nil, nil, err
+	}
+	for !isBlockInSelectedParentChain {
+		removedChainHashes = append(removedChainHashes, blockHash)
+
+		node, ok := v.blockNodeStore.LookupNode(blockHash)
+		if !ok {
+			return nil, nil, errors.Errorf("block %s does not exist in the DAG", blockHash)
+		}
+		blockHash = node.SelectedParent().Hash()
+
+		isBlockInSelectedParentChain, err = v.IsInSelectedParentChain(blockHash)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	// Find the index of the blockHash in the selectedParentChainSlice
+	blockHashIndex := len(v.selectedParentChainSlice) - 1
+	for blockHashIndex >= 0 {
+		node := v.selectedParentChainSlice[blockHashIndex]
+		if node.Hash().IsEqual(blockHash) {
+			break
+		}
+		blockHashIndex--
+	}
+
+	// Copy all the addedChainHashes starting from blockHashIndex (exclusive)
+	addedChainHashes := make([]*daghash.Hash, len(v.selectedParentChainSlice)-blockHashIndex-1)
+	for i, node := range v.selectedParentChainSlice[blockHashIndex+1:] {
+		addedChainHashes[i] = node.Hash()
+	}
+
+	return removedChainHashes, addedChainHashes, nil
 }

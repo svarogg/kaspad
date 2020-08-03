@@ -18,6 +18,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/subnetworks"
 	"github.com/kaspanet/kaspad/consensus/timesource"
 	"github.com/kaspanet/kaspad/consensus/utxo"
+	"github.com/kaspanet/kaspad/consensus/virtualblock"
 	"math"
 	"sort"
 	"sync"
@@ -103,7 +104,7 @@ type BlockDAG struct {
 	blockCount uint64
 
 	// virtual tracks the current tips.
-	virtual *virtualBlock
+	virtual *virtualblock.VirtualBlock
 
 	// subnetworkID holds the subnetwork ID of the DAG
 	subnetworkID *subnetworkid.SubnetworkID
@@ -198,7 +199,7 @@ func New(config *Config) (*BlockDAG, error) {
 	dag.multisetStore = multiset.NewMultisetStore()
 	dag.reachabilityTree = reachability.NewReachabilityTree(blockNodeStore, params)
 	dag.ghostdag = ghostdag.NewGHOSTDAG(dag.reachabilityTree, params, dag.timeSource)
-	dag.virtual = newVirtualBlock(dag.ghostdag, nil)
+	dag.virtual = virtualblock.NewVirtualBlock(dag.ghostdag, params, dag.blockNodeStore, nil)
 
 	// Initialize the DAG state from the passed database. When the db
 	// does not yet contain any DAG state, both it and the DAG state
@@ -1196,18 +1197,18 @@ func (dag *BlockDAG) verifyAndBuildUTXO(node *blocknode.BlockNode, transactions 
 	return pastUTXO, txsAcceptanceData, feeData, multiset, nil
 }
 
-func genesisPastUTXO(virtual *virtualBlock) (utxo.UTXOSet, error) {
+func genesisPastUTXO(virtual *virtualblock.VirtualBlock) (utxo.UTXOSet, error) {
 	// The genesis has no past UTXO, so we create an empty UTXO
 	// set by creating a diff UTXO set with the virtual UTXO
 	// set, and adding all of its entries in toRemove
 	diff := utxo.NewUTXODiff()
-	for outpoint, entry := range virtual.utxoSet.UTXOCollection {
+	for outpoint, entry := range virtual.UTXOSet().UTXOCollection {
 		err := diff.RemoveEntry(outpoint, entry)
 		if err != nil {
 			return nil, err
 		}
 	}
-	genesisPastUTXO := utxo.UTXOSet(utxo.NewDiffUTXOSet(virtual.utxoSet, diff))
+	genesisPastUTXO := utxo.UTXOSet(utxo.NewDiffUTXOSet(virtual.UTXOSet(), diff))
 	return genesisPastUTXO, nil
 }
 
@@ -1275,7 +1276,7 @@ func (dag *BlockDAG) updateParents(node *blocknode.BlockNode, newBlockUTXO utxo.
 
 // updateParentsDiffs updates the diff of any parent whose DiffChild is this block
 func (dag *BlockDAG) updateParentsDiffs(node *blocknode.BlockNode, newBlockUTXO utxo.UTXOSet) error {
-	virtualDiffFromNewBlock, err := dag.virtual.utxoSet.DiffFrom(newBlockUTXO)
+	virtualDiffFromNewBlock, err := dag.virtual.UTXOSet().DiffFrom(newBlockUTXO)
 	if err != nil {
 		return err
 	}
@@ -1381,7 +1382,7 @@ func (dag *BlockDAG) restorePastUTXO(node *blocknode.BlockNode) (utxo.UTXOSet, e
 		}
 	}
 
-	return utxo.NewDiffUTXOSet(dag.virtual.utxoSet, accumulatedDiff), nil
+	return utxo.NewDiffUTXOSet(dag.virtual.UTXOSet(), accumulatedDiff), nil
 }
 
 // updateTipsUTXO builds and applies new diff UTXOs for all the DAG's tips
@@ -1482,12 +1483,12 @@ func (dag *BlockDAG) SelectedTipHash() *daghash.Hash {
 
 // UTXOSet returns the DAG's UTXO set
 func (dag *BlockDAG) UTXOSet() *utxo.FullUTXOSet {
-	return dag.virtual.utxoSet
+	return dag.virtual.UTXOSet()
 }
 
 // CalcPastMedianTime returns the past median time of the DAG.
 func (dag *BlockDAG) CalcPastMedianTime() mstime.Time {
-	return dag.PastMedianTime(dag.virtual.tips().Bluest())
+	return dag.PastMedianTime(dag.virtual.Tips().Bluest())
 }
 
 // GetUTXOEntry returns the requested unspent transaction output. The returned
@@ -1496,7 +1497,7 @@ func (dag *BlockDAG) CalcPastMedianTime() mstime.Time {
 // This function is safe for concurrent access. However, the returned entry (if
 // any) is NOT.
 func (dag *BlockDAG) GetUTXOEntry(outpoint wire.Outpoint) (*utxo.UTXOEntry, bool) {
-	return dag.virtual.utxoSet.Get(outpoint)
+	return dag.virtual.UTXOSet().Get(outpoint)
 }
 
 // BlueScoreByBlockHash returns the blue score of a block with the given hash.
@@ -1596,7 +1597,7 @@ func (dag *BlockDAG) acceptingBlock(node *blocknode.BlockNode) (*blocknode.Block
 	}
 
 	// If the node is a chain-block itself, the accepting block is its chain-child
-	isNodeInSelectedParentChain, err := dag.IsInSelectedParentChain(node.Hash())
+	isNodeInSelectedParentChain, err := dag.virtual.IsInSelectedParentChain(node.Hash())
 	if err != nil {
 		return nil, err
 	}
@@ -1606,7 +1607,7 @@ func (dag *BlockDAG) acceptingBlock(node *blocknode.BlockNode) (*blocknode.Block
 			return nil, nil
 		}
 		for child := range node.Children() {
-			isChildInSelectedParentChain, err := dag.IsInSelectedParentChain(child.Hash())
+			isChildInSelectedParentChain, err := dag.virtual.IsInSelectedParentChain(child.Hash())
 			if err != nil {
 				return nil, err
 			}
@@ -1618,7 +1619,7 @@ func (dag *BlockDAG) acceptingBlock(node *blocknode.BlockNode) (*blocknode.Block
 	}
 
 	// Find the only chain block that may contain the node in its blues
-	candidateAcceptingBlock := dag.oldestChainBlockWithBlueScoreGreaterThan(node.BlueScore())
+	candidateAcceptingBlock := dag.virtual.OldestChainBlockWithBlueScoreGreaterThan(node.BlueScore())
 
 	// if no candidate is found, it means that the node has same or more
 	// blue score than the selected tip and is found in its anticone, so
@@ -1638,89 +1639,6 @@ func (dag *BlockDAG) acceptingBlock(node *blocknode.BlockNode) (*blocknode.Block
 	// Otherwise, the node is red or in the selected tip anticone, and
 	// doesn't have an accepting block
 	return nil, nil
-}
-
-// oldestChainBlockWithBlueScoreGreaterThan finds the oldest chain block with a blue score
-// greater than blueScore. If no such block exists, this method returns nil
-func (dag *BlockDAG) oldestChainBlockWithBlueScoreGreaterThan(blueScore uint64) *blocknode.BlockNode {
-	chainBlockIndex, ok := util.SearchSlice(len(dag.virtual.selectedParentChainSlice), func(i int) bool {
-		selectedPathNode := dag.virtual.selectedParentChainSlice[i]
-		return selectedPathNode.BlueScore() > blueScore
-	})
-	if !ok {
-		return nil
-	}
-	return dag.virtual.selectedParentChainSlice[chainBlockIndex]
-}
-
-// IsInSelectedParentChain returns whether or not a block hash is found in the selected
-// parent chain. Note that this method returns an error if the given blockHash does not
-// exist within the block index.
-//
-// This method MUST be called with the DAG lock held
-func (dag *BlockDAG) IsInSelectedParentChain(blockHash *daghash.Hash) (bool, error) {
-	blockNode, ok := dag.blockNodeStore.LookupNode(blockHash)
-	if !ok {
-		str := fmt.Sprintf("block %s is not in the DAG", blockHash)
-		return false, ErrNotInDAG(str)
-	}
-	return dag.virtual.selectedParentChainSet.Contains(blockNode), nil
-}
-
-// SelectedParentChain returns the selected parent chain starting from blockHash (exclusive)
-// up to the virtual (exclusive). If blockHash is nil then the genesis block is used. If
-// blockHash is not within the select parent chain, go down its own selected parent chain,
-// while collecting each block hash in removedChainHashes, until reaching a block within
-// the main selected parent chain.
-//
-// This method MUST be called with the DAG lock held
-func (dag *BlockDAG) SelectedParentChain(blockHash *daghash.Hash) ([]*daghash.Hash, []*daghash.Hash, error) {
-	if blockHash == nil {
-		blockHash = dag.genesis.Hash()
-	}
-	if !dag.IsInDAG(blockHash) {
-		return nil, nil, errors.Errorf("blockHash %s does not exist in the DAG", blockHash)
-	}
-
-	// If blockHash is not in the selected parent chain, go down its selected parent chain
-	// until we find a block that is in the main selected parent chain.
-	var removedChainHashes []*daghash.Hash
-	isBlockInSelectedParentChain, err := dag.IsInSelectedParentChain(blockHash)
-	if err != nil {
-		return nil, nil, err
-	}
-	for !isBlockInSelectedParentChain {
-		removedChainHashes = append(removedChainHashes, blockHash)
-
-		node, ok := dag.blockNodeStore.LookupNode(blockHash)
-		if !ok {
-			return nil, nil, errors.Errorf("block %s does not exist in the DAG", blockHash)
-		}
-		blockHash = node.SelectedParent().Hash()
-
-		isBlockInSelectedParentChain, err = dag.IsInSelectedParentChain(blockHash)
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-
-	// Find the index of the blockHash in the selectedParentChainSlice
-	blockHashIndex := len(dag.virtual.selectedParentChainSlice) - 1
-	for blockHashIndex >= 0 {
-		node := dag.virtual.selectedParentChainSlice[blockHashIndex]
-		if node.Hash().IsEqual(blockHash) {
-			break
-		}
-		blockHashIndex--
-	}
-
-	// Copy all the addedChainHashes starting from blockHashIndex (exclusive)
-	addedChainHashes := make([]*daghash.Hash, len(dag.virtual.selectedParentChainSlice)-blockHashIndex-1)
-	for i, node := range dag.virtual.selectedParentChainSlice[blockHashIndex+1:] {
-		addedChainHashes[i] = node.Hash()
-	}
-
-	return removedChainHashes, addedChainHashes, nil
 }
 
 // SelectedTipBlueScore returns the blue score of the selected tip. Returns zero
@@ -1745,12 +1663,12 @@ func (dag *BlockDAG) BlockCount() uint64 {
 
 // TipHashes returns the hashes of the DAG's tips
 func (dag *BlockDAG) TipHashes() []*daghash.Hash {
-	return dag.virtual.tips().Hashes()
+	return dag.virtual.Tips().Hashes()
 }
 
 // CurrentBits returns the bits of the tip with the lowest bits, which also means it has highest difficulty.
 func (dag *BlockDAG) CurrentBits() uint32 {
-	tips := dag.virtual.tips()
+	tips := dag.virtual.Tips()
 	minBits := uint32(math.MaxUint32)
 	for tip := range tips {
 		if minBits > tip.Header().Bits {
@@ -1780,7 +1698,7 @@ func (dag *BlockDAG) ChildHashesByHash(hash *daghash.Hash) ([]*daghash.Hash, err
 	node, ok := dag.blockNodeStore.LookupNode(hash)
 	if !ok {
 		str := fmt.Sprintf("block %s is not in the DAG", hash)
-		return nil, ErrNotInDAG(str)
+		return nil, common.ErrNotInDAG(str)
 
 	}
 
@@ -1795,7 +1713,7 @@ func (dag *BlockDAG) SelectedParentHash(blockHash *daghash.Hash) (*daghash.Hash,
 	node, ok := dag.blockNodeStore.LookupNode(blockHash)
 	if !ok {
 		str := fmt.Sprintf("block %s is not in the DAG", blockHash)
-		return nil, ErrNotInDAG(str)
+		return nil, common.ErrNotInDAG(str)
 
 	}
 
@@ -2127,4 +2045,20 @@ func (dag *BlockDAG) PastMedianTime(node *blocknode.BlockNode) mstime.Time {
 // exist this method returns an error.
 func (dag *BlockDAG) GasLimit(subnetworkID *subnetworkid.SubnetworkID) (uint64, error) {
 	return subnetworks.GasLimit(dag.databaseContext, subnetworkID)
+}
+
+// IsInSelectedParentChain returns whether or not a block hash is found in the selected
+// parent chain. Note that this method returns an error if the given blockHash does not
+// exist within the block node store.
+func (dag *BlockDAG) IsInSelectedParentChain(blockHash *daghash.Hash) (bool, error) {
+	return dag.virtual.IsInSelectedParentChain(blockHash)
+}
+
+// SelectedParentChain returns the selected parent chain starting from blockHash (exclusive)
+// up to the virtual (exclusive). If blockHash is nil then the genesis block is used. If
+// blockHash is not within the select parent chain, go down its own selected parent chain,
+// while collecting each block hash in removedChainHashes, until reaching a block within
+// the main selected parent chain.
+func (dag *BlockDAG) SelectedParentChain(blockHash *daghash.Hash) ([]*daghash.Hash, []*daghash.Hash, error) {
+	return dag.virtual.SelectedParentChain(blockHash)
 }

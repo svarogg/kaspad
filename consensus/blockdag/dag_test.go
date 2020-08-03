@@ -744,7 +744,7 @@ func TestConfirmations(t *testing.T) {
 	}
 
 	// Check that each of the tips has a 0 confirmations
-	tips := dag.virtual.tips()
+	tips := dag.virtual.Tips()
 	for tip := range tips {
 		tipConfirmations, err := dag.blockConfirmations(tip)
 		if err != nil {
@@ -850,7 +850,7 @@ func TestAcceptingBlock(t *testing.T) {
 	branchingChainTip := prepareAndProcessBlockByParentMsgBlocks(t, dag, chainBlocks[len(chainBlocks)-3])
 
 	// Make sure that branchingChainTip is not in the selected parent chain
-	isBranchingChainTipInSelectedParentChain, err := dag.IsInSelectedParentChain(branchingChainTip.BlockHash())
+	isBranchingChainTipInSelectedParentChain, err := dag.virtual.IsInSelectedParentChain(branchingChainTip.BlockHash())
 	if err != nil {
 		t.Fatalf("TestAcceptingBlock: IsInSelectedParentChain unexpectedly failed: %s", err)
 	}

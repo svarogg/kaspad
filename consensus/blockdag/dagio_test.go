@@ -6,34 +6,11 @@ package blockdag
 
 import (
 	"bytes"
-	"github.com/pkg/errors"
 	"reflect"
 	"testing"
 
 	"github.com/kaspanet/kaspad/util/daghash"
 )
-
-// TestErrNotInDAG ensures the functions related to ErrNotInDAG work
-// as expected.
-func TestErrNotInDAG(t *testing.T) {
-	errStr := "no block at height 1 exists"
-	err := error(ErrNotInDAG(errStr))
-
-	// Ensure the stringized output for the error is as expected.
-	if err.Error() != errStr {
-		t.Fatalf("ErrNotInDAG retuned unexpected error string - "+
-			"got %q, want %q", err.Error(), errStr)
-	}
-
-	// Ensure error is detected as the correct type.
-	if !IsNotInDAGErr(err) {
-		t.Fatalf("IsNotInDAGErr did not detect as expected type")
-	}
-	err = errors.New("something else")
-	if IsNotInDAGErr(err) {
-		t.Fatalf("IsNotInDAGErr detected incorrect type")
-	}
-}
 
 // TestDAGStateSerialization ensures serializing and deserializing the
 // DAG state works as expected.

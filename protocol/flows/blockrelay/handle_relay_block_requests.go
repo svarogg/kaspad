@@ -2,6 +2,7 @@ package blockrelay
 
 import (
 	"github.com/kaspanet/kaspad/consensus/blockdag"
+	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/netadapter/router"
 	peerpkg "github.com/kaspanet/kaspad/protocol/peer"
 	"github.com/kaspanet/kaspad/protocol/protocolerrors"
@@ -28,7 +29,7 @@ func HandleRelayBlockRequests(context RelayBlockRequestsContext, incomingRoute *
 		for _, hash := range getRelayBlocksMessage.Hashes {
 			// Fetch the block from the database.
 			block, err := context.DAG().BlockByHash(hash)
-			if blockdag.IsNotInDAGErr(err) {
+			if common.IsNotInDAGErr(err) {
 				return protocolerrors.Errorf(true, "block %s not found", hash)
 			} else if err != nil {
 				return errors.Wrapf(err, "unable to fetch requested block hash %s", hash)

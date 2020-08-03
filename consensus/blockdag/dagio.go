@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/blocknode"
+	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/utxo"
 	"github.com/kaspanet/kaspad/dbaccess"
 	"github.com/pkg/errors"
@@ -23,22 +24,6 @@ var (
 	// fields for storage in the database.
 	byteOrder = binary.LittleEndian
 )
-
-// ErrNotInDAG signifies that a block hash that is not in the
-// DAG was requested.
-type ErrNotInDAG string
-
-// Error implements the error interface.
-func (e ErrNotInDAG) Error() string {
-	return string(e)
-}
-
-// IsNotInDAGErr returns whether or not the passed error is an
-// ErrNotInDAG error.
-func IsNotInDAGErr(err error) bool {
-	var notInDAGErr ErrNotInDAG
-	return errors.As(err, &notInDAGErr)
-}
 
 type dagState struct {
 	TipHashes         []*daghash.Hash
@@ -131,10 +116,11 @@ func (dag *BlockDAG) initDAGState() error {
 	}
 
 	log.Debugf("Loading UTXO set...")
-	dag.virtual.utxoSet, err = utxo.InitUTXOSet(dag.databaseContext)
+	utxoSet, err := utxo.InitUTXOSet(dag.databaseContext)
 	if err != nil {
 		return errors.Wrap(err, "Error loading UTXOSet")
 	}
+	dag.virtual.SetUTXOSet(utxoSet)
 
 	log.Debugf("Applying the stored tips to the virtual block...")
 	err = dag.initVirtualBlockTips(dagState)
@@ -258,7 +244,7 @@ func (dag *BlockDAG) BlockByHash(hash *daghash.Hash) (*util.Block, error) {
 	node, ok := dag.blockNodeStore.LookupNode(hash)
 	if !ok {
 		str := fmt.Sprintf("block %s is not in the DAG", hash)
-		return nil, ErrNotInDAG(str)
+		return nil, common.ErrNotInDAG(str)
 	}
 
 	block, err := dag.fetchBlockByHash(node.Hash())
