@@ -6,7 +6,6 @@ package blockdag
 
 import (
 	"github.com/kaspanet/kaspad/consensus/blocknode"
-	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/difficulty"
 	"github.com/kaspanet/kaspad/consensus/ghostdag"
 	"github.com/kaspanet/kaspad/consensus/pastmediantime"
@@ -16,8 +15,6 @@ import (
 	"testing"
 
 	"github.com/kaspanet/kaspad/util/mstime"
-
-	"github.com/pkg/errors"
 
 	"github.com/kaspanet/kaspad/dagconfig"
 	"github.com/kaspanet/kaspad/util/daghash"
@@ -77,35 +74,6 @@ func addNodeAsChildToParents(node *blocknode.BlockNode) {
 	for parent := range node.Parents() {
 		parent.Children().Add(node)
 	}
-}
-
-// checkRuleError ensures the type of the two passed errors are of the
-// same type (either both nil or both of type RuleError) and their error codes
-// match when not nil.
-func checkRuleError(gotErr, wantErr error) error {
-	if wantErr == nil && gotErr == nil {
-		return nil
-	}
-
-	var gotRuleErr common.RuleError
-	if ok := errors.As(gotErr, &gotRuleErr); !ok {
-		return errors.Errorf("gotErr expected to be RuleError, but got %+v instead", gotErr)
-	}
-
-	var wantRuleErr common.RuleError
-	if ok := errors.As(wantErr, &wantRuleErr); !ok {
-		return errors.Errorf("wantErr expected to be RuleError, but got %+v instead", wantErr)
-	}
-
-	// Ensure the error codes match. It's safe to use a raw type assert
-	// here since the code above already proved they are the same type and
-	// the want error is a script error.
-	if gotRuleErr.ErrorCode != wantRuleErr.ErrorCode {
-		return errors.Errorf("mismatched error code - got %v (%v), want %v",
-			gotRuleErr.ErrorCode, gotErr, wantRuleErr.ErrorCode)
-	}
-
-	return nil
 }
 
 func prepareAndProcessBlockByParentMsgBlocks(t *testing.T, dag *BlockDAG, parents ...*wire.MsgBlock) *wire.MsgBlock {

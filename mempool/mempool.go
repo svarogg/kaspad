@@ -10,6 +10,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/scriptvalidation"
 	"github.com/kaspanet/kaspad/consensus/utxo"
+	"github.com/kaspanet/kaspad/consensus/validation/transaction"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -835,7 +836,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *util.Tx, rejectDupOrphans bool) ([]
 	// Perform preliminary sanity checks on the transaction. This makes
 	// use of blockDAG which contains the invariant rules for what
 	// transactions are allowed into blocks.
-	err = blockdag.CheckTransactionSanity(tx, subnetworkID)
+	err = transaction.CheckTransactionSanity(tx, subnetworkID)
 	if err != nil {
 		var ruleErr common.RuleError
 		if ok := errors.As(err, &ruleErr); ok {

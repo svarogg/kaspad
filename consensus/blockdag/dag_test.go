@@ -1148,9 +1148,9 @@ func TestIsDAGCurrentMaxDiff(t *testing.T) {
 func testProcessBlockRuleError(t *testing.T, dag *BlockDAG, block *wire.MsgBlock, expectedRuleErr error) {
 	isOrphan, isDelayed, err := dag.ProcessBlock(util.NewBlock(block), BFNoPoWCheck)
 
-	err = checkRuleError(err, expectedRuleErr)
+	err = common.CheckRuleError(err, expectedRuleErr)
 	if err != nil {
-		t.Errorf("checkRuleError: %s", err)
+		t.Errorf("CheckRuleError: %s", err)
 	}
 
 	if isDelayed {

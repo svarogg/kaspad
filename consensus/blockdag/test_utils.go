@@ -115,38 +115,6 @@ func DAGSetup(dbName string, openDb bool, config Config) (*BlockDAG, func(), err
 // OpTrueScript is script returning TRUE
 var OpTrueScript = []byte{txscript.OpTrue}
 
-type txSubnetworkData struct {
-	subnetworkID *subnetworkid.SubnetworkID
-	Gas          uint64
-	Payload      []byte
-}
-
-func createTxForTest(numInputs uint32, numOutputs uint32, outputValue uint64, subnetworkData *txSubnetworkData) *wire.MsgTx {
-	txIns := []*wire.TxIn{}
-	txOuts := []*wire.TxOut{}
-
-	for i := uint32(0); i < numInputs; i++ {
-		txIns = append(txIns, &wire.TxIn{
-			PreviousOutpoint: *wire.NewOutpoint(&daghash.TxID{}, i),
-			SignatureScript:  []byte{},
-			Sequence:         wire.MaxTxInSequenceNum,
-		})
-	}
-
-	for i := uint32(0); i < numOutputs; i++ {
-		txOuts = append(txOuts, &wire.TxOut{
-			ScriptPubKey: OpTrueScript,
-			Value:        outputValue,
-		})
-	}
-
-	if subnetworkData != nil {
-		return wire.NewSubnetworkMsgTx(wire.TxVersion, txIns, txOuts, subnetworkData.subnetworkID, subnetworkData.Gas, subnetworkData.Payload)
-	}
-
-	return wire.NewNativeMsgTx(wire.TxVersion, txIns, txOuts)
-}
-
 // VirtualForTest is an exported version for virtualBlock, so that it can be returned by exported test_util methods
 type VirtualForTest *virtualblock.VirtualBlock
 
