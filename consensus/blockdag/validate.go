@@ -10,8 +10,8 @@ import (
 	"github.com/kaspanet/kaspad/consensus/coinbase"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/merkle"
-	"github.com/kaspanet/kaspad/consensus/scriptvalidation"
 	"github.com/kaspanet/kaspad/consensus/utxo"
+	"github.com/kaspanet/kaspad/consensus/validation/script"
 	"github.com/kaspanet/kaspad/consensus/validation/transaction"
 	"github.com/kaspanet/kaspad/util/mstime"
 	"math"
@@ -843,7 +843,7 @@ func (dag *BlockDAG) checkConnectToPastUTXO(block *blocknode.BlockNode, pastUTXO
 		// transactions are actually allowed to spend the coins by running the
 		// expensive SCHNORR signature check scripts. Doing this last helps
 		// prevent CPU exhaustion attacks.
-		err := scriptvalidation.CheckBlockScripts(block.Hash(), pastUTXO, transactions, scriptFlags, dag.sigCache)
+		err := script.CheckBlockScripts(block.Hash(), pastUTXO, transactions, scriptFlags, dag.sigCache)
 		if err != nil {
 			return nil, err
 		}
