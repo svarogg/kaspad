@@ -65,15 +65,16 @@ type BlockDAG struct {
 	// The following fields are set when the instance is created and can't
 	// be changed afterwards, so there is no need to protect them with a
 	// separate mutex.
-	Params          *dagconfig.Params
-	databaseContext *dbaccess.DatabaseContext
-	timeSource      timesource.TimeSource
-	sigCache        *txscript.SigCache
-	indexManager    IndexManager
-	genesis         *blocknode.BlockNode
-	notifier        *notifications.ConsensusNotifier
-	coinbase        *coinbase.Coinbase
-	ghostdag        *ghostdag.GHOSTDAG
+	Params              *dagconfig.Params
+	databaseContext     *dbaccess.DatabaseContext
+	timeSource          timesource.TimeSource
+	sigCache            *txscript.SigCache
+	indexManager        IndexManager
+	genesis             *blocknode.BlockNode
+	notifier            *notifications.ConsensusNotifier
+	coinbase            *coinbase.Coinbase
+	ghostdag            *ghostdag.GHOSTDAG
+	blockLocatorFactory *BlockLocatorFactory
 
 	// The following fields are calculated based upon the provided DAG
 	// parameters. They are also set when the instance is created and
@@ -200,6 +201,7 @@ func New(config *Config) (*BlockDAG, error) {
 	dag.reachabilityTree = reachability.NewReachabilityTree(blockNodeStore, params)
 	dag.ghostdag = ghostdag.NewGHOSTDAG(dag.reachabilityTree, params, dag.timeSource)
 	dag.virtual = virtualblock.NewVirtualBlock(dag.ghostdag, params, dag.blockNodeStore, nil)
+	dag.blockLocatorFactory = NewBlockLocatorFactory(dag.blockNodeStore, params)
 
 	// Initialize the DAG state from the passed database. When the db
 	// does not yet contain any DAG state, both it and the DAG state
@@ -2061,4 +2063,18 @@ func (dag *BlockDAG) IsInSelectedParentChain(blockHash *daghash.Hash) (bool, err
 // the main selected parent chain.
 func (dag *BlockDAG) SelectedParentChain(blockHash *daghash.Hash) ([]*daghash.Hash, []*daghash.Hash, error) {
 	return dag.virtual.SelectedParentChain(blockHash)
+}
+
+// BlockLocatorFromHashes returns a block locator from high and low hash.
+// See BlockLocator for details on the algorithm used to create a block locator.
+func (dag *BlockDAG) BlockLocatorFromHashes(highHash, lowHash *daghash.Hash) (BlockLocator, error) {
+	return dag.blockLocatorFactory.BlockLocatorFromHashes(highHash, lowHash)
+}
+
+// FindNextLocatorBoundaries returns the lowest unknown block locator, hash
+// and the highest known block locator hash. This is used to create the
+// next block locator to find the highest shared known chain block with the
+// sync peer.
+func (dag *BlockDAG) FindNextLocatorBoundaries(locator BlockLocator) (highHash, lowHash *daghash.Hash) {
+	return dag.blockLocatorFactory.FindNextLocatorBoundaries(locator)
 }
