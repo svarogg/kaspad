@@ -78,10 +78,7 @@ type BlockDAG struct {
 	coinbase            *coinbase.Coinbase
 	ghostdag            *ghostdag.GHOSTDAG
 	blockLocatorFactory *blocklocator.BlockLocatorFactory
-
-	// powMaxBits defines the highest allowed proof of work value for a
-	// block in compact form.
-	powMaxBits uint32
+	difficulty          *Difficulty
 
 	// dagLock protects concurrent access to the vast majority of the
 	// fields in this struct below this point.
@@ -176,7 +173,6 @@ func New(config *Config) (*BlockDAG, error) {
 		timeSource:       config.TimeSource,
 		sigCache:         config.SigCache,
 		indexManager:     config.IndexManager,
-		powMaxBits:       util.BigToCompact(params.PowMax),
 		blockNodeStore:   blockNodeStore,
 		orphans:          make(map[daghash.Hash]*orphanBlock),
 		prevOrphans:      make(map[daghash.Hash][]*orphanBlock),
@@ -196,6 +192,7 @@ func New(config *Config) (*BlockDAG, error) {
 	dag.virtual = virtualblock.NewVirtualBlock(dag.ghostdag, params, dag.blockNodeStore, nil)
 	dag.blockLocatorFactory = blocklocator.NewBlockLocatorFactory(dag.blockNodeStore, params)
 	dag.utxoDiffStore = utxodiffstore.NewUTXODiffStore(dag.databaseContext, blockNodeStore, dag.virtual)
+	dag.difficulty = NewDifficulty(params, dag.virtual)
 
 	// Initialize the DAG state from the passed database. When the db
 	// does not yet contain any DAG state, both it and the DAG state
@@ -2071,4 +2068,10 @@ func (dag *BlockDAG) BlockLocatorFromHashes(highHash, lowHash *daghash.Hash) (bl
 // sync peer.
 func (dag *BlockDAG) FindNextLocatorBoundaries(locator blocklocator.BlockLocator) (highHash, lowHash *daghash.Hash) {
 	return dag.blockLocatorFactory.FindNextLocatorBoundaries(locator)
+}
+
+// NextRequiredDifficulty calculates the required difficulty for a block that will
+// be built on top of the current tips.
+func (dag *BlockDAG) NextRequiredDifficulty() uint32 {
+	return dag.difficulty.NextRequiredDifficulty()
 }

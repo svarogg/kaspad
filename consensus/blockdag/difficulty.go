@@ -7,24 +7,43 @@ package blockdag
 import (
 	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/consensus/blockwindow"
+	"github.com/kaspanet/kaspad/consensus/virtualblock"
+	"github.com/kaspanet/kaspad/dagconfig"
 	"github.com/kaspanet/kaspad/util"
 	"github.com/kaspanet/kaspad/util/bigintpool"
 )
 
-// requiredDifficulty calculates the required difficulty for a
+type Difficulty struct {
+	params  *dagconfig.Params
+	virtual *virtualblock.VirtualBlock
+
+	// powMaxBits defines the highest allowed proof of work value for a
+	// block in compact form.
+	powMaxBits uint32
+}
+
+func NewDifficulty(params *dagconfig.Params, virtual *virtualblock.VirtualBlock) *Difficulty {
+	return &Difficulty{
+		params:     params,
+		virtual:    virtual,
+		powMaxBits: util.BigToCompact(params.PowMax),
+	}
+}
+
+// RequiredDifficulty calculates the required difficulty for a
 // block given its bluest parent.
-func (dag *BlockDAG) requiredDifficulty(bluestParent *blocknode.BlockNode) uint32 {
+func (d *Difficulty) RequiredDifficulty(bluestParent *blocknode.BlockNode) uint32 {
 	// Genesis block.
-	if bluestParent == nil || bluestParent.BlueScore() < dag.Params.DifficultyAdjustmentWindowSize+1 {
-		return dag.powMaxBits
+	if bluestParent == nil || bluestParent.BlueScore() < d.params.DifficultyAdjustmentWindowSize+1 {
+		return d.powMaxBits
 	}
 
 	// Fetch window of dag.difficultyAdjustmentWindowSize + 1 so we can have dag.difficultyAdjustmentWindowSize block intervals
-	timestampsWindow := blockwindow.BlueBlockWindow(bluestParent, dag.Params.DifficultyAdjustmentWindowSize+1)
+	timestampsWindow := blockwindow.BlueBlockWindow(bluestParent, d.params.DifficultyAdjustmentWindowSize+1)
 	windowMinTimestamp, windowMaxTimeStamp := timestampsWindow.MinMaxTimestamps()
 
 	// Remove the last block from the window so to calculate the average target of dag.difficultyAdjustmentWindowSize blocks
-	targetsWindow := timestampsWindow[:dag.Params.DifficultyAdjustmentWindowSize]
+	targetsWindow := timestampsWindow[:d.params.DifficultyAdjustmentWindowSize]
 
 	// Calculate new target difficulty as:
 	// averageWindowTarget * (windowMinTimestamp / (targetTimePerBlock * windowSize))
@@ -34,9 +53,9 @@ func (dag *BlockDAG) requiredDifficulty(bluestParent *blocknode.BlockNode) uint3
 	defer bigintpool.Release(newTarget)
 	windowTimeStampDifference := bigintpool.Acquire(windowMaxTimeStamp - windowMinTimestamp)
 	defer bigintpool.Release(windowTimeStampDifference)
-	targetTimePerBlock := bigintpool.Acquire(dag.Params.TargetTimePerBlock.Milliseconds())
+	targetTimePerBlock := bigintpool.Acquire(d.params.TargetTimePerBlock.Milliseconds())
 	defer bigintpool.Release(targetTimePerBlock)
-	difficultyAdjustmentWindowSize := bigintpool.Acquire(int64(dag.Params.DifficultyAdjustmentWindowSize))
+	difficultyAdjustmentWindowSize := bigintpool.Acquire(int64(d.params.DifficultyAdjustmentWindowSize))
 	defer bigintpool.Release(difficultyAdjustmentWindowSize)
 
 	targetsWindow.AverageTarget(newTarget)
@@ -44,8 +63,8 @@ func (dag *BlockDAG) requiredDifficulty(bluestParent *blocknode.BlockNode) uint3
 		Mul(newTarget, windowTimeStampDifference).
 		Div(newTarget, targetTimePerBlock).
 		Div(newTarget, difficultyAdjustmentWindowSize)
-	if newTarget.Cmp(dag.Params.PowMax) > 0 {
-		return dag.powMaxBits
+	if newTarget.Cmp(d.params.PowMax) > 0 {
+		return d.powMaxBits
 	}
 	newTargetBits := util.BigToCompact(newTarget)
 	return newTargetBits
@@ -53,9 +72,7 @@ func (dag *BlockDAG) requiredDifficulty(bluestParent *blocknode.BlockNode) uint3
 
 // NextRequiredDifficulty calculates the required difficulty for a block that will
 // be built on top of the current tips.
-//
-// This function is safe for concurrent access.
-func (dag *BlockDAG) NextRequiredDifficulty() uint32 {
-	difficulty := dag.requiredDifficulty(dag.virtual.Parents().Bluest())
+func (d *Difficulty) NextRequiredDifficulty() uint32 {
+	difficulty := d.RequiredDifficulty(d.virtual.Parents().Bluest())
 	return difficulty
 }

@@ -511,7 +511,7 @@ func TestPastMedianTime(t *testing.T) {
 	// Checks that a block is valid if it has timestamp equals to past median time
 	node := newTestNode(dag, blocknode.BlockNodeSetFromSlice(tip),
 		blockVersion,
-		dag.powMaxBits,
+		util.BigToCompact(dag.Params.PowMax),
 		dag.PastMedianTime(tip))
 
 	header := node.Header()
@@ -524,7 +524,7 @@ func TestPastMedianTime(t *testing.T) {
 	// Checks that a block is valid if its timestamp is after past median time
 	node = newTestNode(dag, blocknode.BlockNodeSetFromSlice(tip),
 		blockVersion,
-		dag.powMaxBits,
+		util.BigToCompact(dag.Params.PowMax),
 		dag.PastMedianTime(tip).Add(time.Second))
 
 	header = node.Header()

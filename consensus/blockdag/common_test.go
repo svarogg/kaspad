@@ -18,7 +18,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/kaspanet/kaspad/dagconfig"
-	"github.com/kaspanet/kaspad/util"
 	"github.com/kaspanet/kaspad/util/daghash"
 	"github.com/kaspanet/kaspad/wire"
 )
@@ -38,7 +37,6 @@ func newTestDAG(params *dagconfig.Params) *BlockDAG {
 	dag := &BlockDAG{
 		Params:           params,
 		timeSource:       timesource.New(),
-		powMaxBits:       util.BigToCompact(params.PowMax),
 		blockNodeStore:   blockNodeStore,
 		warningCaches:    newThresholdCaches(vbNumBits),
 		deploymentCaches: newThresholdCaches(dagconfig.DefinedDeployments),
@@ -52,6 +50,8 @@ func newTestDAG(params *dagconfig.Params) *BlockDAG {
 	blockNodeStore.AddNode(dag.genesis)
 
 	dag.virtual = virtualblock.NewVirtualBlock(dag.ghostdag, dag.Params, dag.blockNodeStore, blocknode.BlockNodeSetFromSlice(dag.genesis))
+	dag.difficulty = NewDifficulty(params, dag.virtual)
+
 	return dag
 }
 

@@ -104,7 +104,7 @@ func TestDifficulty(t *testing.T) {
 			t.Fatalf("unexpected error in PrepareBlockForTest: %s", err)
 		}
 		block.Header.Timestamp = blockTime
-		block.Header.Bits = dag.requiredDifficulty(bluestParent)
+		block.Header.Bits = dag.difficulty.RequiredDifficulty(bluestParent)
 
 		isOrphan, isDelayed, err := dag.ProcessBlock(util.NewBlock(block), BFNoPoWCheck)
 		if err != nil {
