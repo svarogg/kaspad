@@ -646,8 +646,7 @@ func (dag *BlockDAG) validateDifficulty(header *wire.BlockHeader, bluestParent *
 	// Ensure the difficulty specified in the block header matches
 	// the calculated difficulty based on the previous block and
 	// difficulty retarget rules.
-	expectedDifficulty := dag.requiredDifficulty(bluestParent,
-		header.Timestamp)
+	expectedDifficulty := dag.requiredDifficulty(bluestParent)
 	blockDifficulty := header.Bits
 	if blockDifficulty != expectedDifficulty {
 		str := fmt.Sprintf("block difficulty of %d is not the expected value of %d", blockDifficulty, expectedDifficulty)

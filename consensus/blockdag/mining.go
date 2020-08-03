@@ -20,7 +20,7 @@ import (
 // This function MUST be called with the DAG state lock held (for reads).
 func (dag *BlockDAG) BlockForMining(transactions []*util.Tx) (*wire.MsgBlock, error) {
 	blockTimestamp := dag.NextBlockTime()
-	requiredDifficulty := dag.NextRequiredDifficulty(blockTimestamp)
+	requiredDifficulty := dag.NextRequiredDifficulty()
 
 	// Calculate the next expected block version based on the state of the
 	// rule change deployments.
