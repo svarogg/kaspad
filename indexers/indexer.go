@@ -8,8 +8,8 @@ Package indexers implements optional block DAG indexes.
 package indexers
 
 import (
-	"github.com/kaspanet/kaspad/consensus/accpetancedata"
 	"github.com/kaspanet/kaspad/consensus/blockdag"
+	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/dbaccess"
 	"github.com/kaspanet/kaspad/util/daghash"
 )
@@ -25,5 +25,5 @@ type Indexer interface {
 	// block has been connected to the DAG.
 	ConnectBlock(dbContext *dbaccess.TxContext,
 		blockHash *daghash.Hash,
-		acceptedTxsData accpetancedata.MultiBlockTxsAcceptanceData) error
+		acceptedTxsData common.MultiBlockTxsAcceptanceData) error
 }

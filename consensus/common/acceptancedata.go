@@ -1,4 +1,4 @@
-package accpetancedata
+package common
 
 import (
 	"github.com/kaspanet/kaspad/util"

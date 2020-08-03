@@ -3,7 +3,7 @@ package indexers
 import (
 	"bytes"
 	"encoding/gob"
-	"github.com/kaspanet/kaspad/consensus/accpetancedata"
+	"github.com/kaspanet/kaspad/consensus/common"
 
 	"github.com/kaspanet/kaspad/consensus/blockdag"
 	"github.com/kaspanet/kaspad/dbaccess"
@@ -95,7 +95,7 @@ func (idx *AcceptanceIndex) recover() error {
 //
 // This is part of the Indexer interface.
 func (idx *AcceptanceIndex) ConnectBlock(dbContext *dbaccess.TxContext, blockHash *daghash.Hash,
-	txsAcceptanceData accpetancedata.MultiBlockTxsAcceptanceData) error {
+	txsAcceptanceData common.MultiBlockTxsAcceptanceData) error {
 	serializedTxsAcceptanceData, err := serializeMultiBlockTxsAcceptanceData(txsAcceptanceData)
 	if err != nil {
 		return err
@@ -105,7 +105,7 @@ func (idx *AcceptanceIndex) ConnectBlock(dbContext *dbaccess.TxContext, blockHas
 
 // TxsAcceptanceData returns the acceptance data of all the transactions that
 // were accepted by the block with hash blockHash.
-func (idx *AcceptanceIndex) TxsAcceptanceData(blockHash *daghash.Hash) (accpetancedata.MultiBlockTxsAcceptanceData, error) {
+func (idx *AcceptanceIndex) TxsAcceptanceData(blockHash *daghash.Hash) (common.MultiBlockTxsAcceptanceData, error) {
 	serializedTxsAcceptanceData, err := dbaccess.FetchAcceptanceData(idx.databaseContext, blockHash)
 	if err != nil {
 		return nil, err
@@ -126,7 +126,7 @@ type serializableBlockTxsAcceptanceData struct {
 type serializableMultiBlockTxsAcceptanceData []serializableBlockTxsAcceptanceData
 
 func serializeMultiBlockTxsAcceptanceData(
-	multiBlockTxsAcceptanceData accpetancedata.MultiBlockTxsAcceptanceData) ([]byte, error) {
+	multiBlockTxsAcceptanceData common.MultiBlockTxsAcceptanceData) ([]byte, error) {
 	// Convert MultiBlockTxsAcceptanceData to a serializable format
 	serializableData := make(serializableMultiBlockTxsAcceptanceData, len(multiBlockTxsAcceptanceData))
 	for i, blockTxsAcceptanceData := range multiBlockTxsAcceptanceData {
@@ -154,7 +154,7 @@ func serializeMultiBlockTxsAcceptanceData(
 }
 
 func deserializeMultiBlockTxsAcceptanceData(
-	serializedTxsAcceptanceData []byte) (accpetancedata.MultiBlockTxsAcceptanceData, error) {
+	serializedTxsAcceptanceData []byte) (common.MultiBlockTxsAcceptanceData, error) {
 	// Deserialize
 	buffer := bytes.NewBuffer(serializedTxsAcceptanceData)
 	decoder := gob.NewDecoder(buffer)
@@ -165,15 +165,15 @@ func deserializeMultiBlockTxsAcceptanceData(
 	}
 
 	// Convert serializable format to MultiBlockTxsAcceptanceData
-	multiBlockTxsAcceptanceData := make(accpetancedata.MultiBlockTxsAcceptanceData, len(serializedData))
+	multiBlockTxsAcceptanceData := make(common.MultiBlockTxsAcceptanceData, len(serializedData))
 	for i, serializableBlockData := range serializedData {
-		blockTxsAcceptanceData := accpetancedata.BlockTxsAcceptanceData{
+		blockTxsAcceptanceData := common.BlockTxsAcceptanceData{
 			BlockHash:        serializableBlockData.BlockHash,
-			TxAcceptanceData: make([]accpetancedata.TxAcceptanceData, len(serializableBlockData.TxAcceptanceData)),
+			TxAcceptanceData: make([]common.TxAcceptanceData, len(serializableBlockData.TxAcceptanceData)),
 		}
 		for i, txData := range serializableBlockData.TxAcceptanceData {
 			msgTx := txData.MsgTx
-			blockTxsAcceptanceData.TxAcceptanceData[i] = accpetancedata.TxAcceptanceData{
+			blockTxsAcceptanceData.TxAcceptanceData[i] = common.TxAcceptanceData{
 				Tx:         util.NewTx(&msgTx),
 				IsAccepted: txData.IsAccepted,
 			}

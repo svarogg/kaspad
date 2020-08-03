@@ -6,7 +6,6 @@ package blockdag
 
 import (
 	"fmt"
-	"github.com/kaspanet/kaspad/consensus/accpetancedata"
 	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/consensus/coinbase"
 	"github.com/kaspanet/kaspad/consensus/common"
@@ -615,7 +614,7 @@ func (dag *BlockDAG) addBlock(node *blocknode.BlockNode,
 	return chainUpdates, nil
 }
 
-func calculateAcceptedIDMerkleRoot(multiBlockTxsAcceptanceData accpetancedata.MultiBlockTxsAcceptanceData) *daghash.Hash {
+func calculateAcceptedIDMerkleRoot(multiBlockTxsAcceptanceData common.MultiBlockTxsAcceptanceData) *daghash.Hash {
 	var acceptedTxs []*util.Tx
 	for _, blockTxsAcceptanceData := range multiBlockTxsAcceptanceData {
 		for _, txAcceptance := range blockTxsAcceptanceData.TxAcceptanceData {
@@ -633,7 +632,7 @@ func calculateAcceptedIDMerkleRoot(multiBlockTxsAcceptanceData accpetancedata.Mu
 	return acceptedIDMerkleTree.Root()
 }
 
-func (dag *BlockDAG) validateAcceptedIDMerkleRoot(node *blocknode.BlockNode, txsAcceptanceData accpetancedata.MultiBlockTxsAcceptanceData) error {
+func (dag *BlockDAG) validateAcceptedIDMerkleRoot(node *blocknode.BlockNode, txsAcceptanceData common.MultiBlockTxsAcceptanceData) error {
 	if node.IsGenesis() {
 		return nil
 	}
@@ -709,13 +708,13 @@ func (dag *BlockDAG) connectBlock(node *blocknode.BlockNode,
 }
 
 // calcMultiset returns the multiset of the past UTXO of the given block.
-func (dag *BlockDAG) calcMultiset(node *blocknode.BlockNode, acceptanceData accpetancedata.MultiBlockTxsAcceptanceData,
+func (dag *BlockDAG) calcMultiset(node *blocknode.BlockNode, acceptanceData common.MultiBlockTxsAcceptanceData,
 	selectedParentPastUTXO utxo.UTXOSet) (*secp256k1.MultiSet, error) {
 
 	return dag.pastUTXOMultiSet(node, acceptanceData, selectedParentPastUTXO)
 }
 
-func (dag *BlockDAG) pastUTXOMultiSet(node *blocknode.BlockNode, acceptanceData accpetancedata.MultiBlockTxsAcceptanceData,
+func (dag *BlockDAG) pastUTXOMultiSet(node *blocknode.BlockNode, acceptanceData common.MultiBlockTxsAcceptanceData,
 	selectedParentPastUTXO utxo.UTXOSet) (*secp256k1.MultiSet, error) {
 
 	ms, err := dag.selectedParentMultiset(node)
@@ -786,7 +785,7 @@ func addTxToMultiset(ms *secp256k1.MultiSet, tx *wire.MsgTx, pastUTXO utxo.UTXOS
 }
 
 func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, virtualUTXODiff *utxo.UTXODiff,
-	txsAcceptanceData accpetancedata.MultiBlockTxsAcceptanceData, feeData coinbase.CompactFeeData) error {
+	txsAcceptanceData common.MultiBlockTxsAcceptanceData, feeData coinbase.CompactFeeData) error {
 
 	dbTx, err := dag.databaseContext.NewTx()
 	if err != nil {
@@ -1065,7 +1064,7 @@ func (dag *BlockDAG) NextAcceptedIDMerkleRootNoLock() (*daghash.Hash, error) {
 // TxsAcceptedByVirtual retrieves transactions accepted by the current virtual block
 //
 // This function MUST be called with the DAG read-lock held
-func (dag *BlockDAG) TxsAcceptedByVirtual() (accpetancedata.MultiBlockTxsAcceptanceData, error) {
+func (dag *BlockDAG) TxsAcceptedByVirtual() (common.MultiBlockTxsAcceptanceData, error) {
 	_, _, txsAcceptanceData, err := dag.pastUTXO(&dag.virtual.BlockNode)
 	return txsAcceptanceData, err
 }
@@ -1073,7 +1072,7 @@ func (dag *BlockDAG) TxsAcceptedByVirtual() (accpetancedata.MultiBlockTxsAccepta
 // TxsAcceptedByBlockHash retrieves transactions accepted by the given block
 //
 // This function MUST be called with the DAG read-lock held
-func (dag *BlockDAG) TxsAcceptedByBlockHash(blockHash *daghash.Hash) (accpetancedata.MultiBlockTxsAcceptanceData, error) {
+func (dag *BlockDAG) TxsAcceptedByBlockHash(blockHash *daghash.Hash) (common.MultiBlockTxsAcceptanceData, error) {
 	node, ok := dag.blockNodeStore.LookupNode(blockHash)
 	if !ok {
 		return nil, errors.Errorf("Couldn't find block %s", blockHash)
@@ -1171,7 +1170,7 @@ func checkDoubleSpendsWithBlockPast(pastUTXO utxo.UTXOSet, blockTransactions []*
 // to save extra traversals it returns the transactions acceptance data, the compactFeeData
 // for the new block and its multiset.
 func (dag *BlockDAG) verifyAndBuildUTXO(node *blocknode.BlockNode, transactions []*util.Tx, fastAdd bool) (
-	newBlockUTXO utxo.UTXOSet, txsAcceptanceData accpetancedata.MultiBlockTxsAcceptanceData, newBlockFeeData coinbase.CompactFeeData, multiset *secp256k1.MultiSet, err error) {
+	newBlockUTXO utxo.UTXOSet, txsAcceptanceData common.MultiBlockTxsAcceptanceData, newBlockFeeData coinbase.CompactFeeData, multiset *secp256k1.MultiSet, err error) {
 
 	pastUTXO, selectedParentPastUTXO, txsAcceptanceData, err := dag.pastUTXO(node)
 	if err != nil {
@@ -1236,10 +1235,10 @@ func (dag *BlockDAG) fetchBlueBlocks(node *blocknode.BlockNode) ([]*util.Block, 
 // Purposefully ignoring failures - these are just unaccepted transactions
 // Writing down which transactions were accepted or not in txsAcceptanceData
 func (dag *BlockDAG) applyBlueBlocks(node *blocknode.BlockNode, selectedParentPastUTXO utxo.UTXOSet, blueBlocks []*util.Block) (
-	pastUTXO utxo.UTXOSet, multiBlockTxsAcceptanceData accpetancedata.MultiBlockTxsAcceptanceData, err error) {
+	pastUTXO utxo.UTXOSet, multiBlockTxsAcceptanceData common.MultiBlockTxsAcceptanceData, err error) {
 
 	pastUTXO = selectedParentPastUTXO.(*utxo.DiffUTXOSet).CloneWithoutBase()
-	multiBlockTxsAcceptanceData = make(accpetancedata.MultiBlockTxsAcceptanceData, len(blueBlocks))
+	multiBlockTxsAcceptanceData = make(common.MultiBlockTxsAcceptanceData, len(blueBlocks))
 
 	// Add blueBlocks to multiBlockTxsAcceptanceData in topological order. This
 	// is so that anyone who iterates over it would process blocks (and transactions)
@@ -1247,9 +1246,9 @@ func (dag *BlockDAG) applyBlueBlocks(node *blocknode.BlockNode, selectedParentPa
 	for i := 0; i < len(blueBlocks); i++ {
 		blueBlock := blueBlocks[i]
 		transactions := blueBlock.Transactions()
-		blockTxsAcceptanceData := accpetancedata.BlockTxsAcceptanceData{
+		blockTxsAcceptanceData := common.BlockTxsAcceptanceData{
 			BlockHash:        *blueBlock.Hash(),
-			TxAcceptanceData: make([]accpetancedata.TxAcceptanceData, len(transactions)),
+			TxAcceptanceData: make([]common.TxAcceptanceData, len(transactions)),
 		}
 		isSelectedParent := i == 0
 
@@ -1266,7 +1265,7 @@ func (dag *BlockDAG) applyBlueBlocks(node *blocknode.BlockNode, selectedParentPa
 					return nil, nil, err
 				}
 			}
-			blockTxsAcceptanceData.TxAcceptanceData[j] = accpetancedata.TxAcceptanceData{Tx: tx, IsAccepted: isAccepted}
+			blockTxsAcceptanceData.TxAcceptanceData[j] = common.TxAcceptanceData{Tx: tx, IsAccepted: isAccepted}
 		}
 		multiBlockTxsAcceptanceData[i] = blockTxsAcceptanceData
 	}
@@ -1325,14 +1324,14 @@ func (dag *BlockDAG) updateParentsDiffs(node *blocknode.BlockNode, newBlockUTXO 
 // To save traversals over the blue blocks, it also returns the transaction acceptance data for
 // all blue blocks
 func (dag *BlockDAG) pastUTXO(node *blocknode.BlockNode) (
-	pastUTXO, selectedParentPastUTXO utxo.UTXOSet, bluesTxsAcceptanceData accpetancedata.MultiBlockTxsAcceptanceData, err error) {
+	pastUTXO, selectedParentPastUTXO utxo.UTXOSet, bluesTxsAcceptanceData common.MultiBlockTxsAcceptanceData, err error) {
 
 	if node.IsGenesis() {
 		genesisPastUTXO, err := genesisPastUTXO(dag.virtual)
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		return genesisPastUTXO, nil, accpetancedata.MultiBlockTxsAcceptanceData{}, nil
+		return genesisPastUTXO, nil, common.MultiBlockTxsAcceptanceData{}, nil
 	}
 
 	selectedParentPastUTXO, err = dag.restorePastUTXO(node.SelectedParent())
@@ -2053,7 +2052,7 @@ type IndexManager interface {
 
 	// ConnectBlock is invoked when a new block has been connected to the
 	// DAG.
-	ConnectBlock(dbContext *dbaccess.TxContext, blockHash *daghash.Hash, acceptedTxsData accpetancedata.MultiBlockTxsAcceptanceData) error
+	ConnectBlock(dbContext *dbaccess.TxContext, blockHash *daghash.Hash, acceptedTxsData common.MultiBlockTxsAcceptanceData) error
 }
 
 // Config is a descriptor which specifies the blockDAG instance configuration.

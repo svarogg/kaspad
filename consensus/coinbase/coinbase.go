@@ -1,7 +1,6 @@
 package coinbase
 
 import (
-	"github.com/kaspanet/kaspad/consensus/accpetancedata"
 	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/dagconfig"
@@ -52,7 +51,7 @@ func (cb *Coinbase) getBluesFeeData(node *blocknode.BlockNode) (map[daghash.Hash
 
 // The following functions deal with building and validating the coinbase transaction
 
-func (cb *Coinbase) ValidateCoinbaseTransaction(node *blocknode.BlockNode, block *util.Block, txsAcceptanceData accpetancedata.MultiBlockTxsAcceptanceData) error {
+func (cb *Coinbase) ValidateCoinbaseTransaction(node *blocknode.BlockNode, block *util.Block, txsAcceptanceData common.MultiBlockTxsAcceptanceData) error {
 	if node.IsGenesis() {
 		return nil
 	}
@@ -77,7 +76,7 @@ func (cb *Coinbase) ValidateCoinbaseTransaction(node *blocknode.BlockNode, block
 }
 
 // ExpectedCoinbaseTransaction returns the coinbase transaction for the current block
-func (cb *Coinbase) ExpectedCoinbaseTransaction(node *blocknode.BlockNode, txsAcceptanceData accpetancedata.MultiBlockTxsAcceptanceData, scriptPubKey []byte, extraData []byte) (*util.Tx, error) {
+func (cb *Coinbase) ExpectedCoinbaseTransaction(node *blocknode.BlockNode, txsAcceptanceData common.MultiBlockTxsAcceptanceData, scriptPubKey []byte, extraData []byte) (*util.Tx, error) {
 	bluesFeeData, err := cb.getBluesFeeData(node)
 	if err != nil {
 		return nil, err
@@ -107,7 +106,7 @@ func (cb *Coinbase) ExpectedCoinbaseTransaction(node *blocknode.BlockNode, txsAc
 // coinbaseOutputForBlueBlock calculates the output that should go into the coinbase transaction of blueBlock
 // If blueBlock gets no fee - returns nil for txOut
 func (cb *Coinbase) coinbaseOutputForBlueBlock(blueBlock *blocknode.BlockNode,
-	txsAcceptanceData accpetancedata.MultiBlockTxsAcceptanceData,
+	txsAcceptanceData common.MultiBlockTxsAcceptanceData,
 	feeData map[daghash.Hash]CompactFeeData) (*wire.TxOut, error) {
 
 	blockTxsAcceptanceData, ok := txsAcceptanceData.FindAcceptanceData(blueBlock.Hash())
