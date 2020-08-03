@@ -39,7 +39,6 @@ func newTestDAG(params *dagconfig.Params) *BlockDAG {
 		Params:                         params,
 		timeSource:                     timesource.New(),
 		difficultyAdjustmentWindowSize: params.DifficultyAdjustmentWindowSize,
-		TimestampDeviationTolerance:    params.TimestampDeviationTolerance,
 		powMaxBits:                     util.BigToCompact(params.PowMax),
 		blockNodeStore:                 blockNodeStore,
 		warningCaches:                  newThresholdCaches(vbNumBits),

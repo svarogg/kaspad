@@ -82,7 +82,6 @@ type BlockDAG struct {
 	// can't be changed afterwards, so there is no need to protect them with
 	// a separate mutex.
 	difficultyAdjustmentWindowSize uint64
-	TimestampDeviationTolerance    uint64
 
 	// powMaxBits defines the highest allowed proof of work value for a
 	// block in compact form.
@@ -182,7 +181,6 @@ func New(config *Config) (*BlockDAG, error) {
 		sigCache:                       config.SigCache,
 		indexManager:                   config.IndexManager,
 		difficultyAdjustmentWindowSize: params.DifficultyAdjustmentWindowSize,
-		TimestampDeviationTolerance:    params.TimestampDeviationTolerance,
 		powMaxBits:                     util.BigToCompact(params.PowMax),
 		blockNodeStore:                 blockNodeStore,
 		orphans:                        make(map[daghash.Hash]*orphanBlock),
@@ -2036,7 +2034,7 @@ func (dag *BlockDAG) FinalityScore(node *blocknode.BlockNode) uint64 {
 //
 // This function is safe for concurrent access.
 func (dag *BlockDAG) PastMedianTime(node *blocknode.BlockNode) mstime.Time {
-	window := blueBlockWindow(node, 2*dag.TimestampDeviationTolerance-1)
+	window := blueBlockWindow(node, 2*dag.Params.TimestampDeviationTolerance-1)
 	medianTimestamp, err := window.medianTimestamp()
 	if err != nil {
 		panic(fmt.Sprintf("blueBlockWindow: %s", err))

@@ -204,7 +204,7 @@ func TestProcessDelayedBlocks(t *testing.T) {
 	}
 
 	// We advance the clock to the point where delayedBlock timestamp is valid.
-	deviationTolerance := time.Duration(dag2.TimestampDeviationTolerance) * dag2.Params.TargetTimePerBlock
+	deviationTolerance := time.Duration(dag2.Params.TimestampDeviationTolerance) * dag2.Params.TargetTimePerBlock
 	timeUntilDelayedBlockIsValid := delayedBlock.Header.Timestamp.
 		Add(-deviationTolerance).
 		Sub(dag2.Now()) +

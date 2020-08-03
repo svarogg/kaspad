@@ -635,7 +635,7 @@ func (state *gbtWorkState) blockTemplateResult(s *Server) (*model.GetBlockTempla
 	msgBlock := template.Block
 	header := &msgBlock.Header
 	adjustedTime := dag.Now()
-	maxTime := adjustedTime.Add(time.Millisecond * time.Duration(dag.TimestampDeviationTolerance))
+	maxTime := adjustedTime.Add(time.Millisecond * time.Duration(dag.Params.TimestampDeviationTolerance))
 	if header.Timestamp.After(maxTime) {
 		return nil, &model.RPCError{
 			Code: model.ErrRPCOutOfRange,
