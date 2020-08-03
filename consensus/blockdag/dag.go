@@ -81,6 +81,7 @@ type BlockDAG struct {
 	blockLocatorFactory   *blocklocator.BlockLocatorFactory
 	difficulty            *difficulty2.Difficulty
 	pastMedianTimeFactory *pastmediantime.PastMedianTimeFactory
+	syncRate              *SyncRate
 
 	// dagLock protects concurrent access to the vast majority of the
 	// fields in this struct below this point.
@@ -131,9 +132,6 @@ type BlockDAG struct {
 	multisetStore *multiset.MultisetStore
 
 	reachabilityTree *reachability.ReachabilityTree
-
-	recentBlockProcessingTimestamps []mstime.Time
-	startTime                       mstime.Time
 }
 
 // New returns a BlockDAG instance using the provided configuration details.
@@ -164,10 +162,10 @@ func New(config *Config) (*BlockDAG, error) {
 		delayedBlocks:         delayedblocks.New(),
 		blockCount:            0,
 		subnetworkID:          config.SubnetworkID,
-		startTime:             mstime.Now(),
 		notifier:              notifications.New(),
 		coinbase:              coinbase.New(config.DatabaseContext, params),
 		pastMedianTimeFactory: pastmediantime.NewPastMedianTimeFactory(params),
+		syncRate:              NewSyncRate(params),
 	}
 
 	dag.multisetStore = multiset.NewMultisetStore()
@@ -2032,4 +2030,10 @@ func (dag *BlockDAG) FindNextLocatorBoundaries(locator blocklocator.BlockLocator
 // be built on top of the current tips.
 func (dag *BlockDAG) NextRequiredDifficulty() uint32 {
 	return dag.difficulty.NextRequiredDifficulty()
+}
+
+// IsSyncRateBelowThreshold checks whether the sync rate
+// is below the expected threshold.
+func (dag *BlockDAG) IsSyncRateBelowThreshold(maxDeviation float64) bool {
+	return dag.syncRate.IsSyncRateBelowThreshold(maxDeviation)
 }
