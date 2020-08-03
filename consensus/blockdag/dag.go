@@ -19,6 +19,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/pastmediantime"
 	"github.com/kaspanet/kaspad/consensus/reachability"
 	"github.com/kaspanet/kaspad/consensus/subnetworks"
+	"github.com/kaspanet/kaspad/consensus/syncrate"
 	"github.com/kaspanet/kaspad/consensus/timesource"
 	"github.com/kaspanet/kaspad/consensus/utxo"
 	"github.com/kaspanet/kaspad/consensus/utxodiffstore"
@@ -81,7 +82,7 @@ type BlockDAG struct {
 	blockLocatorFactory   *blocklocator.BlockLocatorFactory
 	difficulty            *difficulty2.Difficulty
 	pastMedianTimeFactory *pastmediantime.PastMedianTimeFactory
-	syncRate              *SyncRate
+	syncRate              *syncrate.SyncRate
 
 	// dagLock protects concurrent access to the vast majority of the
 	// fields in this struct below this point.
@@ -165,7 +166,7 @@ func New(config *Config) (*BlockDAG, error) {
 		notifier:              notifications.New(),
 		coinbase:              coinbase.New(config.DatabaseContext, params),
 		pastMedianTimeFactory: pastmediantime.NewPastMedianTimeFactory(params),
-		syncRate:              NewSyncRate(params),
+		syncRate:              syncrate.NewSyncRate(params),
 	}
 
 	dag.multisetStore = multiset.NewMultisetStore()

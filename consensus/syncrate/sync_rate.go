@@ -1,4 +1,4 @@
-package blockdag
+package syncrate
 
 import (
 	"github.com/kaspanet/kaspad/dagconfig"
@@ -23,10 +23,10 @@ func NewSyncRate(params *dagconfig.Params) *SyncRate {
 	}
 }
 
-// addBlockProcessingTimestamp adds the last block processing timestamp in order to measure the recent sync rate.
+// AddBlockProcessingTimestamp adds the last block processing timestamp in order to measure the recent sync rate.
 //
 // This function MUST be called with the DAG state lock held (for writes).
-func (sr *SyncRate) addBlockProcessingTimestamp() {
+func (sr *SyncRate) AddBlockProcessingTimestamp() {
 	now := mstime.Now()
 	sr.recentBlockProcessingTimestamps = append(sr.recentBlockProcessingTimestamps, now)
 	sr.removeNonRecentTimestampsFromRecentBlockProcessingTimestamps()
