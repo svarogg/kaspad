@@ -19,6 +19,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/subnetworks"
 	"github.com/kaspanet/kaspad/consensus/timesource"
 	"github.com/kaspanet/kaspad/consensus/utxo"
+	"github.com/kaspanet/kaspad/consensus/utxodiffstore"
 	"github.com/kaspanet/kaspad/consensus/virtualblock"
 	"math"
 	"sort"
@@ -143,7 +144,7 @@ type BlockDAG struct {
 
 	lastFinalityPoint *blocknode.BlockNode
 
-	utxoDiffStore *utxoDiffStore
+	utxoDiffStore *utxodiffstore.UtxoDiffStore
 	multisetStore *multiset.MultisetStore
 
 	reachabilityTree *reachability.ReachabilityTree
@@ -188,12 +189,12 @@ func New(config *Config) (*BlockDAG, error) {
 		coinbase:         coinbase.New(config.DatabaseContext, params),
 	}
 
-	dag.utxoDiffStore = newUTXODiffStore(dag)
 	dag.multisetStore = multiset.NewMultisetStore()
 	dag.reachabilityTree = reachability.NewReachabilityTree(blockNodeStore, params)
 	dag.ghostdag = ghostdag.NewGHOSTDAG(dag.reachabilityTree, params, dag.timeSource)
 	dag.virtual = virtualblock.NewVirtualBlock(dag.ghostdag, params, dag.blockNodeStore, nil)
 	dag.blockLocatorFactory = blocklocator.NewBlockLocatorFactory(dag.blockNodeStore, params)
+	dag.utxoDiffStore = utxodiffstore.NewUTXODiffStore(dag.databaseContext, blockNodeStore, dag.virtual)
 
 	// Initialize the DAG state from the passed database. When the db
 	// does not yet contain any DAG state, both it and the DAG state
@@ -786,7 +787,7 @@ func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, virtualUTXODiff *ut
 		return err
 	}
 
-	err = dag.utxoDiffStore.flushToDB(dbTx)
+	err = dag.utxoDiffStore.FlushToDB(dbTx)
 	if err != nil {
 		return err
 	}
@@ -849,8 +850,8 @@ func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, virtualUTXODiff *ut
 	}
 
 	dag.blockNodeStore.ClearDirtyEntries()
-	dag.utxoDiffStore.clearDirtyEntries()
-	dag.utxoDiffStore.clearOldEntries()
+	dag.utxoDiffStore.ClearDirtyEntries()
+	dag.utxoDiffStore.ClearOldEntries()
 	dag.reachabilityTree.ClearDirtyEntries()
 	dag.multisetStore.ClearNewEntries()
 
@@ -1000,7 +1001,7 @@ func (dag *BlockDAG) finalizeNodesBelowFinalityPoint(deleteDiffData bool) {
 		}
 	}
 	if deleteDiffData {
-		err := dag.utxoDiffStore.removeBlocksDiffData(dag.databaseContext, nodesToDelete)
+		err := dag.utxoDiffStore.RemoveBlocksDiffData(dag.databaseContext, nodesToDelete)
 		if err != nil {
 			panic(fmt.Sprintf("Error removing diff data from utxoDiffStore: %s", err))
 		}
@@ -1275,13 +1276,13 @@ func (dag *BlockDAG) updateParentsDiffs(node *blocknode.BlockNode, newBlockUTXO 
 		return err
 	}
 
-	err = dag.utxoDiffStore.setBlockDiff(node, virtualDiffFromNewBlock)
+	err = dag.utxoDiffStore.SetBlockDiff(node, virtualDiffFromNewBlock)
 	if err != nil {
 		return err
 	}
 
 	for parent := range node.Parents() {
-		diffChild, err := dag.utxoDiffStore.diffChildByNode(parent)
+		diffChild, err := dag.utxoDiffStore.DiffChildByNode(parent)
 		if err != nil {
 			return err
 		}
@@ -1290,7 +1291,7 @@ func (dag *BlockDAG) updateParentsDiffs(node *blocknode.BlockNode, newBlockUTXO 
 			if err != nil {
 				return err
 			}
-			err = dag.utxoDiffStore.setBlockDiffChild(parent, node)
+			err = dag.utxoDiffStore.SetBlockDiffChild(parent, node)
 			if err != nil {
 				return err
 			}
@@ -1298,7 +1299,7 @@ func (dag *BlockDAG) updateParentsDiffs(node *blocknode.BlockNode, newBlockUTXO 
 			if err != nil {
 				return err
 			}
-			err = dag.utxoDiffStore.setBlockDiff(parent, diff)
+			err = dag.utxoDiffStore.SetBlockDiff(parent, diff)
 			if err != nil {
 				return err
 			}
@@ -1349,7 +1350,7 @@ func (dag *BlockDAG) restorePastUTXO(node *blocknode.BlockNode) (utxo.UTXOSet, e
 	for current := node; current != nil; {
 		stack = append(stack, current)
 		var err error
-		current, err = dag.utxoDiffStore.diffChildByNode(current)
+		current, err = dag.utxoDiffStore.DiffChildByNode(current)
 		if err != nil {
 			return nil, err
 		}
@@ -1358,14 +1359,14 @@ func (dag *BlockDAG) restorePastUTXO(node *blocknode.BlockNode) (utxo.UTXOSet, e
 	// Start with the top item in the stack, going over it top-to-bottom,
 	// applying the UTXO-diff one-by-one.
 	topNode, stack := stack[len(stack)-1], stack[:len(stack)-1] // pop the top item in the stack
-	topNodeDiff, err := dag.utxoDiffStore.diffByNode(topNode)
+	topNodeDiff, err := dag.utxoDiffStore.DiffByNode(topNode)
 	if err != nil {
 		return nil, err
 	}
 	accumulatedDiff := topNodeDiff.Clone()
 
 	for i := len(stack) - 1; i >= 0; i-- {
-		diff, err := dag.utxoDiffStore.diffByNode(stack[i])
+		diff, err := dag.utxoDiffStore.DiffByNode(stack[i])
 		if err != nil {
 			return nil, err
 		}
@@ -1390,7 +1391,7 @@ func updateTipsUTXO(dag *BlockDAG, virtualUTXO utxo.UTXOSet) error {
 		if err != nil {
 			return err
 		}
-		err = dag.utxoDiffStore.setBlockDiff(tip, diff)
+		err = dag.utxoDiffStore.SetBlockDiff(tip, diff)
 		if err != nil {
 			return err
 		}
