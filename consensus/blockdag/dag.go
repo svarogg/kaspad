@@ -77,12 +77,6 @@ type BlockDAG struct {
 	ghostdag            *ghostdag.GHOSTDAG
 	blockLocatorFactory *blocklocator.BlockLocatorFactory
 
-	// The following fields are calculated based upon the provided DAG
-	// parameters. They are also set when the instance is created and
-	// can't be changed afterwards, so there is no need to protect them with
-	// a separate mutex.
-	difficultyAdjustmentWindowSize uint64
-
 	// powMaxBits defines the highest allowed proof of work value for a
 	// block in compact form.
 	powMaxBits uint32
@@ -175,24 +169,23 @@ func New(config *Config) (*BlockDAG, error) {
 
 	blockNodeStore := blocknode.NewBlockNodeStore(params)
 	dag := &BlockDAG{
-		Params:                         params,
-		databaseContext:                config.DatabaseContext,
-		timeSource:                     config.TimeSource,
-		sigCache:                       config.SigCache,
-		indexManager:                   config.IndexManager,
-		difficultyAdjustmentWindowSize: params.DifficultyAdjustmentWindowSize,
-		powMaxBits:                     util.BigToCompact(params.PowMax),
-		blockNodeStore:                 blockNodeStore,
-		orphans:                        make(map[daghash.Hash]*orphanBlock),
-		prevOrphans:                    make(map[daghash.Hash][]*orphanBlock),
-		delayedBlocks:                  delayedblocks.New(),
-		warningCaches:                  newThresholdCaches(vbNumBits),
-		deploymentCaches:               newThresholdCaches(dagconfig.DefinedDeployments),
-		blockCount:                     0,
-		subnetworkID:                   config.SubnetworkID,
-		startTime:                      mstime.Now(),
-		notifier:                       notifications.New(),
-		coinbase:                       coinbase.New(config.DatabaseContext, params),
+		Params:           params,
+		databaseContext:  config.DatabaseContext,
+		timeSource:       config.TimeSource,
+		sigCache:         config.SigCache,
+		indexManager:     config.IndexManager,
+		powMaxBits:       util.BigToCompact(params.PowMax),
+		blockNodeStore:   blockNodeStore,
+		orphans:          make(map[daghash.Hash]*orphanBlock),
+		prevOrphans:      make(map[daghash.Hash][]*orphanBlock),
+		delayedBlocks:    delayedblocks.New(),
+		warningCaches:    newThresholdCaches(vbNumBits),
+		deploymentCaches: newThresholdCaches(dagconfig.DefinedDeployments),
+		blockCount:       0,
+		subnetworkID:     config.SubnetworkID,
+		startTime:        mstime.Now(),
+		notifier:         notifications.New(),
+		coinbase:         coinbase.New(config.DatabaseContext, params),
 	}
 
 	dag.utxoDiffStore = newUTXODiffStore(dag)

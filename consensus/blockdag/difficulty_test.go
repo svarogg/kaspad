@@ -123,14 +123,14 @@ func TestDifficulty(t *testing.T) {
 		return node
 	}
 	tip := dag.genesis
-	for i := uint64(0); i < dag.difficultyAdjustmentWindowSize; i++ {
+	for i := uint64(0); i < dag.Params.DifficultyAdjustmentWindowSize; i++ {
 		tip = addNode(blocknode.BlockNodeSetFromSlice(tip), zeroTime)
 		if tip.Bits() != dag.genesis.Bits() {
 			t.Fatalf("As long as the bluest parent's blue score is less then the difficulty adjustment " +
 				"window size, the difficulty should be the same as genesis'")
 		}
 	}
-	for i := uint64(0); i < dag.difficultyAdjustmentWindowSize+100; i++ {
+	for i := uint64(0); i < dag.Params.DifficultyAdjustmentWindowSize+100; i++ {
 		tip = addNode(blocknode.BlockNodeSetFromSlice(tip), zeroTime)
 		if tip.Bits() != dag.genesis.Bits() {
 			t.Fatalf("As long as the block rate remains the same, the difficulty shouldn't change")
@@ -157,7 +157,7 @@ func TestDifficulty(t *testing.T) {
 	}
 
 	// Increase block rate to increase difficulty
-	for i := uint64(0); i < dag.difficultyAdjustmentWindowSize; i++ {
+	for i := uint64(0); i < dag.Params.DifficultyAdjustmentWindowSize; i++ {
 		tip = addNode(blocknode.BlockNodeSetFromSlice(tip), dag.PastMedianTime(tip))
 		if compareBits(tip.Bits(), tip.Parents().Bluest().Bits()) > 0 {
 			t.Fatalf("Because we're increasing the block rate, the difficulty can't decrease")
@@ -167,7 +167,7 @@ func TestDifficulty(t *testing.T) {
 	// Add blocks until difficulty stabilizes
 	lastBits := tip.Bits()
 	sameBitsCount := uint64(0)
-	for sameBitsCount < dag.difficultyAdjustmentWindowSize+1 {
+	for sameBitsCount < dag.Params.DifficultyAdjustmentWindowSize+1 {
 		tip = addNode(blocknode.BlockNodeSetFromSlice(tip), zeroTime)
 		if tip.Bits() == lastBits {
 			sameBitsCount++

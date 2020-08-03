@@ -16,16 +16,16 @@ import (
 // block given its bluest parent.
 func (dag *BlockDAG) requiredDifficulty(bluestParent *blocknode.BlockNode, newBlockTime mstime.Time) uint32 {
 	// Genesis block.
-	if bluestParent == nil || bluestParent.BlueScore() < dag.difficultyAdjustmentWindowSize+1 {
+	if bluestParent == nil || bluestParent.BlueScore() < dag.Params.DifficultyAdjustmentWindowSize+1 {
 		return dag.powMaxBits
 	}
 
 	// Fetch window of dag.difficultyAdjustmentWindowSize + 1 so we can have dag.difficultyAdjustmentWindowSize block intervals
-	timestampsWindow := blueBlockWindow(bluestParent, dag.difficultyAdjustmentWindowSize+1)
+	timestampsWindow := blueBlockWindow(bluestParent, dag.Params.DifficultyAdjustmentWindowSize+1)
 	windowMinTimestamp, windowMaxTimeStamp := timestampsWindow.minMaxTimestamps()
 
 	// Remove the last block from the window so to calculate the average target of dag.difficultyAdjustmentWindowSize blocks
-	targetsWindow := timestampsWindow[:dag.difficultyAdjustmentWindowSize]
+	targetsWindow := timestampsWindow[:dag.Params.DifficultyAdjustmentWindowSize]
 
 	// Calculate new target difficulty as:
 	// averageWindowTarget * (windowMinTimestamp / (targetTimePerBlock * windowSize))
@@ -37,7 +37,7 @@ func (dag *BlockDAG) requiredDifficulty(bluestParent *blocknode.BlockNode, newBl
 	defer bigintpool.Release(windowTimeStampDifference)
 	targetTimePerBlock := bigintpool.Acquire(dag.Params.TargetTimePerBlock.Milliseconds())
 	defer bigintpool.Release(targetTimePerBlock)
-	difficultyAdjustmentWindowSize := bigintpool.Acquire(int64(dag.difficultyAdjustmentWindowSize))
+	difficultyAdjustmentWindowSize := bigintpool.Acquire(int64(dag.Params.DifficultyAdjustmentWindowSize))
 	defer bigintpool.Release(difficultyAdjustmentWindowSize)
 
 	targetsWindow.averageTarget(newTarget)
