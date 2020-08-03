@@ -7,6 +7,7 @@ package blockdag
 import (
 	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/consensus/common"
+	"github.com/kaspanet/kaspad/consensus/difficulty"
 	"github.com/kaspanet/kaspad/consensus/ghostdag"
 	"github.com/kaspanet/kaspad/consensus/reachability"
 	"github.com/kaspanet/kaspad/consensus/timesource"
@@ -50,7 +51,7 @@ func newTestDAG(params *dagconfig.Params) *BlockDAG {
 	blockNodeStore.AddNode(dag.genesis)
 
 	dag.virtual = virtualblock.NewVirtualBlock(dag.ghostdag, dag.Params, dag.blockNodeStore, blocknode.BlockNodeSetFromSlice(dag.genesis))
-	dag.difficulty = NewDifficulty(params, dag.virtual)
+	dag.difficulty = difficulty.NewDifficulty(params, dag.virtual)
 
 	return dag
 }

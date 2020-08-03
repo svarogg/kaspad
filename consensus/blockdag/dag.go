@@ -12,6 +12,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/coinbase"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/delayedblocks"
+	difficulty2 "github.com/kaspanet/kaspad/consensus/difficulty"
 	"github.com/kaspanet/kaspad/consensus/ghostdag"
 	"github.com/kaspanet/kaspad/consensus/merkle"
 	"github.com/kaspanet/kaspad/consensus/multiset"
@@ -78,7 +79,7 @@ type BlockDAG struct {
 	coinbase            *coinbase.Coinbase
 	ghostdag            *ghostdag.GHOSTDAG
 	blockLocatorFactory *blocklocator.BlockLocatorFactory
-	difficulty          *Difficulty
+	difficulty          *difficulty2.Difficulty
 
 	// dagLock protects concurrent access to the vast majority of the
 	// fields in this struct below this point.
@@ -192,7 +193,7 @@ func New(config *Config) (*BlockDAG, error) {
 	dag.virtual = virtualblock.NewVirtualBlock(dag.ghostdag, params, dag.blockNodeStore, nil)
 	dag.blockLocatorFactory = blocklocator.NewBlockLocatorFactory(dag.blockNodeStore, params)
 	dag.utxoDiffStore = utxodiffstore.NewUTXODiffStore(dag.databaseContext, blockNodeStore, dag.virtual)
-	dag.difficulty = NewDifficulty(params, dag.virtual)
+	dag.difficulty = difficulty2.NewDifficulty(params, dag.virtual)
 
 	// Initialize the DAG state from the passed database. When the db
 	// does not yet contain any DAG state, both it and the DAG state
