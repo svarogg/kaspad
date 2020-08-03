@@ -256,11 +256,11 @@ func TestChainUpdates(t *testing.T) {
 	chainUpdates := virtual.setTips(blocknode.BlockNodeSetFromSlice(toBeAddedTip))
 
 	// Make sure that the removed blocks are as expected (in reverse order)
-	if len(chainUpdates.removedChainBlockHashes) != len(toBeRemovedNodes) {
+	if len(chainUpdates.RemovedChainBlockHashes) != len(toBeRemovedNodes) {
 		t.Fatalf("TestChainUpdates: wrong removed amount. "+
-			"Got: %d, want: %d", len(chainUpdates.removedChainBlockHashes), len(toBeRemovedNodes))
+			"Got: %d, want: %d", len(chainUpdates.RemovedChainBlockHashes), len(toBeRemovedNodes))
 	}
-	for i, removedHash := range chainUpdates.removedChainBlockHashes {
+	for i, removedHash := range chainUpdates.RemovedChainBlockHashes {
 		correspondingRemovedNode := toBeRemovedNodes[len(toBeRemovedNodes)-1-i]
 		if !removedHash.IsEqual(correspondingRemovedNode.Hash()) {
 			t.Fatalf("TestChainUpdates: wrong removed hash. "+
@@ -269,11 +269,11 @@ func TestChainUpdates(t *testing.T) {
 	}
 
 	// Make sure that the added blocks are as expected (in forward order)
-	if len(chainUpdates.addedChainBlockHashes) != len(toBeAddedNodes) {
+	if len(chainUpdates.AddedChainBlockHashes) != len(toBeAddedNodes) {
 		t.Fatalf("TestChainUpdates: wrong added amount. "+
-			"Got: %d, want: %d", len(chainUpdates.removedChainBlockHashes), len(toBeAddedNodes))
+			"Got: %d, want: %d", len(chainUpdates.RemovedChainBlockHashes), len(toBeAddedNodes))
 	}
-	for i, addedHash := range chainUpdates.addedChainBlockHashes {
+	for i, addedHash := range chainUpdates.AddedChainBlockHashes {
 		correspondingAddedNode := toBeAddedNodes[i]
 		if !addedHash.IsEqual(correspondingAddedNode.Hash()) {
 			t.Fatalf("TestChainUpdates: wrong added hash. "+

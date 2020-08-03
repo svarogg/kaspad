@@ -124,10 +124,10 @@ func (dag *BlockDAG) maybeAcceptBlock(block *util.Block, flags BehaviorFlags) er
 		Block:         block,
 		WasUnorphaned: flags&BFWasUnorphaned != 0,
 	})
-	if len(chainUpdates.addedChainBlockHashes) > 0 {
+	if len(chainUpdates.AddedChainBlockHashes) > 0 {
 		dag.notifier.SendNotification(notifications.NTChainChanged, &notifications.ChainChangedNotificationData{
-			RemovedChainBlockHashes: chainUpdates.removedChainBlockHashes,
-			AddedChainBlockHashes:   chainUpdates.addedChainBlockHashes,
+			RemovedChainBlockHashes: chainUpdates.RemovedChainBlockHashes,
+			AddedChainBlockHashes:   chainUpdates.AddedChainBlockHashes,
 		})
 	}
 	dag.dagLock.Lock()

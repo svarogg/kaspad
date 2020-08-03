@@ -57,13 +57,6 @@ type orphanBlock struct {
 	expiration mstime.Time
 }
 
-// chainUpdates represents the updates made to the selected parent chain after
-// a block had been added to the DAG.
-type chainUpdates struct {
-	removedChainBlockHashes []*daghash.Hash
-	addedChainBlockHashes   []*daghash.Hash
-}
-
 // BlockDAG provides functions for working with the kaspa block DAG.
 // It includes functionality such as rejecting duplicate blocks, ensuring blocks
 // follow all rules, and orphan handling.
@@ -584,7 +577,7 @@ func LockTimeToSequence(isMilliseconds bool, locktime uint64) uint64 {
 //
 // This function MUST be called with the DAG state lock held (for writes).
 func (dag *BlockDAG) addBlock(node *blocknode.BlockNode,
-	block *util.Block, selectedParentAnticone []*blocknode.BlockNode, flags BehaviorFlags) (*chainUpdates, error) {
+	block *util.Block, selectedParentAnticone []*blocknode.BlockNode, flags BehaviorFlags) (*common.ChainUpdates, error) {
 	// Skip checks if node has already been fully validated.
 	fastAdd := flags&BFFastAdd == BFFastAdd || dag.blockNodeStore.NodeStatus(node).KnownValid()
 
@@ -652,7 +645,7 @@ func (dag *BlockDAG) validateAcceptedIDMerkleRoot(node *blocknode.BlockNode, txs
 //
 // This function MUST be called with the DAG state lock held (for writes).
 func (dag *BlockDAG) connectBlock(node *blocknode.BlockNode,
-	block *util.Block, selectedParentAnticone []*blocknode.BlockNode, fastAdd bool) (*chainUpdates, error) {
+	block *util.Block, selectedParentAnticone []*blocknode.BlockNode, fastAdd bool) (*common.ChainUpdates, error) {
 	// No warnings about unknown rules or versions until the DAG is
 	// synced.
 	if dag.isSynced() {
@@ -1096,7 +1089,7 @@ func (dag *BlockDAG) TxsAcceptedByBlockHash(blockHash *daghash.Hash) (common.Mul
 // This function MUST be called with the DAG state lock held (for writes).
 func (dag *BlockDAG) applyDAGChanges(node *blocknode.BlockNode, newBlockPastUTXO utxo.UTXOSet,
 	newBlockMultiset *secp256k1.MultiSet, selectedParentAnticone []*blocknode.BlockNode) (
-	virtualUTXODiff *utxo.UTXODiff, chainUpdates *chainUpdates, err error) {
+	virtualUTXODiff *utxo.UTXODiff, chainUpdates *common.ChainUpdates, err error) {
 
 	// Add the block to the reachability tree
 	err = dag.reachabilityTree.AddBlock(node, selectedParentAnticone, dag.SelectedTipBlueScore())

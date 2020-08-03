@@ -6,6 +6,7 @@ package blockdag
 
 import (
 	"github.com/kaspanet/kaspad/consensus/blocknode"
+	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/ghostdag"
 	"github.com/kaspanet/kaspad/consensus/utxo"
 	"github.com/kaspanet/kaspad/util/daghash"
@@ -47,7 +48,7 @@ func newVirtualBlock(ghostdag *ghostdag.GHOSTDAG, tips blocknode.BlockNodeSet) *
 // is up to the caller to ensure the lock is held.
 //
 // This function MUST be called with the view mutex locked (for writes).
-func (v *virtualBlock) setTips(tips blocknode.BlockNodeSet) *chainUpdates {
+func (v *virtualBlock) setTips(tips blocknode.BlockNodeSet) *common.ChainUpdates {
 	oldSelectedParent := v.SelectedParent()
 	node, _ := v.ghostdag.InitBlockNode(nil, tips)
 	v.BlockNode = *node
@@ -62,7 +63,7 @@ func (v *virtualBlock) setTips(tips blocknode.BlockNodeSet) *chainUpdates {
 // parent and are not selected ancestors of the new one, and adding
 // blocks that are selected ancestors of the new selected parent
 // and aren't selected ancestors of the old one.
-func (v *virtualBlock) updateSelectedParentSet(oldSelectedParent *blocknode.BlockNode) *chainUpdates {
+func (v *virtualBlock) updateSelectedParentSet(oldSelectedParent *blocknode.BlockNode) *common.ChainUpdates {
 	var intersectionNode *blocknode.BlockNode
 	nodesToAdd := make([]*blocknode.BlockNode, 0)
 	for node := v.BlockNode.SelectedParent(); intersectionNode == nil && node != nil; node = node.SelectedParent() {
@@ -104,9 +105,9 @@ func (v *virtualBlock) updateSelectedParentSet(oldSelectedParent *blocknode.Bloc
 	}
 	v.selectedParentChainSlice = append(v.selectedParentChainSlice, nodesToAdd...)
 
-	return &chainUpdates{
-		removedChainBlockHashes: removedChainBlockHashes,
-		addedChainBlockHashes:   addedChainBlockHashes,
+	return &common.ChainUpdates{
+		RemovedChainBlockHashes: removedChainBlockHashes,
+		AddedChainBlockHashes:   addedChainBlockHashes,
 	}
 }
 
@@ -126,7 +127,7 @@ func (v *virtualBlock) SetTips(tips blocknode.BlockNodeSet) {
 // is up to the caller to ensure the lock is held.
 //
 // This function MUST be called with the view mutex locked (for writes).
-func (v *virtualBlock) addTip(newTip *blocknode.BlockNode) *chainUpdates {
+func (v *virtualBlock) addTip(newTip *blocknode.BlockNode) *common.ChainUpdates {
 	updatedTips := v.tips().Clone()
 	for parent := range newTip.Parents() {
 		updatedTips.Remove(parent)
@@ -141,7 +142,7 @@ func (v *virtualBlock) addTip(newTip *blocknode.BlockNode) *chainUpdates {
 // from the set.
 //
 // This function is safe for concurrent access.
-func (v *virtualBlock) AddTip(newTip *blocknode.BlockNode) *chainUpdates {
+func (v *virtualBlock) AddTip(newTip *blocknode.BlockNode) *common.ChainUpdates {
 	v.mtx.Lock()
 	defer v.mtx.Unlock()
 	return v.addTip(newTip)
