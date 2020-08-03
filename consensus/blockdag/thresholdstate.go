@@ -7,6 +7,7 @@ package blockdag
 import (
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/blocknode"
+	"github.com/kaspanet/kaspad/consensus/blockwindow"
 
 	"github.com/kaspanet/kaspad/util/daghash"
 	"github.com/pkg/errors"
@@ -223,7 +224,7 @@ func (dag *BlockDAG) thresholdState(prevNode *blocknode.BlockNode, checker thres
 			var count uint64
 			windowNodes := make([]*blocknode.BlockNode, 0, confirmationWindow)
 			windowNodes = append(windowNodes, prevNode)
-			windowNodes = append(windowNodes, blueBlockWindow(prevNode, confirmationWindow-1)...)
+			windowNodes = append(windowNodes, blockwindow.BlueBlockWindow(prevNode, confirmationWindow-1)...)
 			for _, current := range windowNodes {
 				condition, err := checker.Condition(current)
 				if err != nil {

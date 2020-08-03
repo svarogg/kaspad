@@ -6,6 +6,7 @@ package blockdag
 
 import (
 	"github.com/kaspanet/kaspad/consensus/blocknode"
+	"github.com/kaspanet/kaspad/consensus/blockwindow"
 	"github.com/kaspanet/kaspad/util/bigintpool"
 	"github.com/kaspanet/kaspad/util/mstime"
 
@@ -21,8 +22,8 @@ func (dag *BlockDAG) requiredDifficulty(bluestParent *blocknode.BlockNode, newBl
 	}
 
 	// Fetch window of dag.difficultyAdjustmentWindowSize + 1 so we can have dag.difficultyAdjustmentWindowSize block intervals
-	timestampsWindow := blueBlockWindow(bluestParent, dag.Params.DifficultyAdjustmentWindowSize+1)
-	windowMinTimestamp, windowMaxTimeStamp := timestampsWindow.minMaxTimestamps()
+	timestampsWindow := blockwindow.BlueBlockWindow(bluestParent, dag.Params.DifficultyAdjustmentWindowSize+1)
+	windowMinTimestamp, windowMaxTimeStamp := timestampsWindow.MinMaxTimestamps()
 
 	// Remove the last block from the window so to calculate the average target of dag.difficultyAdjustmentWindowSize blocks
 	targetsWindow := timestampsWindow[:dag.Params.DifficultyAdjustmentWindowSize]
@@ -40,7 +41,7 @@ func (dag *BlockDAG) requiredDifficulty(bluestParent *blocknode.BlockNode, newBl
 	difficultyAdjustmentWindowSize := bigintpool.Acquire(int64(dag.Params.DifficultyAdjustmentWindowSize))
 	defer bigintpool.Release(difficultyAdjustmentWindowSize)
 
-	targetsWindow.averageTarget(newTarget)
+	targetsWindow.AverageTarget(newTarget)
 	newTarget.
 		Mul(newTarget, windowTimeStampDifference).
 		Div(newTarget, targetTimePerBlock).

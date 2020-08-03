@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/blocklocator"
 	"github.com/kaspanet/kaspad/consensus/blocknode"
+	"github.com/kaspanet/kaspad/consensus/blockwindow"
 	"github.com/kaspanet/kaspad/consensus/coinbase"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/delayedblocks"
@@ -2028,8 +2029,8 @@ func (dag *BlockDAG) FinalityScore(node *blocknode.BlockNode) uint64 {
 //
 // This function is safe for concurrent access.
 func (dag *BlockDAG) PastMedianTime(node *blocknode.BlockNode) mstime.Time {
-	window := blueBlockWindow(node, 2*dag.Params.TimestampDeviationTolerance-1)
-	medianTimestamp, err := window.medianTimestamp()
+	window := blockwindow.BlueBlockWindow(node, 2*dag.Params.TimestampDeviationTolerance-1)
+	medianTimestamp, err := window.MedianTimestamp()
 	if err != nil {
 		panic(fmt.Sprintf("blueBlockWindow: %s", err))
 	}

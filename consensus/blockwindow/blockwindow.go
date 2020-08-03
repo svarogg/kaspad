@@ -1,4 +1,4 @@
-package blockdag
+package blockwindow
 
 import (
 	"github.com/kaspanet/kaspad/consensus/blocknode"
@@ -10,14 +10,14 @@ import (
 	"sort"
 )
 
-type blockWindow []*blocknode.BlockNode
+type BlockWindow []*blocknode.BlockNode
 
-// blueBlockWindow returns a blockWindow of the given size that contains the
+// BlueBlockWindow returns a BlockWindow of the given size that contains the
 // blues in the past of startindNode, sorted by GHOSTDAG order.
 // If the number of blues in the past of startingNode is less then windowSize,
 // the window will be padded by genesis blocks to achieve a size of windowSize.
-func blueBlockWindow(startingNode *blocknode.BlockNode, windowSize uint64) blockWindow {
-	window := make(blockWindow, 0, windowSize)
+func BlueBlockWindow(startingNode *blocknode.BlockNode, windowSize uint64) BlockWindow {
+	window := make(BlockWindow, 0, windowSize)
 	currentNode := startingNode
 	for uint64(len(window)) < windowSize && currentNode.SelectedParent() != nil {
 		if currentNode.SelectedParent() != nil {
@@ -41,7 +41,7 @@ func blueBlockWindow(startingNode *blocknode.BlockNode, windowSize uint64) block
 	return window
 }
 
-func (window blockWindow) minMaxTimestamps() (min, max int64) {
+func (window BlockWindow) MinMaxTimestamps() (min, max int64) {
 	min = math.MaxInt64
 	max = 0
 	for _, node := range window {
@@ -55,7 +55,7 @@ func (window blockWindow) minMaxTimestamps() (min, max int64) {
 	return
 }
 
-func (window blockWindow) averageTarget(averageTarget *big.Int) {
+func (window BlockWindow) AverageTarget(averageTarget *big.Int) {
 	averageTarget.SetInt64(0)
 
 	target := bigintpool.Acquire(0)
@@ -70,7 +70,7 @@ func (window blockWindow) averageTarget(averageTarget *big.Int) {
 	averageTarget.Div(averageTarget, windowLen)
 }
 
-func (window blockWindow) medianTimestamp() (int64, error) {
+func (window BlockWindow) MedianTimestamp() (int64, error) {
 	if len(window) == 0 {
 		return 0, errors.New("Cannot calculate median timestamp for an empty block window")
 	}
