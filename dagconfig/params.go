@@ -6,7 +6,6 @@ package dagconfig
 
 import (
 	"github.com/kaspanet/kaspad/util/network"
-	"math"
 	"math/big"
 	"time"
 
@@ -53,37 +52,6 @@ const (
 	timestampDeviationTolerance    = 132
 	finalityDuration               = 24 * time.Hour
 	targetTimePerBlock             = 1 * time.Second
-)
-
-// ConsensusDeployment defines details related to a specific consensus rule
-// change that is voted in. This is part of BIP0009.
-type ConsensusDeployment struct {
-	// BitNumber defines the specific bit number within the block version
-	// this particular soft-fork deployment refers to.
-	BitNumber uint8
-
-	// StartTime is the median block time after which voting on the
-	// deployment starts.
-	StartTime uint64
-
-	// ExpireTime is the median block time after which the attempted
-	// deployment expires.
-	ExpireTime uint64
-}
-
-// Constants that define the deployment offset in the deployments field of the
-// parameters for each deployment. This is useful to be able to get the details
-// of a specific deployment by name.
-const (
-	// DeploymentTestDummy defines the rule change deployment ID for testing
-	// purposes.
-	DeploymentTestDummy = iota
-
-	// NOTE: DefinedDeployments must always come last since it is used to
-	// determine how many defined deployments there currently are.
-
-	// DefinedDeployments is the number of currently defined deployments.
-	DefinedDeployments
 )
 
 // KType defines the size of GHOSTDAG consensus algorithm K parameter.
@@ -161,7 +129,6 @@ type Params struct {
 	// on.
 	RuleChangeActivationThreshold uint64
 	MinerConfirmationWindow       uint64
-	Deployments                   [DefinedDeployments]ConsensusDeployment
 
 	// Mempool parameters
 	RelayNonStdTxs bool
@@ -212,13 +179,6 @@ var MainnetParams = Params{
 	//   target proof of work timespan / target proof of work spacing
 	RuleChangeActivationThreshold: 1916, // 95% of MinerConfirmationWindow
 	MinerConfirmationWindow:       2016, //
-	Deployments: [DefinedDeployments]ConsensusDeployment{
-		DeploymentTestDummy: {
-			BitNumber:  28,
-			StartTime:  1199145601000, // January 1, 2008 UTC
-			ExpireTime: 1230767999000, // December 31, 2008 UTC
-		},
-	},
 
 	// Mempool parameters
 	RelayNonStdTxs: false,
@@ -265,13 +225,6 @@ var RegressionNetParams = Params{
 	//   target proof of work timespan / target proof of work spacing
 	RuleChangeActivationThreshold: 108, // 75%  of MinerConfirmationWindow
 	MinerConfirmationWindow:       144,
-	Deployments: [DefinedDeployments]ConsensusDeployment{
-		DeploymentTestDummy: {
-			BitNumber:  28,
-			StartTime:  0,             // Always available for vote
-			ExpireTime: math.MaxInt64, // Never expires
-		},
-	},
 
 	// Mempool parameters
 	RelayNonStdTxs: true,
@@ -316,13 +269,6 @@ var TestnetParams = Params{
 	//   target proof of work timespan / target proof of work spacing
 	RuleChangeActivationThreshold: 1512, // 75% of MinerConfirmationWindow
 	MinerConfirmationWindow:       2016,
-	Deployments: [DefinedDeployments]ConsensusDeployment{
-		DeploymentTestDummy: {
-			BitNumber:  28,
-			StartTime:  1199145601000, // January 1, 2008 UTC
-			ExpireTime: 1230767999000, // December 31, 2008 UTC
-		},
-	},
 
 	// Mempool parameters
 	RelayNonStdTxs: true,
@@ -373,13 +319,6 @@ var SimnetParams = Params{
 	//   target proof of work timespan / target proof of work spacing
 	RuleChangeActivationThreshold: 75, // 75% of MinerConfirmationWindow
 	MinerConfirmationWindow:       100,
-	Deployments: [DefinedDeployments]ConsensusDeployment{
-		DeploymentTestDummy: {
-			BitNumber:  28,
-			StartTime:  0,             // Always available for vote
-			ExpireTime: math.MaxInt64, // Never expires
-		},
-	},
 
 	// Mempool parameters
 	RelayNonStdTxs: true,
@@ -422,13 +361,6 @@ var DevnetParams = Params{
 	//   target proof of work timespan / target proof of work spacing
 	RuleChangeActivationThreshold: 1512, // 75% of MinerConfirmationWindow
 	MinerConfirmationWindow:       2016,
-	Deployments: [DefinedDeployments]ConsensusDeployment{
-		DeploymentTestDummy: {
-			BitNumber:  28,
-			StartTime:  1199145601000, // January 1, 2008 UTC
-			ExpireTime: 1230767999000, // December 31, 2008 UTC
-		},
-	},
 
 	// Mempool parameters
 	RelayNonStdTxs: true,

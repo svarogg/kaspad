@@ -22,13 +22,6 @@ func (dag *BlockDAG) BlockForMining(transactions []*util.Tx) (*wire.MsgBlock, er
 	blockTimestamp := dag.NextBlockTime()
 	requiredDifficulty := dag.difficulty.NextRequiredDifficulty()
 
-	// Calculate the next expected block version based on the state of the
-	// rule change deployments.
-	nextBlockVersion, err := dag.CalcNextBlockVersion()
-	if err != nil {
-		return nil, err
-	}
-
 	// Create a new block ready to be solved.
 	hashMerkleTree := merkle.BuildHashMerkleTreeStore(transactions)
 	acceptedIDMerkleRoot, err := dag.NextAcceptedIDMerkleRootNoLock()
@@ -46,7 +39,7 @@ func (dag *BlockDAG) BlockForMining(transactions []*util.Tx) (*wire.MsgBlock, er
 	}
 
 	msgBlock.Header = wire.BlockHeader{
-		Version:              nextBlockVersion,
+		Version:              0x10000000,
 		ParentHashes:         dag.TipHashes(),
 		HashMerkleRoot:       hashMerkleTree.Root(),
 		AcceptedIDMerkleRoot: acceptedIDMerkleRoot,

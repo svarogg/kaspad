@@ -114,23 +114,6 @@ type BlockDAG struct {
 
 	delayedBlocks *delayedblocks.DelayedBlocks
 
-	// The following caches are used to efficiently keep track of the
-	// current deployment threshold state of each rule change deployment.
-	//
-	// This information is stored in the database so it can be quickly
-	// reconstructed on load.
-	//
-	// warningCaches caches the current deployment threshold state for blocks
-	// in each of the **possible** deployments. This is used in order to
-	// detect when new unrecognized rule changes are being voted on and/or
-	// have been activated such as will be the case when older versions of
-	// the software are being used
-	//
-	// deploymentCaches caches the current deployment threshold state for
-	// blocks in each of the actively defined deployments.
-	warningCaches    []thresholdStateCache
-	deploymentCaches []thresholdStateCache
-
 	// The following fields are used to determine if certain warnings have
 	// already been shown.
 	//
@@ -179,8 +162,6 @@ func New(config *Config) (*BlockDAG, error) {
 		orphans:               make(map[daghash.Hash]*orphanBlock),
 		prevOrphans:           make(map[daghash.Hash][]*orphanBlock),
 		delayedBlocks:         delayedblocks.New(),
-		warningCaches:         newThresholdCaches(vbNumBits),
-		deploymentCaches:      newThresholdCaches(dagconfig.DefinedDeployments),
 		blockCount:            0,
 		subnetworkID:          config.SubnetworkID,
 		startTime:             mstime.Now(),
@@ -239,12 +220,6 @@ func New(config *Config) (*BlockDAG, error) {
 
 	// Save a reference to the genesis block.
 	dag.genesis = genesis
-
-	// Initialize rule change threshold state caches.
-	err = dag.initThresholdCaches()
-	if err != nil {
-		return nil, err
-	}
 
 	selectedTip := dag.selectedTip()
 	log.Infof("DAG state (blue score %d, hash %s)",
@@ -643,21 +618,6 @@ func (dag *BlockDAG) validateAcceptedIDMerkleRoot(node *blocknode.BlockNode, txs
 // This function MUST be called with the DAG state lock held (for writes).
 func (dag *BlockDAG) connectBlock(node *blocknode.BlockNode,
 	block *util.Block, selectedParentAnticone []*blocknode.BlockNode, fastAdd bool) (*common.ChainUpdates, error) {
-	// No warnings about unknown rules or versions until the DAG is
-	// synced.
-	if dag.isSynced() {
-		// Warn if any unknown new rules are either about to activate or
-		// have already been activated.
-		if err := dag.warnUnknownRuleActivations(node); err != nil {
-			return nil, err
-		}
-
-		// Warn if a high enough percentage of the last blocks have
-		// unexpected versions.
-		if err := dag.warnUnknownVersions(node); err != nil {
-			return nil, err
-		}
-	}
 
 	if err := dag.checkFinalityViolation(node); err != nil {
 		return nil, err

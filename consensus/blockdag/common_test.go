@@ -37,11 +37,9 @@ func (dag *BlockDAG) TestSetCoinbaseMaturity(maturity uint64) {
 func newTestDAG(params *dagconfig.Params) *BlockDAG {
 	blockNodeStore := blocknode.NewBlockNodeStore(params)
 	dag := &BlockDAG{
-		Params:           params,
-		timeSource:       timesource.New(),
-		blockNodeStore:   blockNodeStore,
-		warningCaches:    newThresholdCaches(vbNumBits),
-		deploymentCaches: newThresholdCaches(dagconfig.DefinedDeployments),
+		Params:         params,
+		timeSource:     timesource.New(),
+		blockNodeStore: blockNodeStore,
 	}
 	dag.reachabilityTree = reachability.NewReachabilityTree(blockNodeStore, params)
 	dag.ghostdag = ghostdag.NewGHOSTDAG(dag.reachabilityTree, params, dag.timeSource)
