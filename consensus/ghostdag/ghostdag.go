@@ -3,7 +3,9 @@ package ghostdag
 import (
 	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/consensus/reachability"
+	"github.com/kaspanet/kaspad/consensus/timesource"
 	"github.com/kaspanet/kaspad/dagconfig"
+	"github.com/kaspanet/kaspad/wire"
 	"github.com/pkg/errors"
 	"sort"
 )
@@ -11,12 +13,16 @@ import (
 type GHOSTDAG struct {
 	reachabilityTree *reachability.ReachabilityTree
 	params           *dagconfig.Params
+	timeSource       timesource.TimeSource
 }
 
-func NewGHOSTDAG(reachabilityTree *reachability.ReachabilityTree, params *dagconfig.Params) *GHOSTDAG {
+func NewGHOSTDAG(reachabilityTree *reachability.ReachabilityTree,
+	params *dagconfig.Params, timeSource timesource.TimeSource) *GHOSTDAG {
+
 	return &GHOSTDAG{
 		reachabilityTree: reachabilityTree,
 		params:           params,
+		timeSource:       timeSource,
 	}
 }
 
@@ -181,4 +187,24 @@ func (g *GHOSTDAG) selectedParentAnticone(node *blocknode.BlockNode) ([]*blockno
 
 func (g *GHOSTDAG) isInPast(this *blocknode.BlockNode, other *blocknode.BlockNode) (bool, error) {
 	return g.reachabilityTree.IsInPast(this, other)
+}
+
+// InitBlockNode returns a new block node for the given block header and parents, and the
+// anticone of its selected parent (parent with highest blue score).
+// selectedParentAnticone is used to update reachability data we store for future reachability queries.
+// This function is NOT safe for concurrent access.
+func (g *GHOSTDAG) InitBlockNode(blockHeader *wire.BlockHeader, parents blocknode.BlockNodeSet) (
+	node *blocknode.BlockNode, selectedParentAnticone []*blocknode.BlockNode) {
+
+	node = blocknode.NewBlockNode(blockHeader, parents, g.timeSource.Now())
+
+	if len(node.Parents()) == 0 {
+		return node, nil
+	}
+
+	selectedParentAnticone, err := g.Run(node)
+	if err != nil {
+		panic(errors.Wrap(err, "unexpected error in GHOSTDAG"))
+	}
+	return node, selectedParentAnticone
 }

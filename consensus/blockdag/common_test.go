@@ -7,6 +7,8 @@ package blockdag
 import (
 	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/consensus/common"
+	"github.com/kaspanet/kaspad/consensus/ghostdag"
+	"github.com/kaspanet/kaspad/consensus/reachability"
 	"github.com/kaspanet/kaspad/consensus/timesource"
 	"testing"
 
@@ -31,22 +33,24 @@ func (dag *BlockDAG) TestSetCoinbaseMaturity(maturity uint64) {
 // it is not usable with all functions and the tests must take care when making
 // use of it.
 func newTestDAG(params *dagconfig.Params) *BlockDAG {
-	index := blocknode.NewBlockNodeStore(params)
+	blockNodeStore := blocknode.NewBlockNodeStore(params)
 	dag := &BlockDAG{
 		Params:                         params,
 		timeSource:                     timesource.New(),
 		difficultyAdjustmentWindowSize: params.DifficultyAdjustmentWindowSize,
 		TimestampDeviationTolerance:    params.TimestampDeviationTolerance,
 		powMaxBits:                     util.BigToCompact(params.PowMax),
-		blockNodeStore:                 index,
+		blockNodeStore:                 blockNodeStore,
 		warningCaches:                  newThresholdCaches(vbNumBits),
 		deploymentCaches:               newThresholdCaches(dagconfig.DefinedDeployments),
 	}
+	dag.reachabilityTree = reachability.NewReachabilityTree(blockNodeStore, params)
+	dag.ghostdag = ghostdag.NewGHOSTDAG(dag.reachabilityTree, params, dag.timeSource)
 
-	// Create a genesis block node and block index index populated with it
+	// Create a genesis block node and block blockNodeStore populated with it
 	// on the above fake DAG.
 	dag.genesis, _ = dag.initBlockNode(&params.GenesisBlock.Header, blocknode.NewBlockNodeSet())
-	index.AddNode(dag.genesis)
+	blockNodeStore.AddNode(dag.genesis)
 
 	dag.virtual = newVirtualBlock(dag, blocknode.BlockNodeSetFromSlice(dag.genesis))
 	return dag

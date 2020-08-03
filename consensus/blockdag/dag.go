@@ -11,7 +11,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/coinbase"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/delayedblocks"
-	ghostdag2 "github.com/kaspanet/kaspad/consensus/ghostdag"
+	"github.com/kaspanet/kaspad/consensus/ghostdag"
 	"github.com/kaspanet/kaspad/consensus/merkle"
 	"github.com/kaspanet/kaspad/consensus/multiset"
 	"github.com/kaspanet/kaspad/consensus/notifications"
@@ -80,7 +80,7 @@ type BlockDAG struct {
 	genesis         *blocknode.BlockNode
 	notifier        *notifications.ConsensusNotifier
 	coinbase        *coinbase.Coinbase
-	ghostdag        *ghostdag2.GHOSTDAG
+	ghostdag        *ghostdag.GHOSTDAG
 
 	// The following fields are calculated based upon the provided DAG
 	// parameters. They are also set when the instance is created and
@@ -202,11 +202,11 @@ func New(config *Config) (*BlockDAG, error) {
 		coinbase:                       coinbase.New(config.DatabaseContext, params),
 	}
 
-	dag.virtual = newVirtualBlock(dag, nil)
 	dag.utxoDiffStore = newUTXODiffStore(dag)
 	dag.multisetStore = multiset.NewMultisetStore()
 	dag.reachabilityTree = reachability.NewReachabilityTree(blockNodeStore, params)
-	dag.ghostdag = ghostdag2.NewGHOSTDAG(dag.reachabilityTree, params)
+	dag.ghostdag = ghostdag.NewGHOSTDAG(dag.reachabilityTree, params, dag.timeSource)
+	dag.virtual = newVirtualBlock(dag, nil)
 
 	// Initialize the DAG state from the passed database. When the db
 	// does not yet contain any DAG state, both it and the DAG state
@@ -2107,17 +2107,7 @@ type Config struct {
 // selectedParentAnticone is used to update reachability data we store for future reachability queries.
 // This function is NOT safe for concurrent access.
 func (dag *BlockDAG) initBlockNode(blockHeader *wire.BlockHeader, parents blocknode.BlockNodeSet) (node *blocknode.BlockNode, selectedParentAnticone []*blocknode.BlockNode) {
-	node = blocknode.NewBlockNode(blockHeader, parents, dag.Now())
-
-	if len(node.Parents()) == 0 {
-		return node, nil
-	}
-
-	selectedParentAnticone, err := dag.ghostdag.Run(node)
-	if err != nil {
-		panic(errors.Wrap(err, "unexpected error in GHOSTDAG"))
-	}
-	return node, selectedParentAnticone
+	return dag.ghostdag.InitBlockNode(blockHeader, parents)
 }
 
 func (dag *BlockDAG) Notifier() *notifications.ConsensusNotifier {
