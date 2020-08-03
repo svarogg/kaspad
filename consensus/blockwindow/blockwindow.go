@@ -41,10 +41,10 @@ func BlueBlockWindow(startingNode *blocknode.BlockNode, windowSize uint64) Block
 	return window
 }
 
-func (window BlockWindow) MinMaxTimestamps() (min, max int64) {
+func (bw BlockWindow) MinMaxTimestamps() (min, max int64) {
 	min = math.MaxInt64
 	max = 0
-	for _, node := range window {
+	for _, node := range bw {
 		if node.Timestamp() < min {
 			min = node.Timestamp()
 		}
@@ -55,27 +55,27 @@ func (window BlockWindow) MinMaxTimestamps() (min, max int64) {
 	return
 }
 
-func (window BlockWindow) AverageTarget(averageTarget *big.Int) {
+func (bw BlockWindow) AverageTarget(averageTarget *big.Int) {
 	averageTarget.SetInt64(0)
 
 	target := bigintpool.Acquire(0)
 	defer bigintpool.Release(target)
-	for _, node := range window {
+	for _, node := range bw {
 		util.CompactToBigWithDestination(node.Bits(), target)
 		averageTarget.Add(averageTarget, target)
 	}
 
-	windowLen := bigintpool.Acquire(int64(len(window)))
+	windowLen := bigintpool.Acquire(int64(len(bw)))
 	defer bigintpool.Release(windowLen)
 	averageTarget.Div(averageTarget, windowLen)
 }
 
-func (window BlockWindow) MedianTimestamp() (int64, error) {
-	if len(window) == 0 {
+func (bw BlockWindow) MedianTimestamp() (int64, error) {
+	if len(bw) == 0 {
 		return 0, errors.New("Cannot calculate median timestamp for an empty block window")
 	}
-	timestamps := make([]int64, len(window))
-	for i, node := range window {
+	timestamps := make([]int64, len(bw))
+	for i, node := range bw {
 		timestamps[i] = node.Timestamp()
 	}
 	sort.Sort(timeSorter(timestamps))

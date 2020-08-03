@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/blocklocator"
 	"github.com/kaspanet/kaspad/consensus/blocknode"
-	"github.com/kaspanet/kaspad/consensus/blockwindow"
 	"github.com/kaspanet/kaspad/consensus/coinbase"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/delayedblocks"
@@ -17,6 +16,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/merkle"
 	"github.com/kaspanet/kaspad/consensus/multiset"
 	"github.com/kaspanet/kaspad/consensus/notifications"
+	"github.com/kaspanet/kaspad/consensus/pastmediantime"
 	"github.com/kaspanet/kaspad/consensus/reachability"
 	"github.com/kaspanet/kaspad/consensus/subnetworks"
 	"github.com/kaspanet/kaspad/consensus/timesource"
@@ -69,17 +69,18 @@ type BlockDAG struct {
 	// The following fields are set when the instance is created and can't
 	// be changed afterwards, so there is no need to protect them with a
 	// separate mutex.
-	Params              *dagconfig.Params
-	databaseContext     *dbaccess.DatabaseContext
-	timeSource          timesource.TimeSource
-	sigCache            *txscript.SigCache
-	indexManager        IndexManager
-	genesis             *blocknode.BlockNode
-	notifier            *notifications.ConsensusNotifier
-	coinbase            *coinbase.Coinbase
-	ghostdag            *ghostdag.GHOSTDAG
-	blockLocatorFactory *blocklocator.BlockLocatorFactory
-	difficulty          *difficulty2.Difficulty
+	Params                *dagconfig.Params
+	databaseContext       *dbaccess.DatabaseContext
+	timeSource            timesource.TimeSource
+	sigCache              *txscript.SigCache
+	indexManager          IndexManager
+	genesis               *blocknode.BlockNode
+	notifier              *notifications.ConsensusNotifier
+	coinbase              *coinbase.Coinbase
+	ghostdag              *ghostdag.GHOSTDAG
+	blockLocatorFactory   *blocklocator.BlockLocatorFactory
+	difficulty            *difficulty2.Difficulty
+	pastMedianTimeFactory *pastmediantime.PastMedianTimeFactory
 
 	// dagLock protects concurrent access to the vast majority of the
 	// fields in this struct below this point.
@@ -169,22 +170,23 @@ func New(config *Config) (*BlockDAG, error) {
 
 	blockNodeStore := blocknode.NewBlockNodeStore(params)
 	dag := &BlockDAG{
-		Params:           params,
-		databaseContext:  config.DatabaseContext,
-		timeSource:       config.TimeSource,
-		sigCache:         config.SigCache,
-		indexManager:     config.IndexManager,
-		blockNodeStore:   blockNodeStore,
-		orphans:          make(map[daghash.Hash]*orphanBlock),
-		prevOrphans:      make(map[daghash.Hash][]*orphanBlock),
-		delayedBlocks:    delayedblocks.New(),
-		warningCaches:    newThresholdCaches(vbNumBits),
-		deploymentCaches: newThresholdCaches(dagconfig.DefinedDeployments),
-		blockCount:       0,
-		subnetworkID:     config.SubnetworkID,
-		startTime:        mstime.Now(),
-		notifier:         notifications.New(),
-		coinbase:         coinbase.New(config.DatabaseContext, params),
+		Params:                params,
+		databaseContext:       config.DatabaseContext,
+		timeSource:            config.TimeSource,
+		sigCache:              config.SigCache,
+		indexManager:          config.IndexManager,
+		blockNodeStore:        blockNodeStore,
+		orphans:               make(map[daghash.Hash]*orphanBlock),
+		prevOrphans:           make(map[daghash.Hash][]*orphanBlock),
+		delayedBlocks:         delayedblocks.New(),
+		warningCaches:         newThresholdCaches(vbNumBits),
+		deploymentCaches:      newThresholdCaches(dagconfig.DefinedDeployments),
+		blockCount:            0,
+		subnetworkID:          config.SubnetworkID,
+		startTime:             mstime.Now(),
+		notifier:              notifications.New(),
+		coinbase:              coinbase.New(config.DatabaseContext, params),
+		pastMedianTimeFactory: pastmediantime.NewPastMedianTimeFactory(params),
 	}
 
 	dag.multisetStore = multiset.NewMultisetStore()
@@ -2022,17 +2024,12 @@ func (dag *BlockDAG) FinalityScore(node *blocknode.BlockNode) uint64 {
 	return node.BlueScore() / dag.FinalityInterval()
 }
 
-// CalcPastMedianTime returns the median time of the previous few blocks
+// PastMedianTime returns the median time of the previous few blocks
 // prior to, and including, the block node.
 //
 // This function is safe for concurrent access.
 func (dag *BlockDAG) PastMedianTime(node *blocknode.BlockNode) mstime.Time {
-	window := blockwindow.BlueBlockWindow(node, 2*dag.Params.TimestampDeviationTolerance-1)
-	medianTimestamp, err := window.MedianTimestamp()
-	if err != nil {
-		panic(fmt.Sprintf("blueBlockWindow: %s", err))
-	}
-	return mstime.UnixMilliseconds(medianTimestamp)
+	return dag.pastMedianTimeFactory.PastMedianTime(node)
 }
 
 // GasLimit returns the gas limit of a registered subnetwork. If the subnetwork does not

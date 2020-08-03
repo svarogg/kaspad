@@ -9,6 +9,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/difficulty"
 	"github.com/kaspanet/kaspad/consensus/ghostdag"
+	"github.com/kaspanet/kaspad/consensus/pastmediantime"
 	"github.com/kaspanet/kaspad/consensus/reachability"
 	"github.com/kaspanet/kaspad/consensus/timesource"
 	"github.com/kaspanet/kaspad/consensus/virtualblock"
@@ -44,6 +45,7 @@ func newTestDAG(params *dagconfig.Params) *BlockDAG {
 	}
 	dag.reachabilityTree = reachability.NewReachabilityTree(blockNodeStore, params)
 	dag.ghostdag = ghostdag.NewGHOSTDAG(dag.reachabilityTree, params, dag.timeSource)
+	dag.pastMedianTimeFactory = pastmediantime.NewPastMedianTimeFactory(params)
 
 	// Create a genesis block node and block blockNodeStore populated with it
 	// on the above fake DAG.
