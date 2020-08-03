@@ -6,6 +6,7 @@ package blockdag
 
 import (
 	"fmt"
+	"github.com/kaspanet/kaspad/consensus/blocklocator"
 	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/consensus/coinbase"
 	"github.com/kaspanet/kaspad/consensus/common"
@@ -74,7 +75,7 @@ type BlockDAG struct {
 	notifier            *notifications.ConsensusNotifier
 	coinbase            *coinbase.Coinbase
 	ghostdag            *ghostdag.GHOSTDAG
-	blockLocatorFactory *BlockLocatorFactory
+	blockLocatorFactory *blocklocator.BlockLocatorFactory
 
 	// The following fields are calculated based upon the provided DAG
 	// parameters. They are also set when the instance is created and
@@ -201,7 +202,7 @@ func New(config *Config) (*BlockDAG, error) {
 	dag.reachabilityTree = reachability.NewReachabilityTree(blockNodeStore, params)
 	dag.ghostdag = ghostdag.NewGHOSTDAG(dag.reachabilityTree, params, dag.timeSource)
 	dag.virtual = virtualblock.NewVirtualBlock(dag.ghostdag, params, dag.blockNodeStore, nil)
-	dag.blockLocatorFactory = NewBlockLocatorFactory(dag.blockNodeStore, params)
+	dag.blockLocatorFactory = blocklocator.NewBlockLocatorFactory(dag.blockNodeStore, params)
 
 	// Initialize the DAG state from the passed database. When the db
 	// does not yet contain any DAG state, both it and the DAG state
@@ -2067,7 +2068,7 @@ func (dag *BlockDAG) SelectedParentChain(blockHash *daghash.Hash) ([]*daghash.Ha
 
 // BlockLocatorFromHashes returns a block locator from high and low hash.
 // See BlockLocator for details on the algorithm used to create a block locator.
-func (dag *BlockDAG) BlockLocatorFromHashes(highHash, lowHash *daghash.Hash) (BlockLocator, error) {
+func (dag *BlockDAG) BlockLocatorFromHashes(highHash, lowHash *daghash.Hash) (blocklocator.BlockLocator, error) {
 	return dag.blockLocatorFactory.BlockLocatorFromHashes(highHash, lowHash)
 }
 
@@ -2075,6 +2076,6 @@ func (dag *BlockDAG) BlockLocatorFromHashes(highHash, lowHash *daghash.Hash) (Bl
 // and the highest known block locator hash. This is used to create the
 // next block locator to find the highest shared known chain block with the
 // sync peer.
-func (dag *BlockDAG) FindNextLocatorBoundaries(locator BlockLocator) (highHash, lowHash *daghash.Hash) {
+func (dag *BlockDAG) FindNextLocatorBoundaries(locator blocklocator.BlockLocator) (highHash, lowHash *daghash.Hash) {
 	return dag.blockLocatorFactory.FindNextLocatorBoundaries(locator)
 }

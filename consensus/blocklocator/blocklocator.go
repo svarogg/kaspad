@@ -1,4 +1,4 @@
-package blockdag
+package blocklocator
 
 import (
 	"github.com/kaspanet/kaspad/consensus/blocknode"

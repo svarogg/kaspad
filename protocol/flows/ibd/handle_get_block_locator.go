@@ -2,6 +2,7 @@ package ibd
 
 import (
 	"github.com/kaspanet/kaspad/consensus/blockdag"
+	"github.com/kaspanet/kaspad/consensus/blocklocator"
 	"github.com/kaspanet/kaspad/netadapter/router"
 	"github.com/kaspanet/kaspad/protocol/protocolerrors"
 	"github.com/kaspanet/kaspad/util/daghash"
@@ -62,7 +63,7 @@ func (flow *handleGetBlockLocatorFlow) receiveGetBlockLocator() (lowHash *daghas
 	return msgGetBlockLocator.LowHash, msgGetBlockLocator.HighHash, nil
 }
 
-func (flow *handleGetBlockLocatorFlow) sendBlockLocator(locator blockdag.BlockLocator) error {
+func (flow *handleGetBlockLocatorFlow) sendBlockLocator(locator blocklocator.BlockLocator) error {
 	msgBlockLocator := wire.NewMsgBlockLocator(locator)
 	err := flow.outgoingRoute.Enqueue(msgBlockLocator)
 	if err != nil {
