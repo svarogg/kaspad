@@ -52,7 +52,7 @@ func newTestDAG(params *dagconfig.Params) *BlockDAG {
 	dag.genesis, _ = dag.initBlockNode(&params.GenesisBlock.Header, blocknode.NewBlockNodeSet())
 	blockNodeStore.AddNode(dag.genesis)
 
-	dag.virtual = newVirtualBlock(dag, blocknode.BlockNodeSetFromSlice(dag.genesis))
+	dag.virtual = newVirtualBlock(dag.ghostdag, blocknode.BlockNodeSetFromSlice(dag.genesis))
 	return dag
 }
 

@@ -206,7 +206,7 @@ func New(config *Config) (*BlockDAG, error) {
 	dag.multisetStore = multiset.NewMultisetStore()
 	dag.reachabilityTree = reachability.NewReachabilityTree(blockNodeStore, params)
 	dag.ghostdag = ghostdag.NewGHOSTDAG(dag.reachabilityTree, params, dag.timeSource)
-	dag.virtual = newVirtualBlock(dag, nil)
+	dag.virtual = newVirtualBlock(dag.ghostdag, nil)
 
 	// Initialize the DAG state from the passed database. When the db
 	// does not yet contain any DAG state, both it and the DAG state

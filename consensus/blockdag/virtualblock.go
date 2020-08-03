@@ -6,6 +6,7 @@ package blockdag
 
 import (
 	"github.com/kaspanet/kaspad/consensus/blocknode"
+	"github.com/kaspanet/kaspad/consensus/ghostdag"
 	"github.com/kaspanet/kaspad/consensus/utxo"
 	"github.com/kaspanet/kaspad/util/daghash"
 	"sync"
@@ -13,9 +14,9 @@ import (
 
 // virtualBlock is a virtual block whose parents are the tips of the DAG.
 type virtualBlock struct {
-	mtx     sync.Mutex
-	dag     *BlockDAG
-	utxoSet *utxo.FullUTXOSet
+	mtx      sync.Mutex
+	ghostdag *ghostdag.GHOSTDAG
+	utxoSet  *utxo.FullUTXOSet
 	blocknode.BlockNode
 
 	// selectedParentChainSet is a block set that includes all the blocks
@@ -29,10 +30,10 @@ type virtualBlock struct {
 }
 
 // newVirtualBlock creates and returns a new VirtualBlock.
-func newVirtualBlock(dag *BlockDAG, tips blocknode.BlockNodeSet) *virtualBlock {
+func newVirtualBlock(ghostdag *ghostdag.GHOSTDAG, tips blocknode.BlockNodeSet) *virtualBlock {
 	// The mutex is intentionally not held since this is a constructor.
 	var virtual virtualBlock
-	virtual.dag = dag
+	virtual.ghostdag = ghostdag
 	virtual.utxoSet = utxo.NewFullUTXOSet()
 	virtual.selectedParentChainSet = blocknode.NewBlockNodeSet()
 	virtual.selectedParentChainSlice = nil
@@ -48,7 +49,7 @@ func newVirtualBlock(dag *BlockDAG, tips blocknode.BlockNodeSet) *virtualBlock {
 // This function MUST be called with the view mutex locked (for writes).
 func (v *virtualBlock) setTips(tips blocknode.BlockNodeSet) *chainUpdates {
 	oldSelectedParent := v.SelectedParent()
-	node, _ := v.dag.initBlockNode(nil, tips)
+	node, _ := v.ghostdag.InitBlockNode(nil, tips)
 	v.BlockNode = *node
 	return v.updateSelectedParentSet(oldSelectedParent)
 }

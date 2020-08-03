@@ -166,7 +166,7 @@ func GetVirtualFromParentsForTest(dag *BlockDAG, parentHashes []*daghash.Hash) (
 		}
 		parents.Add(parent)
 	}
-	virtual := newVirtualBlock(dag, parents)
+	virtual := newVirtualBlock(dag.ghostdag, parents)
 
 	pastUTXO, _, _, err := dag.pastUTXO(&virtual.BlockNode)
 	if err != nil {

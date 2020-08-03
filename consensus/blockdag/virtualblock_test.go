@@ -104,7 +104,7 @@ func TestVirtualBlock(t *testing.T) {
 
 	for _, test := range tests {
 		// Create an empty VirtualBlock
-		virtual := newVirtualBlock(dag, nil)
+		virtual := newVirtualBlock(dag.ghostdag, nil)
 
 		// Set the tips. This will be the initial state
 		virtual.SetTips(blocknode.BlockNodeSetFromSlice(test.tipsToSet...))
@@ -144,7 +144,7 @@ func TestSelectedPath(t *testing.T) {
 	defer teardownFunc()
 
 	// Create an empty VirtualBlock
-	virtual := newVirtualBlock(dag, nil)
+	virtual := newVirtualBlock(dag.ghostdag, nil)
 
 	tip := dag.genesis
 	virtual.AddTip(tip)
@@ -210,7 +210,7 @@ func TestSelectedPath(t *testing.T) {
 	}
 
 	// We call updateSelectedParentSet manually without updating the tips, to check if it panics
-	virtual2 := newVirtualBlock(dag, nil)
+	virtual2 := newVirtualBlock(dag.ghostdag, nil)
 	defer func() {
 		if r := recover(); r == nil {
 			t.Fatalf("updateSelectedParentSet didn't panic")
@@ -242,7 +242,7 @@ func TestChainUpdates(t *testing.T) {
 	}
 
 	// Create a VirtualBlock with the toBeRemoved chain
-	virtual := newVirtualBlock(dag, blocknode.BlockNodeSetFromSlice(toBeRemovedNodes...))
+	virtual := newVirtualBlock(dag.ghostdag, blocknode.BlockNodeSetFromSlice(toBeRemovedNodes...))
 
 	// Create a chain to be added
 	var toBeAddedNodes []*blocknode.BlockNode
