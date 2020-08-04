@@ -58,7 +58,7 @@ func (dag *BlockDAG) maybeAcceptBlock(block *util.Block, flags common.BehaviorFl
 
 	// The block must pass all of the validation rules which depend on the
 	// position of the block within the block DAG.
-	err = dag.checkBlockContext(block, parents, flags)
+	err = blockvalidation.CheckBlockContext(dag.difficulty, dag.pastMedianTimeFactory, dag.reachabilityTree, block, parents, flags)
 	if err != nil {
 		return err
 	}
