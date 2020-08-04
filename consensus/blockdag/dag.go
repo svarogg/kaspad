@@ -52,10 +52,9 @@ import (
 // It includes functionality such as rejecting duplicate blocks, ensuring blocks
 // follow all rules, and orphan handling.
 type BlockDAG struct {
-	// The following fields are set when the instance is created and can't
-	// be changed afterwards, so there is no need to protect them with a
-	// separate mutex.
-	Params                 *dagconfig.Params
+	Params       *dagconfig.Params
+	subnetworkID *subnetworkid.SubnetworkID
+
 	databaseContext        *dbaccess.DatabaseContext
 	timeSource             timesource.TimeSource
 	sigCache               *txscript.SigCache
@@ -70,48 +69,20 @@ type BlockDAG struct {
 	syncRate               *syncrate.SyncRate
 	sequenceLockCalculator *sequencelock.SequenceLockCalculator
 	finalityManager        *finality.FinalityManager
+	blockNodeStore         *blocknode.BlockNodeStore
+	virtual                *virtualblock.VirtualBlock
+	orphanedBlocks         *orphanedblocks.OrphanedBlocks
+	delayedBlocks          *delayedblocks.DelayedBlocks
+	utxoDiffStore          *utxodiffstore.UTXODiffStore
+	multisetManager        *multiset.MultiSetManager
+	reachabilityTree       *reachability.ReachabilityTree
 
 	// dagLock protects concurrent access to the vast majority of the
 	// fields in this struct below this point.
 	dagLock sync.RWMutex
 
-	utxoLock sync.RWMutex
-
-	// index and virtual are related to the memory block index. They both
-	// have their own locks, however they are often also protected by the
-	// DAG lock to help prevent logic races when blocks are being processed.
-
-	// index houses the entire block index in memory. The block index is
-	// a tree-shaped structure.
-	blockNodeStore *blocknode.BlockNodeStore
-
 	// blockCount holds the number of blocks in the DAG
 	blockCount uint64
-
-	// virtual tracks the current tips.
-	virtual *virtualblock.VirtualBlock
-
-	// subnetworkID holds the subnetwork ID of the DAG
-	subnetworkID *subnetworkid.SubnetworkID
-
-	orphanedBlocks *orphanedblocks.OrphanedBlocks
-	delayedBlocks  *delayedblocks.DelayedBlocks
-
-	// The following fields are used to determine if certain warnings have
-	// already been shown.
-	//
-	// unknownRulesWarned refers to warnings due to unknown rules being
-	// activated.
-	//
-	// unknownVersionsWarned refers to warnings due to unknown versions
-	// being mined.
-	unknownRulesWarned    bool
-	unknownVersionsWarned bool
-
-	utxoDiffStore   *utxodiffstore.UTXODiffStore
-	multisetManager *multiset.MultiSetManager
-
-	reachabilityTree *reachability.ReachabilityTree
 }
 
 // New returns a BlockDAG instance using the provided configuration details.
@@ -566,8 +537,6 @@ func (dag *BlockDAG) applyDAGChanges(node *blocknode.BlockNode, newBlockPastUTXO
 }
 
 func (dag *BlockDAG) meldVirtualUTXO(newVirtualUTXODiffSet *utxo.DiffUTXOSet) error {
-	dag.utxoLock.Lock()
-	defer dag.utxoLock.Unlock()
 	return newVirtualUTXODiffSet.MeldToBase()
 }
 
