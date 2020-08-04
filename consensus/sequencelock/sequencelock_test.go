@@ -1,5 +1,10 @@
 package sequencelock
 
+import (
+	"github.com/kaspanet/kaspad/util/mstime"
+	"testing"
+)
+
 // TODO: Fix this test
 //// TestCalcSequenceLock tests the LockTimeToSequence function, and the
 //// CalcSequenceLock method of a DAG instance. The tests exercise several
@@ -271,3 +276,49 @@ package sequencelock
 //		}
 //	}
 //}
+
+// TestSequenceLocksActive tests the IsActive function to ensure it
+// works as expected in all possible combinations/scenarios.
+func TestSequenceLocksActive(t *testing.T) {
+	seqLock := func(blueScore int64, milliseconds int64) *SequenceLock {
+		return &SequenceLock{
+			Milliseconds:   milliseconds,
+			BlockBlueScore: blueScore,
+		}
+	}
+
+	tests := []struct {
+		seqLock        *SequenceLock
+		blockBlueScore uint64
+		mtp            mstime.Time
+
+		want bool
+	}{
+		// Block based sequence lock with equal block blue score.
+		{seqLock: seqLock(1000, -1), blockBlueScore: 1001, mtp: mstime.UnixMilliseconds(9), want: true},
+
+		// Time based sequence lock with mtp past the absolute time.
+		{seqLock: seqLock(-1, 30), blockBlueScore: 2, mtp: mstime.UnixMilliseconds(31), want: true},
+
+		// Block based sequence lock with current blue score below seq lock block blue score.
+		{seqLock: seqLock(1000, -1), blockBlueScore: 90, mtp: mstime.UnixMilliseconds(9), want: false},
+
+		// Time based sequence lock with current time before lock time.
+		{seqLock: seqLock(-1, 30), blockBlueScore: 2, mtp: mstime.UnixMilliseconds(29), want: false},
+
+		// Block based sequence lock at the same blue score, so shouldn't yet be active.
+		{seqLock: seqLock(1000, -1), blockBlueScore: 1000, mtp: mstime.UnixMilliseconds(9), want: false},
+
+		// Time based sequence lock with current time equal to lock time, so shouldn't yet be active.
+		{seqLock: seqLock(-1, 30), blockBlueScore: 2, mtp: mstime.UnixMilliseconds(30), want: false},
+	}
+
+	t.Logf("Running %d sequence locks tests", len(tests))
+	for i, test := range tests {
+		got := test.seqLock.IsActive(test.blockBlueScore, test.mtp)
+		if got != test.want {
+			t.Fatalf("IsActive #%d got %v want %v", i,
+				got, test.want)
+		}
+	}
+}

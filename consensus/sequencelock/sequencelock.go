@@ -8,6 +8,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/utxo"
 	"github.com/kaspanet/kaspad/consensus/virtualblock"
 	"github.com/kaspanet/kaspad/util"
+	"github.com/kaspanet/kaspad/util/mstime"
 	"github.com/kaspanet/kaspad/wire"
 )
 
@@ -148,4 +149,20 @@ func LockTimeToSequence(isMilliseconds bool, locktime uint64) uint64 {
 	// 34,359,214,080 seconds, or 1.1 years.
 	return wire.SequenceLockTimeIsSeconds |
 		locktime>>wire.SequenceLockTimeGranularity
+}
+
+// IsActive determines if a transaction's sequence locks have been
+// met, meaning that all the inputs of a given transaction have reached a
+// blue score or time sufficient for their relative lock-time maturity.
+func (sequenceLock *SequenceLock) IsActive(blockBlueScore uint64, medianTimePast mstime.Time) bool {
+
+	// If either the milliseconds, or blue score relative-lock time has not yet
+	// reached, then the transaction is not yet mature according to its
+	// sequence locks.
+	if sequenceLock.Milliseconds >= medianTimePast.UnixMilliseconds() ||
+		sequenceLock.BlockBlueScore >= int64(blockBlueScore) {
+		return false
+	}
+
+	return true
 }

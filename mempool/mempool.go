@@ -11,6 +11,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/utxo"
 	"github.com/kaspanet/kaspad/consensus/validation/scriptvalidation"
 	"github.com/kaspanet/kaspad/consensus/validation/transactionvalidation"
+	"github.com/kaspanet/kaspad/consensus/validation/utxovalidation"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -660,7 +661,7 @@ func (mp *TxPool) removeDoubleSpends(tx *util.Tx) error {
 func (mp *TxPool) addTransaction(tx *util.Tx, fee uint64, parentsInPool []*wire.Outpoint) (*TxDesc, error) {
 	// Add the transaction to the pool and mark the referenced outpoints
 	// as spent by the pool.
-	mass, err := blockdag.CalcTxMassFromUTXOSet(tx, mp.mpUTXOSet)
+	mass, err := utxovalidation.CalcTxMassFromUTXOSet(tx, mp.mpUTXOSet)
 	if err != nil {
 		return nil, err
 	}
@@ -774,7 +775,7 @@ func (mp *TxPool) FetchTransaction(txID *daghash.TxID) (*util.Tx, error) {
 // checkTransactionMassSanity checks that a transaction must not exceed the maximum allowed block mass when serialized.
 func checkTransactionMassSanity(tx *util.Tx) error {
 	serializedTxSize := tx.MsgTx().SerializeSize()
-	if serializedTxSize*blockdag.MassPerTxByte > wire.MaxMassPerTx {
+	if serializedTxSize*utxovalidation.MassPerTxByte > wire.MaxMassPerTx {
 		str := fmt.Sprintf("serialized transaction is too big - got "+
 			"%d, max %d", serializedTxSize, wire.MaxMassPerBlock)
 		return txRuleError(wire.RejectInvalid, str)
@@ -947,15 +948,14 @@ func (mp *TxPool) maybeAcceptTransaction(tx *util.Tx, rejectDupOrphans bool) ([]
 		}
 		return nil, nil, err
 	}
-	if !blockdag.SequenceLockActive(sequenceLock, nextBlockBlueScore,
-		medianTimePast) {
+	if !sequenceLock.IsActive(nextBlockBlueScore, medianTimePast) {
 		return nil, nil, txRuleError(wire.RejectNonstandard,
 			"transaction's sequence locks on inputs not met")
 	}
 
 	// Don't allow transactions that exceed the maximum allowed
 	// transaction mass.
-	err = blockdag.ValidateTxMass(tx, mp.mpUTXOSet)
+	err = utxovalidation.ValidateTxMass(tx, mp.mpUTXOSet)
 	if err != nil {
 		var ruleError common.RuleError
 		if ok := errors.As(err, &ruleError); ok {
@@ -968,7 +968,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *util.Tx, rejectDupOrphans bool) ([]
 	// rules in blockDAG for what transactions are allowed into blocks.
 	// Also returns the fees associated with the transaction which will be
 	// used later.
-	txFee, err := blockdag.CheckTransactionInputsAndCalulateFee(tx, nextBlockBlueScore,
+	txFee, err := utxovalidation.CheckTransactionInputsAndCalulateFee(tx, nextBlockBlueScore,
 		mp.mpUTXOSet, mp.cfg.DAG.Params, false)
 	if err != nil {
 		var dagRuleErr common.RuleError

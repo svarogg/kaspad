@@ -27,6 +27,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/utxo"
 	"github.com/kaspanet/kaspad/consensus/utxodiffstore"
 	"github.com/kaspanet/kaspad/consensus/validation/merklevalidation"
+	"github.com/kaspanet/kaspad/consensus/validation/utxovalidation"
 	"github.com/kaspanet/kaspad/consensus/virtualblock"
 	"math"
 	"sync"
@@ -556,7 +557,7 @@ func (dag *BlockDAG) verifyAndBuildUTXO(node *blocknode.BlockNode, transactions 
 		return nil, nil, nil, nil, err
 	}
 
-	feeData, err := dag.checkConnectToPastUTXO(node, pastUTXO, transactions, fastAdd)
+	feeData, err := utxovalidation.CheckConnectToPastUTXO(node, pastUTXO, transactions, fastAdd, dag.Params, dag.sigCache, dag.pastMedianTimeFactory, dag.sequenceLockCalculator)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}

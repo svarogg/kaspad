@@ -1,6 +1,7 @@
 package mining
 
 import (
+	"github.com/kaspanet/kaspad/consensus/validation/utxovalidation"
 	"math"
 	"math/rand"
 	"sort"
@@ -111,7 +112,7 @@ func (g *BlkTmplGenerator) newTxsForBlockTemplate(payToAddress util.Address, ext
 	if err != nil {
 		return nil, err
 	}
-	coinbaseTxMass, err := blockdag.CalcTxMassFromUTXOSet(coinbaseTx, g.dag.UTXOSet())
+	coinbaseTxMass, err := utxovalidation.CalcTxMassFromUTXOSet(coinbaseTx, g.dag.UTXOSet())
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +149,7 @@ func (g *BlkTmplGenerator) collectCandidatesTxs(sourceTxs []*TxDesc) []*candidat
 			continue
 		}
 
-		txMass, err := blockdag.CalcTxMassFromUTXOSet(tx, g.dag.UTXOSet())
+		txMass, err := utxovalidation.CalcTxMassFromUTXOSet(tx, g.dag.UTXOSet())
 		if err != nil {
 			log.Warnf("Skipping tx %s due to error in "+
 				"CalcTxMass: %s", tx.ID(), err)
@@ -195,7 +196,7 @@ func (g *BlkTmplGenerator) collectCandidatesTxs(sourceTxs []*TxDesc) []*candidat
 // The higher the number the more likely it is that the transaction will be
 // included in the block.
 func (g *BlkTmplGenerator) calcTxValue(tx *util.Tx, fee uint64) (float64, error) {
-	mass, err := blockdag.CalcTxMassFromUTXOSet(tx, g.dag.UTXOSet())
+	mass, err := utxovalidation.CalcTxMassFromUTXOSet(tx, g.dag.UTXOSet())
 	if err != nil {
 		return 0, err
 	}
