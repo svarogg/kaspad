@@ -57,11 +57,6 @@ type Config struct {
 	// to policy.
 	Policy Policy
 
-	// CalcSequenceLockNoLock defines the function to use in order to generate
-	// the current sequence lock for the given transaction using the passed
-	// utxo set.
-	CalcSequenceLockNoLock func(*util.Tx, utxo.UTXOSet) (*blockdag.SequenceLock, error)
-
 	// SigCache defines a signature cache to use.
 	SigCache *txscript.SigCache
 
@@ -944,7 +939,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *util.Tx, rejectDupOrphans bool) ([]
 	// Don't allow the transaction into the mempool unless its sequence
 	// lock is active, meaning that it'll be allowed into the next block
 	// with respect to its defined relative lock times.
-	sequenceLock, err := mp.cfg.CalcSequenceLockNoLock(tx, mp.mpUTXOSet)
+	sequenceLock, err := mp.cfg.DAG.CalcSequenceLock(tx, mp.mpUTXOSet)
 	if err != nil {
 		var dagRuleErr common.RuleError
 		if ok := errors.As(err, &dagRuleErr); ok {

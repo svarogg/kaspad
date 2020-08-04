@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/kaspanet/kaspad/addressmanager"
 	"github.com/kaspanet/kaspad/consensus/timesource"
-	"github.com/kaspanet/kaspad/consensus/utxo"
 	"sync/atomic"
 
 	"github.com/kaspanet/kaspad/dbaccess"
@@ -27,7 +26,6 @@ import (
 	"github.com/kaspanet/kaspad/protocol"
 	"github.com/kaspanet/kaspad/rpc"
 	"github.com/kaspanet/kaspad/signal"
-	"github.com/kaspanet/kaspad/util"
 )
 
 // kaspad is a wrapper for all the kaspad services
@@ -190,9 +188,6 @@ func setupMempool(cfg *config.Config, dag *blockdag.BlockDAG, sigCache *txscript
 			MaxOrphanTxSize: config.DefaultMaxOrphanTxSize,
 			MinRelayTxFee:   cfg.MinRelayTxFee,
 			MaxTxVersion:    1,
-		},
-		CalcSequenceLockNoLock: func(tx *util.Tx, utxoSet utxo.UTXOSet) (*blockdag.SequenceLock, error) {
-			return dag.CalcSequenceLockNoLock(tx, utxoSet, true)
 		},
 		SigCache: sigCache,
 		DAG:      dag,

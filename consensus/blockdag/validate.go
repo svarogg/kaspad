@@ -9,6 +9,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/consensus/coinbase"
 	"github.com/kaspanet/kaspad/consensus/common"
+	"github.com/kaspanet/kaspad/consensus/sequencelock"
 	"github.com/kaspanet/kaspad/consensus/utxo"
 	"github.com/kaspanet/kaspad/consensus/validation/blockvalidation"
 	"github.com/kaspanet/kaspad/consensus/validation/scriptvalidation"
@@ -41,7 +42,7 @@ const (
 // SequenceLockActive determines if a transaction's sequence locks have been
 // met, meaning that all the inputs of a given transaction have reached a
 // blue score or time sufficient for their relative lock-time maturity.
-func SequenceLockActive(sequenceLock *SequenceLock, blockBlueScore uint64,
+func SequenceLockActive(sequenceLock *sequencelock.SequenceLock, blockBlueScore uint64,
 	medianTimePast mstime.Time) bool {
 
 	// If either the milliseconds, or blue score relative-lock time has not yet
@@ -543,7 +544,7 @@ func (dag *BlockDAG) checkConnectToPastUTXO(block *blocknode.BlockNode, pastUTXO
 			// A transaction can only be included within a block
 			// once the sequence locks of *all* its inputs are
 			// active.
-			sequenceLock, err := dag.calcSequenceLock(block, pastUTXO, tx, false)
+			sequenceLock, err := dag.sequenceLockCalculator.CalcSequenceLockForBlock(block, pastUTXO, tx)
 			if err != nil {
 				return nil, err
 			}

@@ -7,6 +7,7 @@ package blockdag
 import (
 	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/consensus/common"
+	"github.com/kaspanet/kaspad/consensus/sequencelock"
 	"github.com/kaspanet/kaspad/testdata"
 	"math"
 	"path/filepath"
@@ -25,15 +26,15 @@ import (
 // TestSequenceLocksActive tests the SequenceLockActive function to ensure it
 // works as expected in all possible combinations/scenarios.
 func TestSequenceLocksActive(t *testing.T) {
-	seqLock := func(blueScore int64, milliseconds int64) *SequenceLock {
-		return &SequenceLock{
+	seqLock := func(blueScore int64, milliseconds int64) *sequencelock.SequenceLock {
+		return &sequencelock.SequenceLock{
 			Milliseconds:   milliseconds,
 			BlockBlueScore: blueScore,
 		}
 	}
 
 	tests := []struct {
-		seqLock        *SequenceLock
+		seqLock        *sequencelock.SequenceLock
 		blockBlueScore uint64
 		mtp            mstime.Time
 
