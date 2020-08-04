@@ -2,8 +2,10 @@ package blocklocator
 
 import (
 	"github.com/kaspanet/kaspad/consensus/blocknode"
+	"github.com/kaspanet/kaspad/consensus/reachability"
 	"github.com/kaspanet/kaspad/dagconfig"
 	"github.com/kaspanet/kaspad/util/daghash"
+	"github.com/kaspanet/kaspad/wire"
 	"github.com/pkg/errors"
 )
 
@@ -24,14 +26,18 @@ import (
 type BlockLocator []*daghash.Hash
 
 type BlockLocatorFactory struct {
-	blockNodeStore *blocknode.BlockNodeStore
-	params         *dagconfig.Params
+	blockNodeStore   *blocknode.BlockNodeStore
+	reachabilityTree *reachability.ReachabilityTree
+	params           *dagconfig.Params
 }
 
-func NewBlockLocatorFactory(blockNodeStore *blocknode.BlockNodeStore, params *dagconfig.Params) *BlockLocatorFactory {
+func NewBlockLocatorFactory(blockNodeStore *blocknode.BlockNodeStore,
+	reachabilityTree *reachability.ReachabilityTree, params *dagconfig.Params) *BlockLocatorFactory {
+
 	return &BlockLocatorFactory{
-		blockNodeStore: blockNodeStore,
-		params:         params,
+		blockNodeStore:   blockNodeStore,
+		reachabilityTree: reachabilityTree,
+		params:           params,
 	}
 }
 
@@ -111,4 +117,103 @@ func (blf *BlockLocatorFactory) FindNextLocatorBoundaries(locator BlockLocator) 
 		return nil, lowNode.Hash()
 	}
 	return locator[nextBlockLocatorIndex], lowNode.Hash()
+}
+
+// AntiPastHashesBetween returns the hashes of the blocks between the
+// lowHash's antiPast and highHash's antiPast, or up to the provided
+// max number of block hashes.
+func (blf *BlockLocatorFactory) AntiPastHashesBetween(lowHash, highHash *daghash.Hash, maxHashes uint64) ([]*daghash.Hash, error) {
+	nodes, err := blf.antiPastBetween(lowHash, highHash, maxHashes)
+	if err != nil {
+		return nil, err
+	}
+	hashes := make([]*daghash.Hash, len(nodes))
+	for i, node := range nodes {
+		hashes[i] = node.Hash()
+	}
+	return hashes, nil
+}
+
+// AntiPastHeadersBetween returns the headers of the blocks between the
+// lowHash's antiPast and highHash's antiPast, or up to the provided
+// max number of block headers.
+func (blf *BlockLocatorFactory) AntiPastHeadersBetween(lowHash, highHash *daghash.Hash, maxHeaders uint64) ([]*wire.BlockHeader, error) {
+	nodes, err := blf.antiPastBetween(lowHash, highHash, maxHeaders)
+	if err != nil {
+		return nil, err
+	}
+	headers := make([]*wire.BlockHeader, len(nodes))
+	for i, node := range nodes {
+		headers[i] = node.Header()
+	}
+	return headers, nil
+}
+
+// antiPastBetween returns the blockNodes between the lowHash's antiPast
+// and highHash's antiPast, or up to the provided max number of blocks.
+//
+// This function MUST be called with the DAG state lock held (for reads).
+func (blf *BlockLocatorFactory) antiPastBetween(lowHash, highHash *daghash.Hash, maxEntries uint64) ([]*blocknode.BlockNode, error) {
+	lowNode, ok := blf.blockNodeStore.LookupNode(lowHash)
+	if !ok {
+		return nil, errors.Errorf("Couldn't find low hash %s", lowHash)
+	}
+	highNode, ok := blf.blockNodeStore.LookupNode(highHash)
+	if !ok {
+		return nil, errors.Errorf("Couldn't find high hash %s", highHash)
+	}
+	if lowNode.BlueScore() >= highNode.BlueScore() {
+		return nil, errors.Errorf("Low hash blueScore >= high hash blueScore (%d >= %d)",
+			lowNode.BlueScore(), highNode.BlueScore())
+	}
+
+	// In order to get no more then maxEntries blocks from the
+	// future of the lowNode (including itself), we iterate the
+	// selected parent chain of the highNode and stop once we reach
+	// highNode.blueScore-lowNode.blueScore+1 <= maxEntries. That
+	// stop point becomes the new highNode.
+	// Using blueScore as an approximation is considered to be
+	// fairly accurate because we presume that most DAG blocks are
+	// blue.
+	for highNode.BlueScore()-lowNode.BlueScore()+1 > maxEntries {
+		highNode = highNode.SelectedParent()
+	}
+
+	// Collect every node in highNode's past (including itself) but
+	// NOT in the lowNode's past (excluding itself) into an up-heap
+	// (a heap sorted by blueScore from lowest to greatest).
+	visited := blocknode.NewBlockNodeSet()
+	candidateNodes := blocknode.NewUpHeap()
+	queue := blocknode.NewDownHeap()
+	queue.Push(highNode)
+	for queue.Len() > 0 {
+		current := queue.Pop()
+		if visited.Contains(current) {
+			continue
+		}
+		visited.Add(current)
+		isCurrentAncestorOfLowNode, err := blf.reachabilityTree.IsInPast(current, lowNode)
+		if err != nil {
+			return nil, err
+		}
+		if isCurrentAncestorOfLowNode {
+			continue
+		}
+		candidateNodes.Push(current)
+		for parent := range current.Parents() {
+			queue.Push(parent)
+		}
+	}
+
+	// Pop candidateNodes into a slice. Since candidateNodes is
+	// an up-heap, it's guaranteed to be ordered from low to high
+	nodesLen := int(maxEntries)
+	if candidateNodes.Len() < nodesLen {
+		nodesLen = candidateNodes.Len()
+	}
+	nodes := make([]*blocknode.BlockNode, nodesLen)
+	for i := 0; i < nodesLen; i++ {
+		nodes[i] = candidateNodes.Pop()
+	}
+	return nodes, nil
 }
