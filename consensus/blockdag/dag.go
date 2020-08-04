@@ -1068,48 +1068,11 @@ func updateTipsUTXO(dag *BlockDAG, virtualUTXO utxo.UTXOSet) error {
 	return nil
 }
 
-// isSynced returns whether or not the DAG believes it is synced. Several
-// factors are used to guess, but the key factors that allow the DAG to
-// believe it is synced are:
-//  - Latest block has a timestamp newer than 24 hours ago
-//
-// This function MUST be called with the DAG state lock held (for reads).
-func (dag *BlockDAG) isSynced() bool {
-	// Not synced if the virtual's selected parent has a timestamp
-	// before 24 hours ago. If the DAG is empty, we take the genesis
-	// block timestamp.
-	//
-	// The DAG appears to be syncned if none of the checks reported
-	// otherwise.
-	var dagTimestamp int64
-	selectedTip := dag.selectedTip()
-	if selectedTip == nil {
-		dagTimestamp = dag.Params.GenesisBlock.Header.Timestamp.UnixMilliseconds()
-	} else {
-		dagTimestamp = selectedTip.Timestamp()
-	}
-	dagTime := mstime.UnixMilliseconds(dagTimestamp)
-	return dag.Now().Sub(dagTime) <= isDAGCurrentMaxDiff*dag.Params.TargetTimePerBlock
-}
-
 // Now returns the adjusted time according to
 // dag.timeSource. See TimeSource.Now for
 // more details.
 func (dag *BlockDAG) Now() mstime.Time {
 	return dag.timeSource.Now()
-}
-
-// IsSynced returns whether or not the DAG believes it is synced. Several
-// factors are used to guess, but the key factors that allow the DAG to
-// believe it is synced are:
-//  - Latest block has a timestamp newer than 24 hours ago
-//
-// This function is safe for concurrent access.
-func (dag *BlockDAG) IsSynced() bool {
-	dag.dagLock.RLock()
-	defer dag.dagLock.RUnlock()
-
-	return dag.isSynced()
 }
 
 // selectedTip returns the current selected tip for the DAG.
