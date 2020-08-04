@@ -6,6 +6,7 @@ package main
 
 import (
 	"encoding/binary"
+	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/timesource"
 	"github.com/kaspanet/kaspad/indexers"
 	"github.com/kaspanet/kaspad/util/mstime"
@@ -117,7 +118,7 @@ func (bi *blockImporter) processBlock(serializedBlock []byte) (bool, error) {
 
 	// Ensure the blocks follows all of the DAG rules.
 	isOrphan, isDelayed, err := bi.dag.ProcessBlock(block,
-		blockdag.BFFastAdd)
+		common.BFFastAdd)
 	if err != nil {
 		return false, err
 	}

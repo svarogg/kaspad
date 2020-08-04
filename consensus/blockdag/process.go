@@ -7,55 +7,13 @@ package blockdag
 import (
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/common"
+	"github.com/kaspanet/kaspad/consensus/validation/blockvalidation"
 	"github.com/kaspanet/kaspad/dagconfig"
 	"github.com/pkg/errors"
 	"time"
 
 	"github.com/kaspanet/kaspad/util"
 	"github.com/kaspanet/kaspad/util/daghash"
-)
-
-// BehaviorFlags is a bitmask defining tweaks to the normal behavior when
-// performing DAG processing and consensus rules checks.
-type BehaviorFlags uint32
-
-const (
-	// BFFastAdd may be set to indicate that several checks can be avoided
-	// for the block since it is already known to fit into the DAG due to
-	// already proving it correct links into the DAG.
-	BFFastAdd BehaviorFlags = 1 << iota
-
-	// BFNoPoWCheck may be set to indicate the proof of work check which
-	// ensures a block hashes to a value less than the required target will
-	// not be performed.
-	BFNoPoWCheck
-
-	// BFWasUnorphaned may be set to indicate that a block was just now
-	// unorphaned
-	BFWasUnorphaned
-
-	// BFAfterDelay may be set to indicate that a block had timestamp too far
-	// in the future, just finished the delay
-	BFAfterDelay
-
-	// BFIsSync may be set to indicate that the block was sent as part of the
-	// netsync process
-	BFIsSync
-
-	// BFWasStored is set to indicate that the block was previously stored
-	// in the block index but was never fully processed
-	BFWasStored
-
-	// BFDisallowDelay is set to indicate that a delayed block should be rejected.
-	// This is used for the case where a block is submitted through RPC.
-	BFDisallowDelay
-
-	// BFDisallowOrphans is set to indicate that an orphan block should be rejected.
-	// This is used for the case where a block is submitted through RPC.
-	BFDisallowOrphans
-
-	// BFNone is a convenience value to specifically indicate no flags.
-	BFNone BehaviorFlags = 0
 )
 
 // IsInDAG determines whether a block with the given hash exists in
@@ -75,7 +33,7 @@ func (dag *BlockDAG) IsInDAG(hash *daghash.Hash) bool {
 // are needed to pass along to maybeAcceptBlock.
 //
 // This function MUST be called with the DAG state lock held (for writes).
-func (dag *BlockDAG) processOrphans(hash *daghash.Hash, flags BehaviorFlags) error {
+func (dag *BlockDAG) processOrphans(hash *daghash.Hash, flags common.BehaviorFlags) error {
 	// Start with processing at least the passed hash. Leave a little room
 	// for additional orphan blocks that need to be processed without
 	// needing to grow the array in the common case.
@@ -118,7 +76,7 @@ func (dag *BlockDAG) processOrphans(hash *daghash.Hash, flags BehaviorFlags) err
 			i--
 
 			// Potentially accept the block into the block DAG.
-			err = dag.maybeAcceptBlock(orphan.block, flags|BFWasUnorphaned)
+			err = dag.maybeAcceptBlock(orphan.block, flags|common.BFWasUnorphaned)
 			if err != nil {
 				// Since we don't want to reject the original block because of
 				// a bad unorphaned child, only return an error if it's not a RuleError.
@@ -146,17 +104,17 @@ func (dag *BlockDAG) processOrphans(hash *daghash.Hash, flags BehaviorFlags) err
 // whether or not the block is an orphan.
 //
 // This function is safe for concurrent access.
-func (dag *BlockDAG) ProcessBlock(block *util.Block, flags BehaviorFlags) (isOrphan bool, isDelayed bool, err error) {
+func (dag *BlockDAG) ProcessBlock(block *util.Block, flags common.BehaviorFlags) (isOrphan bool, isDelayed bool, err error) {
 	dag.dagLock.Lock()
 	defer dag.dagLock.Unlock()
 	return dag.processBlockNoLock(block, flags)
 }
 
-func (dag *BlockDAG) processBlockNoLock(block *util.Block, flags BehaviorFlags) (isOrphan bool, isDelayed bool, err error) {
-	isAfterDelay := flags&BFAfterDelay == BFAfterDelay
-	wasBlockStored := flags&BFWasStored == BFWasStored
-	disallowDelay := flags&BFDisallowDelay == BFDisallowDelay
-	disallowOrphans := flags&BFDisallowOrphans == BFDisallowOrphans
+func (dag *BlockDAG) processBlockNoLock(block *util.Block, flags common.BehaviorFlags) (isOrphan bool, isDelayed bool, err error) {
+	isAfterDelay := flags&common.BFAfterDelay == common.BFAfterDelay
+	wasBlockStored := flags&common.BFWasStored == common.BFWasStored
+	disallowDelay := flags&common.BFDisallowDelay == common.BFDisallowDelay
+	disallowOrphans := flags&common.BFDisallowOrphans == common.BFDisallowOrphans
 
 	blockHash := block.Hash()
 	log.Tracef("Processing block %s", blockHash)
@@ -179,7 +137,7 @@ func (dag *BlockDAG) processBlockNoLock(block *util.Block, flags BehaviorFlags) 
 
 	if !isAfterDelay {
 		// Perform preliminary sanity checks on the block and its transactions.
-		delay, err := dag.checkBlockSanity(block, flags)
+		delay, err := blockvalidation.CheckBlockSanity(block, dag.Params, dag.subnetworkID, dag.timeSource, flags)
 		if err != nil {
 			return false, false, err
 		}
@@ -230,7 +188,7 @@ func (dag *BlockDAG) processBlockNoLock(block *util.Block, flags BehaviorFlags) 
 		// The number K*2 was chosen since in peace times anticone is limited to K blocks,
 		// while some red block can make it a bit bigger, but much more than that indicates
 		// there might be some problem with the netsync process.
-		if flags&BFIsSync == BFIsSync && dagconfig.KType(len(dag.orphans)) < dag.Params.K*2 {
+		if flags&common.BFIsSync == common.BFIsSync && dagconfig.KType(len(dag.orphans)) < dag.Params.K*2 {
 			log.Debugf("Adding orphan block %s. This is normal part of netsync process", blockHash)
 		} else {
 			log.Infof("Adding orphan block %s", blockHash)

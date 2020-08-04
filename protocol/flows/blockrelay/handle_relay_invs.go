@@ -181,7 +181,7 @@ func (flow *handleRelayInvsFlow) readMsgBlock() (
 
 func (flow *handleRelayInvsFlow) processAndRelayBlock(requestQueue *hashesQueueSet, block *util.Block) error {
 	blockHash := block.Hash()
-	isOrphan, isDelayed, err := flow.DAG().ProcessBlock(block, blockdag.BFNone)
+	isOrphan, isDelayed, err := flow.DAG().ProcessBlock(block, common2.BFNone)
 	if err != nil {
 		if !errors.As(err, &common2.RuleError{}) {
 			return errors.Wrapf(err, "failed to process block %s", blockHash)

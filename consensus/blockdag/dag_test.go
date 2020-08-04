@@ -62,7 +62,7 @@ func TestBlockCount(t *testing.T) {
 	dag.TestSetCoinbaseMaturity(0)
 
 	for i := 1; i < len(blocks); i++ {
-		isOrphan, isDelayed, err := dag.ProcessBlock(blocks[i], BFNone)
+		isOrphan, isDelayed, err := dag.ProcessBlock(blocks[i], common.BFNone)
 		if err != nil {
 			t.Fatalf("ProcessBlock fail on block %v: %v\n", i, err)
 		}
@@ -115,7 +115,7 @@ func TestIsKnownBlock(t *testing.T) {
 	dag.TestSetCoinbaseMaturity(0)
 
 	for i := 1; i < len(blocks); i++ {
-		isOrphan, isDelayed, err := dag.ProcessBlock(blocks[i], BFNone)
+		isOrphan, isDelayed, err := dag.ProcessBlock(blocks[i], common.BFNone)
 		if err != nil {
 			t.Fatalf("ProcessBlock fail on block %v: %v\n", i, err)
 		}
@@ -141,7 +141,7 @@ func TestIsKnownBlock(t *testing.T) {
 		}
 		blocks = append(blocks, blockTmp...)
 	}
-	isOrphan, isDelayed, err := dag.ProcessBlock(blocks[6], BFNone)
+	isOrphan, isDelayed, err := dag.ProcessBlock(blocks[6], common.BFNone)
 
 	// Block 3C should fail to connect since its parents are related. (It points to 1 and 2, and 1 is the parent of 2)
 	if err == nil {
@@ -168,7 +168,7 @@ func TestIsKnownBlock(t *testing.T) {
 		}
 		blocks = append(blocks, blockTmp...)
 	}
-	isOrphan, isDelayed, err = dag.ProcessBlock(blocks[7], BFNone)
+	isOrphan, isDelayed, err = dag.ProcessBlock(blocks[7], common.BFNone)
 
 	// Block 3D should fail to connect since it has a transaction with the same input twice
 	if err == nil {
@@ -192,7 +192,7 @@ func TestIsKnownBlock(t *testing.T) {
 	}
 
 	// Insert an orphan block.
-	isOrphan, isDelayed, err = dag.ProcessBlock(util.NewBlock(&common.Block100000), BFNoPoWCheck)
+	isOrphan, isDelayed, err = dag.ProcessBlock(util.NewBlock(&common.Block100000), common.BFNoPoWCheck)
 	if err != nil {
 		t.Fatalf("Unable to process block 100000: %v", err)
 	}
@@ -1050,7 +1050,7 @@ func TestDAGIndexFailedStatus(t *testing.T) {
 	)
 	invalidMsgBlock.AddTransaction(invalidCbTx)
 	invalidBlock := util.NewBlock(invalidMsgBlock)
-	isOrphan, isDelayed, err := dag.ProcessBlock(invalidBlock, BFNoPoWCheck)
+	isOrphan, isDelayed, err := dag.ProcessBlock(invalidBlock, common.BFNoPoWCheck)
 
 	if !errors.As(err, &common.RuleError{}) {
 		t.Fatalf("ProcessBlock: expected a rule error but got %s instead", err)
@@ -1080,7 +1080,7 @@ func TestDAGIndexFailedStatus(t *testing.T) {
 	invalidMsgBlockChild.AddTransaction(invalidCbTx)
 	invalidBlockChild := util.NewBlock(invalidMsgBlockChild)
 
-	isOrphan, isDelayed, err = dag.ProcessBlock(invalidBlockChild, BFNoPoWCheck)
+	isOrphan, isDelayed, err = dag.ProcessBlock(invalidBlockChild, common.BFNoPoWCheck)
 	var ruleErr common.RuleError
 	if ok := errors.As(err, &ruleErr); !ok || ruleErr.ErrorCode != common.ErrInvalidAncestorBlock {
 		t.Fatalf("ProcessBlock: expected a rule error but got %s instead", err)
@@ -1109,7 +1109,7 @@ func TestDAGIndexFailedStatus(t *testing.T) {
 	invalidMsgBlockGrandChild.AddTransaction(invalidCbTx)
 	invalidBlockGrandChild := util.NewBlock(invalidMsgBlockGrandChild)
 
-	isOrphan, isDelayed, err = dag.ProcessBlock(invalidBlockGrandChild, BFNoPoWCheck)
+	isOrphan, isDelayed, err = dag.ProcessBlock(invalidBlockGrandChild, common.BFNoPoWCheck)
 	if ok := errors.As(err, &ruleErr); !ok || ruleErr.ErrorCode != common.ErrInvalidAncestorBlock {
 		t.Fatalf("ProcessBlock: expected a rule error but got %s instead", err)
 	}
@@ -1146,7 +1146,7 @@ func TestIsDAGCurrentMaxDiff(t *testing.T) {
 }
 
 func testProcessBlockRuleError(t *testing.T, dag *BlockDAG, block *wire.MsgBlock, expectedRuleErr error) {
-	isOrphan, isDelayed, err := dag.ProcessBlock(util.NewBlock(block), BFNoPoWCheck)
+	isOrphan, isDelayed, err := dag.ProcessBlock(util.NewBlock(block), common.BFNoPoWCheck)
 
 	err = common.CheckRuleError(err, expectedRuleErr)
 	if err != nil {

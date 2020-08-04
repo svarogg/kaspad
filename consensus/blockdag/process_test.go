@@ -1,6 +1,7 @@
 package blockdag
 
 import (
+	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/testdata"
 	"path/filepath"
 	"testing"
@@ -41,7 +42,7 @@ func TestProcessOrphans(t *testing.T) {
 	childBlock.MsgBlock().Header.UTXOCommitment = &daghash.ZeroHash
 
 	// Process the child block so that it gets added to the orphan pool
-	isOrphan, isDelayed, err := dag.ProcessBlock(childBlock, BFNoPoWCheck)
+	isOrphan, isDelayed, err := dag.ProcessBlock(childBlock, common.BFNoPoWCheck)
 	if err != nil {
 		t.Fatalf("TestProcessOrphans: child block unexpectedly returned an error: %s", err)
 	}
@@ -53,7 +54,7 @@ func TestProcessOrphans(t *testing.T) {
 	}
 
 	// Process the parent block. Note that this will attempt to unorphan the child block
-	isOrphan, isDelayed, err = dag.ProcessBlock(parentBlock, BFNone)
+	isOrphan, isDelayed, err = dag.ProcessBlock(parentBlock, common.BFNone)
 	if err != nil {
 		t.Fatalf("TestProcessOrphans: parent block unexpectedly returned an error: %s", err)
 	}
@@ -105,7 +106,7 @@ func TestProcessDelayedBlocks(t *testing.T) {
 	blockDelay := time.Duration(dag1.Params.TimestampDeviationTolerance)*dag1.Params.TargetTimePerBlock + 5*time.Second
 	delayedBlock.Header.Timestamp = initialTime.Add(blockDelay)
 
-	isOrphan, isDelayed, err := dag1.ProcessBlock(util.NewBlock(delayedBlock), BFNoPoWCheck)
+	isOrphan, isDelayed, err := dag1.ProcessBlock(util.NewBlock(delayedBlock), common.BFNoPoWCheck)
 	if err != nil {
 		t.Fatalf("ProcessBlock returned unexpected error: %s\n", err)
 	}
@@ -139,7 +140,7 @@ func TestProcessDelayedBlocks(t *testing.T) {
 	defer teardownFunc2()
 	dag2.timeSource = newFakeTimeSource(initialTime)
 
-	isOrphan, isDelayed, err = dag2.ProcessBlock(util.NewBlock(delayedBlock), BFNoPoWCheck)
+	isOrphan, isDelayed, err = dag2.ProcessBlock(util.NewBlock(delayedBlock), common.BFNoPoWCheck)
 	if err != nil {
 		t.Fatalf("ProcessBlock returned unexpected error: %s\n", err)
 	}
@@ -159,7 +160,7 @@ func TestProcessDelayedBlocks(t *testing.T) {
 		t.Errorf("dag.IsKnownBlock should return true for a a delayed block")
 	}
 
-	isOrphan, isDelayed, err = dag2.ProcessBlock(util.NewBlock(delayedBlockChild), BFNoPoWCheck)
+	isOrphan, isDelayed, err = dag2.ProcessBlock(util.NewBlock(delayedBlockChild), common.BFNoPoWCheck)
 	if err != nil {
 		t.Fatalf("ProcessBlock returned unexpected error: %s\n", err)
 	}
@@ -183,7 +184,7 @@ func TestProcessDelayedBlocks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error in PrepareBlockForTest: %s", err)
 	}
-	isOrphan, isDelayed, err = dag2.ProcessBlock(util.NewBlock(blockBeforeDelay), BFNoPoWCheck)
+	isOrphan, isDelayed, err = dag2.ProcessBlock(util.NewBlock(blockBeforeDelay), common.BFNoPoWCheck)
 	if err != nil {
 		t.Fatalf("ProcessBlock returned unexpected error: %s\n", err)
 	}
@@ -217,7 +218,7 @@ func TestProcessDelayedBlocks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error in PrepareBlockForTest: %s", err)
 	}
-	isOrphan, isDelayed, err = dag2.ProcessBlock(util.NewBlock(blockAfterDelay), BFNoPoWCheck)
+	isOrphan, isDelayed, err = dag2.ProcessBlock(util.NewBlock(blockAfterDelay), common.BFNoPoWCheck)
 	if err != nil {
 		t.Fatalf("ProcessBlock returned unexpected error: %s\n", err)
 	}

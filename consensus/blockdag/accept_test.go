@@ -32,7 +32,7 @@ func TestMaybeAcceptBlockErrors(t *testing.T) {
 	}
 	block := loadedBlocks[0]
 
-	err = dag.maybeAcceptBlock(block, BFNone)
+	err = dag.maybeAcceptBlock(block, common.BFNone)
 	if err == nil {
 		t.Errorf("TestMaybeAcceptBlockErrors: rejecting the block if its parents are missing: "+
 			"Expected: %s, got: <nil>", common.ErrParentBlockUnknown)
@@ -56,7 +56,7 @@ func TestMaybeAcceptBlockErrors(t *testing.T) {
 
 	// Add a valid block and mark it as invalid
 	block1 := blocks[1]
-	isOrphan, isDelayed, err := dag.ProcessBlock(block1, BFNone)
+	isOrphan, isDelayed, err := dag.ProcessBlock(block1, common.BFNone)
 	if err != nil {
 		t.Fatalf("TestMaybeAcceptBlockErrors: Valid block unexpectedly returned an error: %s", err)
 	}
@@ -73,7 +73,7 @@ func TestMaybeAcceptBlockErrors(t *testing.T) {
 	dag.blockNodeStore.SetStatusFlags(blockNode1, blocknode.StatusValidateFailed)
 
 	block2 := blocks[2]
-	err = dag.maybeAcceptBlock(block2, BFNone)
+	err = dag.maybeAcceptBlock(block2, common.BFNone)
 	if err == nil {
 		t.Errorf("TestMaybeAcceptBlockErrors: rejecting the block if its parents are invalid: "+
 			"Expected: %s, got: <nil>", common.ErrInvalidAncestorBlock)
@@ -92,7 +92,7 @@ func TestMaybeAcceptBlockErrors(t *testing.T) {
 	// Test rejecting the block due to bad context
 	originalBits := block2.MsgBlock().Header.Bits
 	block2.MsgBlock().Header.Bits = 0
-	err = dag.maybeAcceptBlock(block2, BFNone)
+	err = dag.maybeAcceptBlock(block2, common.BFNone)
 	if err == nil {
 		t.Errorf("TestMaybeAcceptBlockErrors: rejecting the block due to bad context: "+
 			"Expected: %s, got: <nil>", common.ErrUnexpectedDifficulty)

@@ -5,6 +5,7 @@ import (
 	"github.com/kaspanet/kaspad/config"
 	"github.com/kaspanet/kaspad/connmanager"
 	"github.com/kaspanet/kaspad/consensus/blockdag"
+	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/mempool"
 	"github.com/kaspanet/kaspad/netadapter"
 	"github.com/kaspanet/kaspad/protocol/flowcontext"
@@ -72,7 +73,7 @@ func (m *Manager) AddTransaction(tx *util.Tx) error {
 }
 
 // AddBlock adds the given block to the DAG and propagates it.
-func (m *Manager) AddBlock(block *util.Block, flags blockdag.BehaviorFlags) error {
+func (m *Manager) AddBlock(block *util.Block, flags common.BehaviorFlags) error {
 	err := m.context.AddBlock(block, flags)
 	if err != nil {
 		if protocolErr := &(protocolerrors.ProtocolError{}); errors.As(err, &protocolErr) {

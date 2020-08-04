@@ -4,6 +4,7 @@ package blockdag
 
 import (
 	"github.com/kaspanet/kaspad/consensus/blocknode"
+	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/timesource"
 	"github.com/kaspanet/kaspad/consensus/utxo"
 	"github.com/kaspanet/kaspad/consensus/virtualblock"
@@ -217,7 +218,7 @@ func PrepareAndProcessBlockForTest(t *testing.T, dag *BlockDAG, parentHashes []*
 		t.Fatalf("error in PrepareBlockForTest: %s", err)
 	}
 	utilBlock := util.NewBlock(block)
-	isOrphan, isDelayed, err := dag.ProcessBlock(utilBlock, BFNoPoWCheck)
+	isOrphan, isDelayed, err := dag.ProcessBlock(utilBlock, common.BFNoPoWCheck)
 	if err != nil {
 		t.Fatalf("unexpected error in ProcessBlock: %s", err)
 	}

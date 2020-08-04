@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/utxo"
-	"github.com/kaspanet/kaspad/consensus/validation/script"
-	"github.com/kaspanet/kaspad/consensus/validation/transaction"
+	"github.com/kaspanet/kaspad/consensus/validation/scriptvalidation"
+	"github.com/kaspanet/kaspad/consensus/validation/transactionvalidation"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -836,7 +836,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *util.Tx, rejectDupOrphans bool) ([]
 	// Perform preliminary sanity checks on the transaction. This makes
 	// use of blockDAG which contains the invariant rules for what
 	// transactions are allowed into blocks.
-	err = transaction.CheckTransactionSanity(tx, subnetworkID)
+	err = transactionvalidation.CheckTransactionSanity(tx, subnetworkID)
 	if err != nil {
 		var ruleErr common.RuleError
 		if ok := errors.As(err, &ruleErr); ok {
@@ -1034,7 +1034,7 @@ func (mp *TxPool) maybeAcceptTransaction(tx *util.Tx, rejectDupOrphans bool) ([]
 
 	// Verify crypto signatures for each input and reject the transaction if
 	// any don't verify.
-	err = script.ValidateTransactionScripts(tx, mp.mpUTXOSet,
+	err = scriptvalidation.ValidateTransactionScripts(tx, mp.mpUTXOSet,
 		txscript.StandardVerifyFlags, mp.cfg.SigCache)
 	if err != nil {
 		var dagRuleErr common.RuleError

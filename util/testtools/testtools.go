@@ -1,6 +1,7 @@
 package testtools
 
 import (
+	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/subnetworks"
 	"time"
 
@@ -30,7 +31,7 @@ func RegisterSubnetworkForTest(dag *blockdag.BlockDAG, params *dagconfig.Params,
 	}
 
 	addBlockToDAG := func(block *util.Block) error {
-		isOrphan, isDelayed, err := dag.ProcessBlock(block, blockdag.BFNoPoWCheck)
+		isOrphan, isDelayed, err := dag.ProcessBlock(block, common.BFNoPoWCheck)
 		if err != nil {
 			return err
 		}

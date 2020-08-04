@@ -201,7 +201,7 @@ func New(config *Config) (*BlockDAG, error) {
 		// To prevent the creation of a new err variable unintentionally so the
 		// defered function above could read err - declare isOrphan and isDelayed explicitly.
 		var isOrphan, isDelayed bool
-		isOrphan, isDelayed, err = dag.ProcessBlock(genesisBlock, BFNone)
+		isOrphan, isDelayed, err = dag.ProcessBlock(genesisBlock, common.BFNone)
 		if err != nil {
 			return nil, err
 		}
@@ -548,9 +548,9 @@ func LockTimeToSequence(isMilliseconds bool, locktime uint64) uint64 {
 //
 // This function MUST be called with the DAG state lock held (for writes).
 func (dag *BlockDAG) addBlock(node *blocknode.BlockNode,
-	block *util.Block, selectedParentAnticone []*blocknode.BlockNode, flags BehaviorFlags) (*common.ChainUpdates, error) {
+	block *util.Block, selectedParentAnticone []*blocknode.BlockNode, flags common.BehaviorFlags) (*common.ChainUpdates, error) {
 	// Skip checks if node has already been fully validated.
-	fastAdd := flags&BFFastAdd == BFFastAdd || dag.blockNodeStore.NodeStatus(node).KnownValid()
+	fastAdd := flags&common.BFFastAdd == common.BFFastAdd || dag.blockNodeStore.NodeStatus(node).KnownValid()
 
 	// Connect the block to the DAG.
 	chainUpdates, err := dag.connectBlock(node, block, selectedParentAnticone, fastAdd)
@@ -1894,7 +1894,7 @@ func (dag *BlockDAG) processDelayedBlocks() error {
 			break
 		}
 		delayedBlock := dag.delayedBlocks.Pop()
-		_, _, err := dag.processBlockNoLock(delayedBlock.Block(), BFAfterDelay)
+		_, _, err := dag.processBlockNoLock(delayedBlock.Block(), common.BFAfterDelay)
 		if err != nil {
 			log.Errorf("Error while processing delayed block (block %s)", delayedBlock.Block().Hash().String())
 			// Rule errors should not be propagated as they refer only to the delayed block,

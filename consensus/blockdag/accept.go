@@ -42,7 +42,7 @@ func (dag *BlockDAG) addNodeToIndexWithInvalidAncestor(block *util.Block) error 
 // their documentation for how the flags modify their behavior.
 //
 // This function MUST be called with the dagLock held (for writes).
-func (dag *BlockDAG) maybeAcceptBlock(block *util.Block, flags BehaviorFlags) error {
+func (dag *BlockDAG) maybeAcceptBlock(block *util.Block, flags common.BehaviorFlags) error {
 	parents, err := lookupParentNodes(block, dag)
 	if err != nil {
 		var ruleErr common.RuleError
@@ -101,7 +101,7 @@ func (dag *BlockDAG) maybeAcceptBlock(block *util.Block, flags BehaviorFlags) er
 	}
 
 	// Make sure that all the block's transactions are finalized
-	fastAdd := flags&BFFastAdd == BFFastAdd
+	fastAdd := flags&common.BFFastAdd == common.BFFastAdd
 	bluestParent := parents.Bluest()
 	if !fastAdd {
 		if err := dag.validateAllTxsFinalized(block, newNode, bluestParent); err != nil {
@@ -122,7 +122,7 @@ func (dag *BlockDAG) maybeAcceptBlock(block *util.Block, flags BehaviorFlags) er
 	dag.dagLock.Unlock()
 	dag.notifier.SendNotification(notifications.NTBlockAdded, &notifications.BlockAddedNotificationData{
 		Block:         block,
-		WasUnorphaned: flags&BFWasUnorphaned != 0,
+		WasUnorphaned: flags&common.BFWasUnorphaned != 0,
 	})
 	if len(chainUpdates.AddedChainBlockHashes) > 0 {
 		dag.notifier.SendNotification(notifications.NTChainChanged, &notifications.ChainChangedNotificationData{

@@ -1,4 +1,4 @@
-package transaction
+package transactionvalidation
 
 import (
 	"github.com/kaspanet/kaspad/consensus/common"

@@ -2,6 +2,7 @@ package ibd
 
 import (
 	"github.com/kaspanet/kaspad/consensus/blockdag"
+	common2 "github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/netadapter/router"
 	"github.com/kaspanet/kaspad/protocol/common"
 	peerpkg "github.com/kaspanet/kaspad/protocol/peer"
@@ -164,7 +165,7 @@ func (flow *handleIBDFlow) processIBDBlock(msgIBDBlock *wire.MsgIBDBlock) error 
 	if flow.DAG().IsInDAG(block.Hash()) {
 		return nil
 	}
-	isOrphan, isDelayed, err := flow.DAG().ProcessBlock(block, blockdag.BFNone)
+	isOrphan, isDelayed, err := flow.DAG().ProcessBlock(block, common2.BFNone)
 	if err != nil {
 		return err
 	}

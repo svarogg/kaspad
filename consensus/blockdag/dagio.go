@@ -191,7 +191,7 @@ func (dag *BlockDAG) processUnprocessedBlockNodes(unprocessedBlockNodes []*block
 		if err != nil {
 			return err
 		}
-		isOrphan, isDelayed, err := dag.ProcessBlock(block, BFWasStored)
+		isOrphan, isDelayed, err := dag.ProcessBlock(block, common.BFWasStored)
 		if err != nil {
 			log.Warnf("Block %s, which was not previously processed, "+
 				"failed to be accepted to the DAG: %s", node.Hash(), err)

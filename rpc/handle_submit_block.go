@@ -3,7 +3,7 @@ package rpc
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/kaspanet/kaspad/consensus/blockdag"
+	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/rpc/model"
 	"github.com/kaspanet/kaspad/util"
 )
@@ -27,7 +27,7 @@ func handleSubmitBlock(s *Server, cmd interface{}, closeChan <-chan struct{}) (i
 		}
 	}
 
-	err = s.protocolManager.AddBlock(block, blockdag.BFDisallowDelay|blockdag.BFDisallowOrphans)
+	err = s.protocolManager.AddBlock(block, common.BFDisallowDelay|common.BFDisallowOrphans)
 	if err != nil {
 		return nil, &model.RPCError{
 			Code:    model.ErrRPCVerify,

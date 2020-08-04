@@ -1,9 +1,9 @@
 package flowcontext
 
 import (
+	"github.com/kaspanet/kaspad/consensus/common"
 	"sync/atomic"
 
-	"github.com/kaspanet/kaspad/consensus/blockdag"
 	"github.com/kaspanet/kaspad/protocol/flows/blockrelay"
 	"github.com/kaspanet/kaspad/util"
 	"github.com/kaspanet/kaspad/util/daghash"
@@ -61,7 +61,7 @@ func (f *FlowContext) SharedRequestedBlocks() *blockrelay.SharedRequestedBlocks 
 }
 
 // AddBlock adds the given block to the DAG and propagates it.
-func (f *FlowContext) AddBlock(block *util.Block, flags blockdag.BehaviorFlags) error {
+func (f *FlowContext) AddBlock(block *util.Block, flags common.BehaviorFlags) error {
 	_, _, err := f.DAG().ProcessBlock(block, flags)
 	if err != nil {
 		return err
