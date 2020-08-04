@@ -110,7 +110,7 @@ func New(config *Config) (*BlockDAG, error) {
 		sigCache:              config.SigCache,
 		indexManager:          config.IndexManager,
 		blockNodeStore:        blockNodeStore,
-		delayedBlocks:         delayedblocks.New(),
+		delayedBlocks:         delayedblocks.New(config.TimeSource),
 		blockCount:            0,
 		subnetworkID:          config.SubnetworkID,
 		notifier:              notifications.New(),
