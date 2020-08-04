@@ -50,8 +50,9 @@ func (dag *BlockDAG) processOrphans(hash *daghash.Hash, flags common.BehaviorFla
 		// intentionally used over a range here as range does not
 		// reevaluate the slice on each iteration nor does it adjust the
 		// index for the modified slice.
-		for i := 0; i < len(dag.prevOrphans[*processHash]); i++ {
-			orphan := dag.prevOrphans[*processHash][i]
+		orphanParents := dag.orphanedBlocks.OrphanParents(processHash)
+		for i := 0; i < len(orphanParents); i++ {
+			orphan := orphanParents[i]
 			if orphan == nil {
 				log.Warnf("Found a nil entry at index %d in the "+
 					"orphan dependency list for block %s", i,
@@ -61,7 +62,7 @@ func (dag *BlockDAG) processOrphans(hash *daghash.Hash, flags common.BehaviorFla
 
 			// Skip this orphan if one or more of its parents are
 			// still missing.
-			_, err := lookupParentNodes(orphan.block, dag)
+			_, err := lookupParentNodes(orphan.Block, dag)
 			if err != nil {
 				var ruleErr common.RuleError
 				if ok := errors.As(err, &ruleErr); ok && ruleErr.ErrorCode == common.ErrParentBlockUnknown {
@@ -71,12 +72,12 @@ func (dag *BlockDAG) processOrphans(hash *daghash.Hash, flags common.BehaviorFla
 			}
 
 			// Remove the orphan from the orphan pool.
-			orphanHash := orphan.block.Hash()
-			dag.removeOrphanBlock(orphan)
+			orphanHash := orphan.Block.Hash()
+			dag.orphanedBlocks.RemoveOrphanBlock(orphan)
 			i--
 
 			// Potentially accept the block into the block DAG.
-			err = dag.maybeAcceptBlock(orphan.block, flags|common.BFWasUnorphaned)
+			err = dag.maybeAcceptBlock(orphan.Block, flags|common.BFWasUnorphaned)
 			if err != nil {
 				// Since we don't want to reject the original block because of
 				// a bad unorphaned child, only return an error if it's not a RuleError.
@@ -125,7 +126,7 @@ func (dag *BlockDAG) processBlockNoLock(block *util.Block, flags common.Behavior
 	}
 
 	// The block must not already exist as an orphan.
-	if _, exists := dag.orphans[*blockHash]; exists {
+	if dag.orphanedBlocks.IsKnownOrphan(blockHash) {
 		str := fmt.Sprintf("already have block (orphan) %s", blockHash)
 		return false, false, common.NewRuleError(common.ErrDuplicateBlock, str)
 	}
@@ -188,12 +189,12 @@ func (dag *BlockDAG) processBlockNoLock(block *util.Block, flags common.Behavior
 		// The number K*2 was chosen since in peace times anticone is limited to K blocks,
 		// while some red block can make it a bit bigger, but much more than that indicates
 		// there might be some problem with the netsync process.
-		if flags&common.BFIsSync == common.BFIsSync && dagconfig.KType(len(dag.orphans)) < dag.Params.K*2 {
+		if flags&common.BFIsSync == common.BFIsSync && dagconfig.KType(dag.orphanedBlocks.Len()) < dag.Params.K*2 {
 			log.Debugf("Adding orphan block %s. This is normal part of netsync process", blockHash)
 		} else {
 			log.Infof("Adding orphan block %s", blockHash)
 		}
-		dag.addOrphanBlock(block)
+		dag.orphanedBlocks.AddOrphanBlock(block)
 
 		return true, false, nil
 	}

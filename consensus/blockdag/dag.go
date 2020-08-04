@@ -16,6 +16,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/merkle"
 	"github.com/kaspanet/kaspad/consensus/multiset"
 	"github.com/kaspanet/kaspad/consensus/notifications"
+	"github.com/kaspanet/kaspad/consensus/orphanedblocks"
 	"github.com/kaspanet/kaspad/consensus/pastmediantime"
 	"github.com/kaspanet/kaspad/consensus/reachability"
 	"github.com/kaspanet/kaspad/consensus/sequencelock"
@@ -47,22 +48,10 @@ import (
 )
 
 const (
-	// maxOrphanBlocks is the maximum number of orphan blocks that can be
-	// queued.
-	maxOrphanBlocks = 100
-
 	// isDAGCurrentMaxDiff is the number of blocks from the network tips (estimated by timestamps) for the current
 	// to be considered not synced
 	isDAGCurrentMaxDiff = 40_000
 )
-
-// orphanBlock represents a block that we don't yet have the parent for. It
-// is a normal block plus an expiration time to prevent caching the orphan
-// forever.
-type orphanBlock struct {
-	block      *util.Block
-	expiration mstime.Time
-}
 
 // BlockDAG provides functions for working with the kaspa block DAG.
 // It includes functionality such as rejecting duplicate blocks, ensuring blocks
@@ -109,14 +98,8 @@ type BlockDAG struct {
 	// subnetworkID holds the subnetwork ID of the DAG
 	subnetworkID *subnetworkid.SubnetworkID
 
-	// These fields are related to handling of orphan blocks. They are
-	// protected by a combination of the DAG lock and the orphan lock.
-	orphanLock   sync.RWMutex
-	orphans      map[daghash.Hash]*orphanBlock
-	prevOrphans  map[daghash.Hash][]*orphanBlock
-	newestOrphan *orphanBlock
-
-	delayedBlocks *delayedblocks.DelayedBlocks
+	orphanedBlocks *orphanedblocks.OrphanedBlocks
+	delayedBlocks  *delayedblocks.DelayedBlocks
 
 	// The following fields are used to determine if certain warnings have
 	// already been shown.
@@ -160,8 +143,6 @@ func New(config *Config) (*BlockDAG, error) {
 		sigCache:              config.SigCache,
 		indexManager:          config.IndexManager,
 		blockNodeStore:        blockNodeStore,
-		orphans:               make(map[daghash.Hash]*orphanBlock),
-		prevOrphans:           make(map[daghash.Hash][]*orphanBlock),
 		delayedBlocks:         delayedblocks.New(),
 		blockCount:            0,
 		subnetworkID:          config.SubnetworkID,
@@ -179,6 +160,7 @@ func New(config *Config) (*BlockDAG, error) {
 	dag.utxoDiffStore = utxodiffstore.NewUTXODiffStore(dag.databaseContext, blockNodeStore, dag.virtual)
 	dag.difficulty = difficulty2.NewDifficulty(params, dag.virtual)
 	dag.sequenceLockCalculator = sequencelock.NewSequenceLockCalculator(dag.virtual, dag.pastMedianTimeFactory)
+	dag.orphanedBlocks = orphanedblocks.New(blockNodeStore)
 
 	// Initialize the DAG state from the passed database. When the db
 	// does not yet contain any DAG state, both it and the DAG state
@@ -236,7 +218,7 @@ func New(config *Config) (*BlockDAG, error) {
 //
 // This function is safe for concurrent access.
 func (dag *BlockDAG) IsKnownBlock(hash *daghash.Hash) bool {
-	return dag.IsInDAG(hash) || dag.IsKnownOrphan(hash) || dag.delayedBlocks.IsKnownDelayed(hash) || dag.IsKnownInvalid(hash)
+	return dag.IsInDAG(hash) || dag.orphanedBlocks.IsKnownOrphan(hash) || dag.delayedBlocks.IsKnownDelayed(hash) || dag.IsKnownInvalid(hash)
 }
 
 // AreKnownBlocks returns whether or not the DAG instances has all blocks represented
@@ -255,26 +237,6 @@ func (dag *BlockDAG) AreKnownBlocks(hashes []*daghash.Hash) bool {
 	return true
 }
 
-// IsKnownOrphan returns whether the passed hash is currently a known orphan.
-// Keep in mind that only a limited number of orphans are held onto for a
-// limited amount of time, so this function must not be used as an absolute
-// way to test if a block is an orphan block. A full block (as opposed to just
-// its hash) must be passed to ProcessBlock for that purpose. However, calling
-// ProcessBlock with an orphan that already exists results in an error, so this
-// function provides a mechanism for a caller to intelligently detect *recent*
-// duplicate orphans and react accordingly.
-//
-// This function is safe for concurrent access.
-func (dag *BlockDAG) IsKnownOrphan(hash *daghash.Hash) bool {
-	// Protect concurrent access. Using a read lock only so multiple
-	// readers can query without blocking each other.
-	dag.orphanLock.RLock()
-	defer dag.orphanLock.RUnlock()
-	_, exists := dag.orphans[*hash]
-
-	return exists
-}
-
 // IsKnownInvalid returns whether the passed hash is known to be an invalid block.
 // Note that if the block is not found this method will return false.
 //
@@ -285,127 +247,6 @@ func (dag *BlockDAG) IsKnownInvalid(hash *daghash.Hash) bool {
 		return false
 	}
 	return dag.blockNodeStore.NodeStatus(node).KnownInvalid()
-}
-
-// GetOrphanMissingAncestorHashes returns all of the missing parents in the orphan's sub-DAG
-//
-// This function is safe for concurrent access.
-func (dag *BlockDAG) GetOrphanMissingAncestorHashes(orphanHash *daghash.Hash) []*daghash.Hash {
-	// Protect concurrent access. Using a read lock only so multiple
-	// readers can query without blocking each other.
-	dag.orphanLock.RLock()
-	defer dag.orphanLock.RUnlock()
-
-	missingAncestorsHashes := make([]*daghash.Hash, 0)
-
-	visited := make(map[daghash.Hash]bool)
-	queue := []*daghash.Hash{orphanHash}
-	for len(queue) > 0 {
-		var current *daghash.Hash
-		current, queue = queue[0], queue[1:]
-		if !visited[*current] {
-			visited[*current] = true
-			orphan, orphanExists := dag.orphans[*current]
-			if orphanExists {
-				queue = append(queue, orphan.block.MsgBlock().Header.ParentHashes...)
-			} else {
-				if !dag.IsInDAG(current) && current != orphanHash {
-					missingAncestorsHashes = append(missingAncestorsHashes, current)
-				}
-			}
-		}
-	}
-	return missingAncestorsHashes
-}
-
-// removeOrphanBlock removes the passed orphan block from the orphan pool and
-// previous orphan index.
-func (dag *BlockDAG) removeOrphanBlock(orphan *orphanBlock) {
-	// Protect concurrent access.
-	dag.orphanLock.Lock()
-	defer dag.orphanLock.Unlock()
-
-	// Remove the orphan block from the orphan pool.
-	orphanHash := orphan.block.Hash()
-	delete(dag.orphans, *orphanHash)
-
-	// Remove the reference from the previous orphan index too.
-	for _, parentHash := range orphan.block.MsgBlock().Header.ParentHashes {
-		// An indexing for loop is intentionally used over a range here as range
-		// does not reevaluate the slice on each iteration nor does it adjust the
-		// index for the modified slice.
-		orphans := dag.prevOrphans[*parentHash]
-		for i := 0; i < len(orphans); i++ {
-			hash := orphans[i].block.Hash()
-			if hash.IsEqual(orphanHash) {
-				orphans = append(orphans[:i], orphans[i+1:]...)
-				i--
-			}
-		}
-
-		// Remove the map entry altogether if there are no longer any orphans
-		// which depend on the parent hash.
-		if len(orphans) == 0 {
-			delete(dag.prevOrphans, *parentHash)
-			continue
-		}
-
-		dag.prevOrphans[*parentHash] = orphans
-	}
-}
-
-// addOrphanBlock adds the passed block (which is already determined to be
-// an orphan prior calling this function) to the orphan pool. It lazily cleans
-// up any expired blocks so a separate cleanup poller doesn't need to be run.
-// It also imposes a maximum limit on the number of outstanding orphan
-// blocks and will remove the oldest received orphan block if the limit is
-// exceeded.
-func (dag *BlockDAG) addOrphanBlock(block *util.Block) {
-	// Remove expired orphan blocks.
-	for _, oBlock := range dag.orphans {
-		if mstime.Now().After(oBlock.expiration) {
-			dag.removeOrphanBlock(oBlock)
-			continue
-		}
-
-		// Update the newest orphan block pointer so it can be discarded
-		// in case the orphan pool fills up.
-		if dag.newestOrphan == nil || oBlock.block.Timestamp().After(dag.newestOrphan.block.Timestamp()) {
-			dag.newestOrphan = oBlock
-		}
-	}
-
-	// Limit orphan blocks to prevent memory exhaustion.
-	if len(dag.orphans)+1 > maxOrphanBlocks {
-		// If the new orphan is newer than the newest orphan on the orphan
-		// pool, don't add it.
-		if block.Timestamp().After(dag.newestOrphan.block.Timestamp()) {
-			return
-		}
-		// Remove the newest orphan to make room for the added one.
-		dag.removeOrphanBlock(dag.newestOrphan)
-		dag.newestOrphan = nil
-	}
-
-	// Protect concurrent access. This is intentionally done here instead
-	// of near the top since removeOrphanBlock does its own locking and
-	// the range iterator is not invalidated by removing map entries.
-	dag.orphanLock.Lock()
-	defer dag.orphanLock.Unlock()
-
-	// Insert the block into the orphan map with an expiration time
-	// 1 hour from now.
-	expiration := mstime.Now().Add(time.Hour)
-	oBlock := &orphanBlock{
-		block:      block,
-		expiration: expiration,
-	}
-	dag.orphans[*block.Hash()] = oBlock
-
-	// Add to parent hash lookup index for faster dependency lookups.
-	for _, parentHash := range block.MsgBlock().Header.ParentHashes {
-		dag.prevOrphans[*parentHash] = append(dag.prevOrphans[*parentHash], oBlock)
-	}
 }
 
 // addBlock handles adding the passed block to the DAG.
@@ -1915,4 +1756,21 @@ func (dag *BlockDAG) IsSyncRateBelowThreshold(maxDeviation float64) bool {
 // the candidate transaction to be included in a block.
 func (dag *BlockDAG) CalcSequenceLock(tx *util.Tx, utxoSet utxo.UTXOSet) (*sequencelock.SequenceLock, error) {
 	return dag.sequenceLockCalculator.CalcSequenceLock(tx, utxoSet)
+}
+
+// IsKnownOrphan returns whether the passed hash is currently a known orphan.
+// Keep in mind that only a limited number of orphans are held onto for a
+// limited amount of time, so this function must not be used as an absolute
+// way to test if a block is an orphan block. A full block (as opposed to just
+// its hash) must be passed to ProcessBlock for that purpose. However, calling
+// ProcessBlock with an orphan that already exists results in an error, so this
+// function provides a mechanism for a caller to intelligently detect *recent*
+// duplicate orphans and react accordingly.
+func (dag *BlockDAG) IsKnownOrphan(hash *daghash.Hash) bool {
+	return dag.orphanedBlocks.IsKnownOrphan(hash)
+}
+
+// GetOrphanMissingAncestorHashes returns all of the missing parents in the orphan's sub-DAG
+func (dag *BlockDAG) GetOrphanMissingAncestorHashes(orphanHash *daghash.Hash) []*daghash.Hash {
+	return dag.orphanedBlocks.GetOrphanMissingAncestorHashes(orphanHash)
 }
