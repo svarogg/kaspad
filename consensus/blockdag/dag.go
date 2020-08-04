@@ -264,7 +264,7 @@ func (dag *BlockDAG) connectBlock(node *blocknode.BlockNode,
 		return nil, err
 	}
 
-	if err := dag.validateGasLimit(block); err != nil {
+	if err := blockvalidation.ValidateGasLimit(dag.databaseContext, block); err != nil {
 		return nil, err
 	}
 
@@ -379,48 +379,6 @@ func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, virtualUTXODiff *ut
 	dag.utxoDiffStore.ClearOldEntries()
 	dag.reachabilityTree.ClearDirtyEntries()
 	dag.multisetManager.ClearNewEntries()
-
-	return nil
-}
-
-func (dag *BlockDAG) validateGasLimit(block *util.Block) error {
-	var currentSubnetworkID *subnetworkid.SubnetworkID
-	var currentSubnetworkGasLimit uint64
-	var currentGasUsage uint64
-	var err error
-
-	// We assume here that transactions are ordered by subnetworkID,
-	// since it was already validated in checkTransactionSanity
-	for _, tx := range block.Transactions() {
-		msgTx := tx.MsgTx()
-
-		// In native and Built-In subnetworks all txs must have Gas = 0, and that was already validated in checkTransactionSanity
-		// Therefore - no need to check them here.
-		if msgTx.SubnetworkID.IsEqual(subnetworkid.SubnetworkIDNative) || msgTx.SubnetworkID.IsBuiltIn() {
-			continue
-		}
-
-		if !msgTx.SubnetworkID.IsEqual(currentSubnetworkID) {
-			currentSubnetworkID = &msgTx.SubnetworkID
-			currentGasUsage = 0
-			currentSubnetworkGasLimit, err = subnetworks.GasLimit(dag.databaseContext, currentSubnetworkID)
-			if err != nil {
-				return errors.Errorf("Error getting gas limit for subnetworkID '%s': %s", currentSubnetworkID, err)
-			}
-		}
-
-		newGasUsage := currentGasUsage + msgTx.Gas
-		if newGasUsage < currentGasUsage { // check for overflow
-			str := fmt.Sprintf("Block gas usage in subnetwork with ID %s has overflown", currentSubnetworkID)
-			return common.NewRuleError(common.ErrInvalidGas, str)
-		}
-		if newGasUsage > currentSubnetworkGasLimit {
-			str := fmt.Sprintf("Block wastes too much gas in subnetwork with ID %s", currentSubnetworkID)
-			return common.NewRuleError(common.ErrInvalidGas, str)
-		}
-
-		currentGasUsage = newGasUsage
-	}
 
 	return nil
 }
