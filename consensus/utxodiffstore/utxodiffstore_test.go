@@ -21,7 +21,7 @@ package utxodiffstore
 //
 //	// Check that an error is returned when asking for non existing node
 //	nonExistingNode := createNode()
-//	_, err = dag.UtxoDiffStore.DiffByNode(nonExistingNode)
+//	_, err = dag.UTXODiffStore.DiffByNode(nonExistingNode)
 //	if !dbaccess.IsNotFoundError(err) {
 //		if err != nil {
 //			t.Errorf("DiffByNode: %s", err)
@@ -30,7 +30,7 @@ package utxodiffstore
 //		}
 //	}
 //
-//	// Add node's diff data to the UtxoDiffStore and check if it's checked correctly.
+//	// Add node's diff data to the UTXODiffStore and check if it's checked correctly.
 //	node := createNode()
 //	diff := NewUTXODiff()
 //
@@ -46,51 +46,51 @@ package utxodiffstore
 //		t.Fatalf("RemoveEntry: unexpected error: %s", err)
 //	}
 //
-//	if err := dag.UtxoDiffStore.SetBlockDiff(node, diff); err != nil {
+//	if err := dag.UTXODiffStore.SetBlockDiff(node, diff); err != nil {
 //		t.Fatalf("SetBlockDiff: unexpected error: %s", err)
 //	}
 //	diffChild := createNode()
-//	if err := dag.UtxoDiffStore.SetBlockDiffChild(node, diffChild); err != nil {
+//	if err := dag.UTXODiffStore.SetBlockDiffChild(node, diffChild); err != nil {
 //		t.Fatalf("SetBlockDiffChild: unexpected error: %s", err)
 //	}
 //
-//	if storeDiff, err := dag.UtxoDiffStore.DiffByNode(node); err != nil {
+//	if storeDiff, err := dag.UTXODiffStore.DiffByNode(node); err != nil {
 //		t.Fatalf("DiffByNode: unexpected error: %s", err)
 //	} else if !reflect.DeepEqual(storeDiff, diff) {
 //		t.Errorf("Expected diff and storeDiff to be equal")
 //	}
 //
-//	if storeDiffChild, err := dag.UtxoDiffStore.DiffChildByNode(node); err != nil {
+//	if storeDiffChild, err := dag.UTXODiffStore.DiffChildByNode(node); err != nil {
 //		t.Fatalf("DiffByNode: unexpected error: %s", err)
 //	} else if !reflect.DeepEqual(storeDiffChild, diffChild) {
 //		t.Errorf("Expected diff and storeDiff to be equal")
 //	}
 //
-//	// Flush changes to db, delete them from the dag.UtxoDiffStore.loaded
+//	// Flush changes to db, delete them from the dag.UTXODiffStore.loaded
 //	// map, and check if the diff data is re-fetched from the database.
 //	dbTx, err := dag.databaseContext.NewTx()
 //	if err != nil {
 //		t.Fatalf("Failed to open database transaction: %s", err)
 //	}
 //	defer dbTx.RollbackUnlessClosed()
-//	err = dag.UtxoDiffStore.FlushToDB(dbTx)
+//	err = dag.UTXODiffStore.FlushToDB(dbTx)
 //	if err != nil {
-//		t.Fatalf("Error flushing UtxoDiffStore data to DB: %s", err)
+//		t.Fatalf("Error flushing UTXODiffStore data to DB: %s", err)
 //	}
 //	err = dbTx.Commit()
 //	if err != nil {
 //		t.Fatalf("Failed to commit database transaction: %s", err)
 //	}
-//	delete(dag.UtxoDiffStore.loaded, node)
+//	delete(dag.UTXODiffStore.loaded, node)
 //
-//	if storeDiff, err := dag.UtxoDiffStore.DiffByNode(node); err != nil {
+//	if storeDiff, err := dag.UTXODiffStore.DiffByNode(node); err != nil {
 //		t.Fatalf("DiffByNode: unexpected error: %s", err)
 //	} else if !reflect.DeepEqual(storeDiff, diff) {
 //		t.Errorf("Expected diff and storeDiff to be equal")
 //	}
 //
-//	// Check if getBlockDiff caches the result in dag.UtxoDiffStore.loaded
-//	if loadedDiffData, ok := dag.UtxoDiffStore.loaded[node]; !ok {
+//	// Check if getBlockDiff caches the result in dag.UTXODiffStore.loaded
+//	if loadedDiffData, ok := dag.UTXODiffStore.loaded[node]; !ok {
 //		t.Errorf("the diff data wasn't added to loaded map after requesting it")
 //	} else if !reflect.DeepEqual(loadedDiffData.diff, diff) {
 //		t.Errorf("Expected diff and loadedDiff to be equal")
@@ -126,7 +126,7 @@ package utxodiffstore
 //
 //	// Make sure that all of them exist in the loaded set
 //	for _, node := range blockNodes {
-//		_, ok := dag.UtxoDiffStore.loaded[node]
+//		_, ok := dag.UTXODiffStore.loaded[node]
 //		if !ok {
 //			t.Fatalf("TestClearOldEntries: diffData for node %s is not in the loaded set", node.Hash())
 //		}
@@ -139,7 +139,7 @@ package utxodiffstore
 //
 //	// Make sure that all the old nodes no longer exist in the loaded set
 //	for _, node := range blockNodes {
-//		_, ok := dag.UtxoDiffStore.loaded[node]
+//		_, ok := dag.UTXODiffStore.loaded[node]
 //		if ok {
 //			t.Fatalf("TestClearOldEntries: diffData for node %s is in the loaded set", node.Hash())
 //		}
@@ -154,14 +154,14 @@ package utxodiffstore
 //
 //	// Make sure that the child-of-genesis node is in the loaded set, since it
 //	// is a tip.
-//	_, ok = dag.UtxoDiffStore.loaded[node]
+//	_, ok = dag.UTXODiffStore.loaded[node]
 //	if !ok {
 //		t.Fatalf("TestClearOldEntries: diffData for node %s is not in the loaded set", node.Hash())
 //	}
 //
 //	// Make sure that all the old nodes still do not exist in the loaded set
 //	for _, node := range blockNodes {
-//		_, ok := dag.UtxoDiffStore.loaded[node]
+//		_, ok := dag.UTXODiffStore.loaded[node]
 //		if ok {
 //			t.Fatalf("TestClearOldEntries: diffData for node %s is in the loaded set", node.Hash())
 //		}

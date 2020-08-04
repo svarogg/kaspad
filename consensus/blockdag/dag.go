@@ -11,7 +11,8 @@ import (
 	"github.com/kaspanet/kaspad/consensus/coinbase"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/delayedblocks"
-	difficulty2 "github.com/kaspanet/kaspad/consensus/difficulty"
+	"github.com/kaspanet/kaspad/consensus/difficulty"
+	"github.com/kaspanet/kaspad/consensus/finality"
 	"github.com/kaspanet/kaspad/consensus/ghostdag"
 	"github.com/kaspanet/kaspad/consensus/merkle"
 	"github.com/kaspanet/kaspad/consensus/multiset"
@@ -70,10 +71,11 @@ type BlockDAG struct {
 	coinbase               *coinbase.Coinbase
 	ghostdag               *ghostdag.GHOSTDAG
 	blockLocatorFactory    *blocklocator.BlockLocatorFactory
-	difficulty             *difficulty2.Difficulty
+	difficulty             *difficulty.Difficulty
 	pastMedianTimeFactory  *pastmediantime.PastMedianTimeFactory
 	syncRate               *syncrate.SyncRate
 	sequenceLockCalculator *sequencelock.SequenceLockCalculator
+	finalityManager        *finality.FinalityManager
 
 	// dagLock protects concurrent access to the vast majority of the
 	// fields in this struct below this point.
@@ -112,9 +114,7 @@ type BlockDAG struct {
 	unknownRulesWarned    bool
 	unknownVersionsWarned bool
 
-	lastFinalityPoint *blocknode.BlockNode
-
-	utxoDiffStore   *utxodiffstore.UtxoDiffStore
+	utxoDiffStore   *utxodiffstore.UTXODiffStore
 	multisetManager *multiset.MultiSetManager
 
 	reachabilityTree *reachability.ReachabilityTree
@@ -158,9 +158,10 @@ func New(config *Config) (*BlockDAG, error) {
 	dag.virtual = virtualblock.NewVirtualBlock(dag.ghostdag, params, dag.blockNodeStore, nil)
 	dag.blockLocatorFactory = blocklocator.NewBlockLocatorFactory(dag.blockNodeStore, params)
 	dag.utxoDiffStore = utxodiffstore.NewUTXODiffStore(dag.databaseContext, blockNodeStore, dag.virtual)
-	dag.difficulty = difficulty2.NewDifficulty(params, dag.virtual)
+	dag.difficulty = difficulty.NewDifficulty(params, dag.virtual)
 	dag.sequenceLockCalculator = sequencelock.NewSequenceLockCalculator(dag.virtual, dag.pastMedianTimeFactory)
 	dag.orphanedBlocks = orphanedblocks.New(blockNodeStore)
+	dag.finalityManager = finality.New(params, blockNodeStore, dag.virtual, dag.reachabilityTree, dag.utxoDiffStore, config.DatabaseContext)
 
 	// Initialize the DAG state from the passed database. When the db
 	// does not yet contain any DAG state, both it and the DAG state
@@ -292,7 +293,7 @@ func (dag *BlockDAG) addBlock(node *blocknode.BlockNode,
 func (dag *BlockDAG) connectBlock(node *blocknode.BlockNode,
 	block *util.Block, selectedParentAnticone []*blocknode.BlockNode, fastAdd bool) (*common.ChainUpdates, error) {
 
-	if err := dag.checkFinalityViolation(node); err != nil {
+	if err := dag.finalityManager.CheckFinalityViolation(node); err != nil {
 		return nil, err
 	}
 
@@ -362,7 +363,7 @@ func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, virtualUTXODiff *ut
 	// Update DAG state.
 	state := &dagState{
 		TipHashes:         dag.TipHashes(),
-		LastFinalityPoint: dag.lastFinalityPoint.Hash(),
+		LastFinalityPoint: dag.finalityManager.LastFinalityPointHash(),
 		LocalSubnetworkID: dag.subnetworkID,
 	}
 	err = saveDAGState(dbTx, state)
@@ -455,123 +456,6 @@ func (dag *BlockDAG) validateGasLimit(block *util.Block) error {
 	}
 
 	return nil
-}
-
-// LastFinalityPointHash returns the hash of the last finality point
-func (dag *BlockDAG) LastFinalityPointHash() *daghash.Hash {
-	if dag.lastFinalityPoint == nil {
-		return nil
-	}
-	return dag.lastFinalityPoint.Hash()
-}
-
-// isInSelectedParentChainOf returns whether `node` is in the selected parent chain of `other`.
-func (dag *BlockDAG) isInSelectedParentChainOf(node *blocknode.BlockNode, other *blocknode.BlockNode) (bool, error) {
-	// By definition, a node is not in the selected parent chain of itself.
-	if node == other {
-		return false, nil
-	}
-
-	return dag.reachabilityTree.IsReachabilityTreeAncestorOf(node, other)
-}
-
-// FinalityInterval is the interval that determines the finality window of the DAG.
-func (dag *BlockDAG) FinalityInterval() uint64 {
-	return uint64(dag.Params.FinalityDuration / dag.Params.TargetTimePerBlock)
-}
-
-// checkFinalityViolation checks the new block does not violate the finality rules
-// specifically - the new block selectedParent chain should contain the old finality point.
-func (dag *BlockDAG) checkFinalityViolation(newNode *blocknode.BlockNode) error {
-	// the genesis block can not violate finality rules
-	if newNode.IsGenesis() {
-		return nil
-	}
-
-	// Because newNode doesn't have reachability data we
-	// need to check if the last finality point is in the
-	// selected parent chain of newNode.selectedParent, so
-	// we explicitly check if newNode.selectedParent is
-	// the finality point.
-	if dag.lastFinalityPoint == newNode.SelectedParent() {
-		return nil
-	}
-
-	isInSelectedChain, err := dag.isInSelectedParentChainOf(dag.lastFinalityPoint, newNode.SelectedParent())
-	if err != nil {
-		return err
-	}
-
-	if !isInSelectedChain {
-		return common.NewRuleError(common.ErrFinality, "the last finality point is not in the selected parent chain of this block")
-	}
-	return nil
-}
-
-// updateFinalityPoint updates the dag's last finality point if necessary.
-func (dag *BlockDAG) updateFinalityPoint() {
-	selectedTip := dag.selectedTip()
-	// if the selected tip is the genesis block - it should be the new finality point
-	if selectedTip.IsGenesis() {
-		dag.lastFinalityPoint = selectedTip
-		return
-	}
-	// We are looking for a new finality point only if the new block's finality score is higher
-	// by 2 than the existing finality point's
-	if dag.FinalityScore(selectedTip) < dag.FinalityScore(dag.lastFinalityPoint)+2 {
-		return
-	}
-
-	var currentNode *blocknode.BlockNode
-	for currentNode = selectedTip.SelectedParent(); ; currentNode = currentNode.SelectedParent() {
-		// We look for the first node in the selected parent chain that has a higher finality score than the last finality point.
-		if dag.FinalityScore(currentNode.SelectedParent()) == dag.FinalityScore(dag.lastFinalityPoint) {
-			break
-		}
-	}
-	dag.lastFinalityPoint = currentNode
-	spawn("dag.finalizeNodesBelowFinalityPoint", func() {
-		dag.finalizeNodesBelowFinalityPoint(true)
-	})
-}
-
-func (dag *BlockDAG) finalizeNodesBelowFinalityPoint(deleteDiffData bool) {
-	queue := make([]*blocknode.BlockNode, 0, len(dag.lastFinalityPoint.Parents()))
-	for parent := range dag.lastFinalityPoint.Parents() {
-		queue = append(queue, parent)
-	}
-	var nodesToDelete []*blocknode.BlockNode
-	if deleteDiffData {
-		nodesToDelete = make([]*blocknode.BlockNode, 0, dag.FinalityInterval())
-	}
-	for len(queue) > 0 {
-		var current *blocknode.BlockNode
-		current, queue = queue[0], queue[1:]
-		if !current.IsFinalized() {
-			current.SetFinalized(true)
-			if deleteDiffData {
-				nodesToDelete = append(nodesToDelete, current)
-			}
-			for parent := range current.Parents() {
-				queue = append(queue, parent)
-			}
-		}
-	}
-	if deleteDiffData {
-		err := dag.utxoDiffStore.RemoveBlocksDiffData(dag.databaseContext, nodesToDelete)
-		if err != nil {
-			panic(fmt.Sprintf("Error removing diff data from utxoDiffStore: %s", err))
-		}
-	}
-}
-
-// IsKnownFinalizedBlock returns whether the block is below the finality point.
-// IsKnownFinalizedBlock might be false-negative because node finality status is
-// updated in a separate goroutine. To get a definite answer if a block
-// is finalized or not, use dag.checkFinalityViolation.
-func (dag *BlockDAG) IsKnownFinalizedBlock(blockHash *daghash.Hash) bool {
-	node, ok := dag.blockNodeStore.LookupNode(blockHash)
-	return ok && node.IsFinalized()
 }
 
 // NextBlockCoinbaseTransaction prepares the coinbase transaction for the next mined block
@@ -682,7 +566,7 @@ func (dag *BlockDAG) applyDAGChanges(node *blocknode.BlockNode, newBlockPastUTXO
 	dag.blockNodeStore.SetStatusFlags(node, blocknode.StatusValid)
 
 	// And now we can update the finality point of the DAG (if required)
-	dag.updateFinalityPoint()
+	dag.finalityManager.UpdateFinalityPoint()
 
 	return virtualUTXODiff, chainUpdates, nil
 }
@@ -691,25 +575,6 @@ func (dag *BlockDAG) meldVirtualUTXO(newVirtualUTXODiffSet *utxo.DiffUTXOSet) er
 	dag.utxoLock.Lock()
 	defer dag.utxoLock.Unlock()
 	return newVirtualUTXODiffSet.MeldToBase()
-}
-
-// checkDoubleSpendsWithBlockPast checks that each block transaction
-// has a corresponding UTXO in the block pastUTXO.
-func checkDoubleSpendsWithBlockPast(pastUTXO utxo.UTXOSet, blockTransactions []*util.Tx) error {
-	for _, tx := range blockTransactions {
-		if tx.IsCoinBase() {
-			continue
-		}
-
-		for _, txIn := range tx.MsgTx().TxIn {
-			if _, ok := pastUTXO.Get(txIn.PreviousOutpoint); !ok {
-				return common.NewRuleError(common.ErrMissingTxOut, fmt.Sprintf("missing transaction "+
-					"output %s in the utxo set", txIn.PreviousOutpoint))
-			}
-		}
-	}
-
-	return nil
 }
 
 // verifyAndBuildUTXO verifies all transactions in the given block and builds its UTXO
@@ -1539,10 +1404,6 @@ func (dag *BlockDAG) Notifier() *notifications.ConsensusNotifier {
 	return dag.notifier
 }
 
-func (dag *BlockDAG) FinalityScore(node *blocknode.BlockNode) uint64 {
-	return node.BlueScore() / dag.FinalityInterval()
-}
-
 // PastMedianTime returns the median time of the previous few blocks
 // prior to, and including, the block node.
 //
@@ -1625,4 +1486,22 @@ func (dag *BlockDAG) IsKnownOrphan(hash *daghash.Hash) bool {
 // GetOrphanMissingAncestorHashes returns all of the missing parents in the orphan's sub-DAG
 func (dag *BlockDAG) GetOrphanMissingAncestorHashes(orphanHash *daghash.Hash) []*daghash.Hash {
 	return dag.orphanedBlocks.GetOrphanMissingAncestorHashes(orphanHash)
+}
+
+// IsKnownFinalizedBlock returns whether the block is below the finality point.
+// IsKnownFinalizedBlock might be false-negative because node finality status is
+// updated in a separate goroutine. To get a definite answer if a block
+// is finalized or not, use dag.CheckFinalityViolation.
+func (dag *BlockDAG) IsKnownFinalizedBlock(blockHash *daghash.Hash) bool {
+	return dag.finalityManager.IsKnownFinalizedBlock(blockHash)
+}
+
+// FinalityInterval is the interval that determines the finality window of the DAG.
+func (dag *BlockDAG) FinalityInterval() uint64 {
+	return dag.finalityManager.FinalityInterval()
+}
+
+// LastFinalityPointHash returns the hash of the last finality point
+func (dag *BlockDAG) LastFinalityPointHash() *daghash.Hash {
+	return dag.finalityManager.LastFinalityPointHash()
 }

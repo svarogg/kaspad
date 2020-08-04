@@ -130,12 +130,12 @@ func (dag *BlockDAG) initDAGState() error {
 
 	log.Debugf("Setting the last finality point...")
 	var ok bool
-	dag.lastFinalityPoint, ok = dag.blockNodeStore.LookupNode(dagState.LastFinalityPoint)
+	lastFinalityPoint, ok := dag.blockNodeStore.LookupNode(dagState.LastFinalityPoint)
 	if !ok {
 		return errors.Errorf("finality point block %s "+
 			"does not exist in the DAG", dagState.LastFinalityPoint)
 	}
-	dag.finalizeNodesBelowFinalityPoint(false)
+	dag.finalityManager.SetLastFinalityPoint(lastFinalityPoint)
 
 	log.Debugf("Processing unprocessed blockNodes...")
 	err = dag.processUnprocessedBlockNodes(unprocessedBlockNodes)

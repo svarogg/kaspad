@@ -19,7 +19,7 @@ type blockUTXODiffData struct {
 	diffChild *blocknode.BlockNode
 }
 
-type UtxoDiffStore struct {
+type UTXODiffStore struct {
 	dbContext      *dbaccess.DatabaseContext
 	blockNodeStore *blocknode.BlockNodeStore
 	virtual        *virtualblock.VirtualBlock
@@ -29,9 +29,9 @@ type UtxoDiffStore struct {
 }
 
 func NewUTXODiffStore(dbContext *dbaccess.DatabaseContext,
-	blockNodeStore *blocknode.BlockNodeStore, virtual *virtualblock.VirtualBlock) *UtxoDiffStore {
+	blockNodeStore *blocknode.BlockNodeStore, virtual *virtualblock.VirtualBlock) *UTXODiffStore {
 
-	return &UtxoDiffStore{
+	return &UTXODiffStore{
 		dbContext:      dbContext,
 		blockNodeStore: blockNodeStore,
 		virtual:        virtual,
@@ -41,7 +41,7 @@ func NewUTXODiffStore(dbContext *dbaccess.DatabaseContext,
 	}
 }
 
-func (diffStore *UtxoDiffStore) SetBlockDiff(node *blocknode.BlockNode, diff *utxo.UTXODiff) error {
+func (diffStore *UTXODiffStore) SetBlockDiff(node *blocknode.BlockNode, diff *utxo.UTXODiff) error {
 	diffStore.mtx.HighPriorityWriteLock()
 	defer diffStore.mtx.HighPriorityWriteUnlock()
 	// load the diff data from DB to diffStore.loaded
@@ -57,7 +57,7 @@ func (diffStore *UtxoDiffStore) SetBlockDiff(node *blocknode.BlockNode, diff *ut
 	return nil
 }
 
-func (diffStore *UtxoDiffStore) SetBlockDiffChild(node *blocknode.BlockNode, diffChild *blocknode.BlockNode) error {
+func (diffStore *UTXODiffStore) SetBlockDiffChild(node *blocknode.BlockNode, diffChild *blocknode.BlockNode) error {
 	diffStore.mtx.HighPriorityWriteLock()
 	defer diffStore.mtx.HighPriorityWriteUnlock()
 	// load the diff data from DB to diffStore.loaded
@@ -71,7 +71,7 @@ func (diffStore *UtxoDiffStore) SetBlockDiffChild(node *blocknode.BlockNode, dif
 	return nil
 }
 
-func (diffStore *UtxoDiffStore) RemoveBlocksDiffData(dbContext dbaccess.Context, nodes []*blocknode.BlockNode) error {
+func (diffStore *UTXODiffStore) RemoveBlocksDiffData(dbContext dbaccess.Context, nodes []*blocknode.BlockNode) error {
 	for _, node := range nodes {
 		err := diffStore.removeBlockDiffData(dbContext, node)
 		if err != nil {
@@ -81,7 +81,7 @@ func (diffStore *UtxoDiffStore) RemoveBlocksDiffData(dbContext dbaccess.Context,
 	return nil
 }
 
-func (diffStore *UtxoDiffStore) removeBlockDiffData(dbContext dbaccess.Context, node *blocknode.BlockNode) error {
+func (diffStore *UTXODiffStore) removeBlockDiffData(dbContext dbaccess.Context, node *blocknode.BlockNode) error {
 	diffStore.mtx.LowPriorityWriteLock()
 	defer diffStore.mtx.LowPriorityWriteUnlock()
 	delete(diffStore.loaded, node)
@@ -92,11 +92,11 @@ func (diffStore *UtxoDiffStore) removeBlockDiffData(dbContext dbaccess.Context, 
 	return nil
 }
 
-func (diffStore *UtxoDiffStore) setBlockAsDirty(node *blocknode.BlockNode) {
+func (diffStore *UTXODiffStore) setBlockAsDirty(node *blocknode.BlockNode) {
 	diffStore.dirty[node] = struct{}{}
 }
 
-func (diffStore *UtxoDiffStore) diffDataByBlockNode(node *blocknode.BlockNode) (*blockUTXODiffData, error) {
+func (diffStore *UTXODiffStore) diffDataByBlockNode(node *blocknode.BlockNode) (*blockUTXODiffData, error) {
 	if diffData, ok := diffStore.loaded[node]; ok {
 		return diffData, nil
 	}
@@ -108,7 +108,7 @@ func (diffStore *UtxoDiffStore) diffDataByBlockNode(node *blocknode.BlockNode) (
 	return diffData, nil
 }
 
-func (diffStore *UtxoDiffStore) DiffByNode(node *blocknode.BlockNode) (*utxo.UTXODiff, error) {
+func (diffStore *UTXODiffStore) DiffByNode(node *blocknode.BlockNode) (*utxo.UTXODiff, error) {
 	diffStore.mtx.HighPriorityReadLock()
 	defer diffStore.mtx.HighPriorityReadUnlock()
 	diffData, err := diffStore.diffDataByBlockNode(node)
@@ -118,7 +118,7 @@ func (diffStore *UtxoDiffStore) DiffByNode(node *blocknode.BlockNode) (*utxo.UTX
 	return diffData.diff, nil
 }
 
-func (diffStore *UtxoDiffStore) DiffChildByNode(node *blocknode.BlockNode) (*blocknode.BlockNode, error) {
+func (diffStore *UTXODiffStore) DiffChildByNode(node *blocknode.BlockNode) (*blocknode.BlockNode, error) {
 	diffStore.mtx.HighPriorityReadLock()
 	defer diffStore.mtx.HighPriorityReadUnlock()
 	diffData, err := diffStore.diffDataByBlockNode(node)
@@ -128,7 +128,7 @@ func (diffStore *UtxoDiffStore) DiffChildByNode(node *blocknode.BlockNode) (*blo
 	return diffData.diffChild, nil
 }
 
-func (diffStore *UtxoDiffStore) diffDataFromDB(hash *daghash.Hash) (*blockUTXODiffData, error) {
+func (diffStore *UTXODiffStore) diffDataFromDB(hash *daghash.Hash) (*blockUTXODiffData, error) {
 	serializedBlockDiffData, err := dbaccess.FetchUTXODiffData(diffStore.dbContext, hash)
 	if err != nil {
 		return nil, err
@@ -137,7 +137,7 @@ func (diffStore *UtxoDiffStore) diffDataFromDB(hash *daghash.Hash) (*blockUTXODi
 	return diffStore.deserializeBlockUTXODiffData(serializedBlockDiffData)
 }
 
-func (diffStore *UtxoDiffStore) deserializeBlockUTXODiffData(serializedDiffData []byte) (*blockUTXODiffData, error) {
+func (diffStore *UTXODiffStore) deserializeBlockUTXODiffData(serializedDiffData []byte) (*blockUTXODiffData, error) {
 	diffData := &blockUTXODiffData{}
 	r := bytes.NewBuffer(serializedDiffData)
 
@@ -170,7 +170,7 @@ func (diffStore *UtxoDiffStore) deserializeBlockUTXODiffData(serializedDiffData 
 }
 
 // FlushToDB writes all dirty diff data to the database.
-func (diffStore *UtxoDiffStore) FlushToDB(dbContext *dbaccess.TxContext) error {
+func (diffStore *UTXODiffStore) FlushToDB(dbContext *dbaccess.TxContext) error {
 	diffStore.mtx.HighPriorityWriteLock()
 	defer diffStore.mtx.HighPriorityWriteUnlock()
 	if len(diffStore.dirty) == 0 {
@@ -191,7 +191,7 @@ func (diffStore *UtxoDiffStore) FlushToDB(dbContext *dbaccess.TxContext) error {
 	return nil
 }
 
-func (diffStore *UtxoDiffStore) ClearDirtyEntries() {
+func (diffStore *UTXODiffStore) ClearDirtyEntries() {
 	diffStore.dirty = make(map[*blocknode.BlockNode]struct{})
 }
 
@@ -204,7 +204,7 @@ var maxBlueScoreDifferenceToKeepLoaded uint64 = 100
 // virtual.blueScore - maxBlueScoreDifferenceToKeepLoaded. Note
 // that tips are not removed either even if their blue score is
 // lower than the above.
-func (diffStore *UtxoDiffStore) ClearOldEntries() {
+func (diffStore *UTXODiffStore) ClearOldEntries() {
 	diffStore.mtx.HighPriorityWriteLock()
 	defer diffStore.mtx.HighPriorityWriteUnlock()
 

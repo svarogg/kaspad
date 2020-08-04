@@ -569,6 +569,25 @@ func (dag *BlockDAG) checkConnectToPastUTXO(block *blocknode.BlockNode, pastUTXO
 	return feeData, nil
 }
 
+// checkDoubleSpendsWithBlockPast checks that each block transaction
+// has a corresponding UTXO in the block pastUTXO.
+func checkDoubleSpendsWithBlockPast(pastUTXO utxo.UTXOSet, blockTransactions []*util.Tx) error {
+	for _, tx := range blockTransactions {
+		if tx.IsCoinBase() {
+			continue
+		}
+
+		for _, txIn := range tx.MsgTx().TxIn {
+			if _, ok := pastUTXO.Get(txIn.PreviousOutpoint); !ok {
+				return common.NewRuleError(common.ErrMissingTxOut, fmt.Sprintf("missing transaction "+
+					"output %s in the utxo set", txIn.PreviousOutpoint))
+			}
+		}
+	}
+
+	return nil
+}
+
 // CheckConnectBlockTemplate fully validates that connecting the passed block to
 // the DAG does not violate any consensus rules, aside from the proof of
 // work requirement.
