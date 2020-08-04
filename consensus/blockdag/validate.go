@@ -12,17 +12,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// CheckConnectBlockTemplate fully validates that connecting the passed block to
-// the DAG does not violate any consensus rules, aside from the proof of
-// work requirement.
-//
-// This function is safe for concurrent access.
-func (dag *BlockDAG) CheckConnectBlockTemplate(block *util.Block) error {
-	dag.dagLock.RLock()
-	defer dag.dagLock.RUnlock()
-	return dag.CheckConnectBlockTemplateNoLock(block)
-}
-
 // CheckConnectBlockTemplateNoLock fully validates that connecting the passed block to
 // the DAG does not violate any consensus rules, aside from the proof of
 // work requirement. The block must connect to the current tip of the main dag.

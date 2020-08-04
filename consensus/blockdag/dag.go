@@ -1338,3 +1338,14 @@ func (dag *BlockDAG) AntiPastHashesBetween(lowHash, highHash *daghash.Hash, maxH
 func (dag *BlockDAG) AntiPastHeadersBetween(lowHash, highHash *daghash.Hash, maxHeaders uint64) ([]*wire.BlockHeader, error) {
 	return dag.blockLocatorFactory.AntiPastHeadersBetween(lowHash, highHash, maxHeaders)
 }
+
+// CheckConnectBlockTemplate fully validates that connecting the passed block to
+// the DAG does not violate any consensus rules, aside from the proof of
+// work requirement.
+//
+// This function is safe for concurrent access.
+func (dag *BlockDAG) CheckConnectBlockTemplate(block *util.Block) error {
+	dag.dagLock.RLock()
+	defer dag.dagLock.RUnlock()
+	return dag.CheckConnectBlockTemplateNoLock(block)
+}
