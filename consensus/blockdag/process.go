@@ -168,7 +168,7 @@ func (dag *BlockDAG) processBlockNoLock(block *util.Block, flags common.Behavior
 	}
 
 	// Handle the case of a block with a valid timestamp(non-delayed) which points to a delayed block.
-	delay, isParentDelayed := dag.maxDelayOfParents(missingParents)
+	delay, isParentDelayed := dag.delayedBlocks.MaxDelayOfParents(missingParents)
 	if isParentDelayed {
 		// Add Millisecond to ensure that parent process time will be after its child.
 		delay += time.Millisecond
@@ -225,20 +225,4 @@ func (dag *BlockDAG) processBlockNoLock(block *util.Block, flags common.Behavior
 	log.Debugf("Accepted block %s", blockHash)
 
 	return false, false, nil
-}
-
-// maxDelayOfParents returns the maximum delay of the given block hashes.
-// Note that delay could be 0, but isDelayed will return true. This is the case where the parent process time is due.
-func (dag *BlockDAG) maxDelayOfParents(parentHashes []*daghash.Hash) (delay time.Duration, isDelayed bool) {
-	for _, parentHash := range parentHashes {
-		if delayedParent, exists := dag.delayedBlocks.Get(parentHash); exists {
-			isDelayed = true
-			parentDelay := delayedParent.ProcessTime().Sub(dag.Now())
-			if parentDelay > delay {
-				delay = parentDelay
-			}
-		}
-	}
-
-	return delay, isDelayed
 }
