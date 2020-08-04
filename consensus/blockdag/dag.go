@@ -48,12 +48,6 @@ import (
 	"github.com/kaspanet/kaspad/wire"
 )
 
-const (
-	// isDAGCurrentMaxDiff is the number of blocks from the network tips (estimated by timestamps) for the current
-	// to be considered not synced
-	isDAGCurrentMaxDiff = 40_000
-)
-
 // BlockDAG provides functions for working with the kaspa block DAG.
 // It includes functionality such as rejecting duplicate blocks, ensuring blocks
 // follow all rules, and orphan handling.
