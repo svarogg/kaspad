@@ -1297,18 +1297,6 @@ func (dag *BlockDAG) processDelayedBlocks() error {
 	return nil
 }
 
-// IndexManager provides a generic interface that is called when blocks are
-// connected to the DAG for the purpose of supporting optional indexes.
-type IndexManager interface {
-	// Init is invoked during DAG initialize in order to allow the index
-	// manager to initialize itself and any indexes it is managing.
-	Init(*BlockDAG, *dbaccess.DatabaseContext) error
-
-	// ConnectBlock is invoked when a new block has been connected to the
-	// DAG.
-	ConnectBlock(dbContext *dbaccess.TxContext, blockHash *daghash.Hash, acceptedTxsData common.MultiBlockTxsAcceptanceData) error
-}
-
 // Config is a descriptor which specifies the blockDAG instance configuration.
 type Config struct {
 	// Interrupt specifies a channel the caller can close to signal that
