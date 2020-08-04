@@ -28,16 +28,6 @@ import (
 	"github.com/kaspanet/kaspad/wire"
 )
 
-// FileExists returns whether or not the named file or directory exists.
-func FileExists(name string) bool {
-	if _, err := os.Stat(name); err != nil {
-		if os.IsNotExist(err) {
-			return false
-		}
-	}
-	return true
-}
-
 // DAGSetup is used to create a new db and DAG instance with the genesis
 // block already inserted. In addition to the new DAG instance, it returns
 // a teardown function the caller should invoke when done testing to clean up.
@@ -123,7 +113,7 @@ type VirtualForTest *virtualblock.VirtualBlock
 func SetVirtualForTest(dag *BlockDAG, virtual VirtualForTest) VirtualForTest {
 	oldVirtual := dag.virtual
 	dag.virtual = virtual
-	return VirtualForTest(oldVirtual)
+	return oldVirtual
 }
 
 // GetVirtualFromParentsForTest generates a virtual block with the given parents.

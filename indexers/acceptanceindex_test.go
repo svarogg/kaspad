@@ -3,6 +3,7 @@ package indexers
 import (
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/testdata"
+	"github.com/kaspanet/kaspad/util/fs"
 	"io"
 	"io/ioutil"
 	"os"
@@ -321,7 +322,7 @@ func copyFile(srcFile, dstFile string) error {
 
 // This function is copied and modified from this stackoverflow answer: https://stackoverflow.com/a/56314145/2413761
 func createIfNotExists(dir string, perm os.FileMode) error {
-	if blockdag.FileExists(dir) {
+	if fs.FileExists(dir) {
 		return nil
 	}
 
