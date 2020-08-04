@@ -2,104 +2,95 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package blockdag
-
-import (
-	"github.com/kaspanet/kaspad/consensus/common"
-	"github.com/kaspanet/kaspad/dagconfig"
-	"github.com/kaspanet/kaspad/testdata"
-	"github.com/kaspanet/kaspad/util"
-	"path/filepath"
-	"testing"
-)
-
-// TestCheckConnectBlockTemplate tests the CheckConnectBlockTemplate function to
-// ensure it fails.
-func TestCheckConnectBlockTemplate(t *testing.T) {
-	// Create a new database and DAG instance to run tests against.
-	dag, teardownFunc, err := DAGSetup("checkconnectblocktemplate", true, Config{
-		DAGParams: &dagconfig.SimnetParams,
-	})
-	if err != nil {
-		t.Errorf("Failed to setup dag instance: %v", err)
-		return
-	}
-	defer teardownFunc()
-
-	// Since we're not dealing with the real block DAG, set the coinbase
-	// maturity to 0.
-	dag.TestSetCoinbaseMaturity(0)
-
-	// Load up blocks such that there is a side chain.
-	// (genesis block) -> 1 -> 2 -> 3 -> 4
-	//                          \-> 3a
-	testFiles := []string{
-		"blk_0_to_4.dat",
-		"blk_3B.dat",
-	}
-
-	var blocks []*util.Block
-	for _, file := range testFiles {
-		blockTmp, err := testdata.LoadBlocks(filepath.Join("../../testdata/", file))
-		if err != nil {
-			t.Fatalf("Error loading file: %v\n", err)
-		}
-		blocks = append(blocks, blockTmp...)
-	}
-
-	for i := 1; i <= 3; i++ {
-		_, isDelayed, err := dag.ProcessBlock(blocks[i], common.BFNone)
-		if err != nil {
-			t.Fatalf("CheckConnectBlockTemplate: Received unexpected error "+
-				"processing block %d: %v", i, err)
-		}
-		if isDelayed {
-			t.Fatalf("CheckConnectBlockTemplate: block %d is too far in the future", i)
-		}
-	}
-
-	// Block 3 should fail to connect since it's already inserted.
-	err = dag.CheckConnectBlockTemplateNoLock(blocks[3])
-	if err == nil {
-		t.Fatal("CheckConnectBlockTemplate: Did not received expected error " +
-			"on block 3")
-	}
-
-	// Block 4 should connect successfully to tip of chain.
-	err = dag.CheckConnectBlockTemplateNoLock(blocks[4])
-	if err != nil {
-		t.Fatalf("CheckConnectBlockTemplate: Received unexpected error on "+
-			"block 4: %v", err)
-	}
-
-	// Block 3a should connect even though it does not build on dag tips.
-	err = dag.CheckConnectBlockTemplateNoLock(blocks[5])
-	if err != nil {
-		t.Fatal("CheckConnectBlockTemplate: Recieved unexpected error on " +
-			"block 3a that connects below the tips")
-	}
-
-	// Block 4 should connect even if proof of work is invalid.
-	invalidPowMsgBlock := *blocks[4].MsgBlock()
-	invalidPowMsgBlock.Header.Nonce++
-	invalidPowBlock := util.NewBlock(&invalidPowMsgBlock)
-	err = dag.CheckConnectBlockTemplateNoLock(invalidPowBlock)
-	if err != nil {
-		t.Fatalf("CheckConnectBlockTemplate: Received unexpected error on "+
-			"block 4 with bad nonce: %v", err)
-	}
-
-	// Invalid block building on chain tip should fail to connect.
-	invalidBlock := *blocks[4].MsgBlock()
-	invalidBlock.Header.Bits--
-	err = dag.CheckConnectBlockTemplateNoLock(util.NewBlock(&invalidBlock))
-	if err == nil {
-		t.Fatal("CheckConnectBlockTemplate: Did not received expected error " +
-			"on block 4 with invalid difficulty bits")
-	}
-}
+package validation
 
 // TODO: restore these tests
+//// TestCheckConnectBlockTemplate tests the CheckConnectBlockTemplate function to
+//// ensure it fails.
+//func TestCheckConnectBlockTemplate(t *testing.T) {
+//	// Create a new database and DAG instance to run tests against.
+//	dag, teardownFunc, err := DAGSetup("checkconnectblocktemplate", true, Config{
+//		DAGParams: &dagconfig.SimnetParams,
+//	})
+//	if err != nil {
+//		t.Errorf("Failed to setup dag instance: %v", err)
+//		return
+//	}
+//	defer teardownFunc()
+//
+//	// Since we're not dealing with the real block DAG, set the coinbase
+//	// maturity to 0.
+//	dag.TestSetCoinbaseMaturity(0)
+//
+//	// Load up blocks such that there is a side chain.
+//	// (genesis block) -> 1 -> 2 -> 3 -> 4
+//	//                          \-> 3a
+//	testFiles := []string{
+//		"blk_0_to_4.dat",
+//		"blk_3B.dat",
+//	}
+//
+//	var blocks []*util.Block
+//	for _, file := range testFiles {
+//		blockTmp, err := testdata.LoadBlocks(filepath.Join("../../testdata/", file))
+//		if err != nil {
+//			t.Fatalf("Error loading file: %v\n", err)
+//		}
+//		blocks = append(blocks, blockTmp...)
+//	}
+//
+//	for i := 1; i <= 3; i++ {
+//		_, isDelayed, err := dag.ProcessBlock(blocks[i], common.BFNone)
+//		if err != nil {
+//			t.Fatalf("CheckConnectBlockTemplate: Received unexpected error "+
+//				"processing block %d: %v", i, err)
+//		}
+//		if isDelayed {
+//			t.Fatalf("CheckConnectBlockTemplate: block %d is too far in the future", i)
+//		}
+//	}
+//
+//	// Block 3 should fail to connect since it's already inserted.
+//	err = dag.CheckConnectBlockTemplateNoLock(blocks[3])
+//	if err == nil {
+//		t.Fatal("CheckConnectBlockTemplate: Did not received expected error " +
+//			"on block 3")
+//	}
+//
+//	// Block 4 should connect successfully to tip of chain.
+//	err = dag.CheckConnectBlockTemplateNoLock(blocks[4])
+//	if err != nil {
+//		t.Fatalf("CheckConnectBlockTemplate: Received unexpected error on "+
+//			"block 4: %v", err)
+//	}
+//
+//	// Block 3a should connect even though it does not build on dag tips.
+//	err = dag.CheckConnectBlockTemplateNoLock(blocks[5])
+//	if err != nil {
+//		t.Fatal("CheckConnectBlockTemplate: Recieved unexpected error on " +
+//			"block 3a that connects below the tips")
+//	}
+//
+//	// Block 4 should connect even if proof of work is invalid.
+//	invalidPowMsgBlock := *blocks[4].MsgBlock()
+//	invalidPowMsgBlock.Header.Nonce++
+//	invalidPowBlock := util.NewBlock(&invalidPowMsgBlock)
+//	err = dag.CheckConnectBlockTemplateNoLock(invalidPowBlock)
+//	if err != nil {
+//		t.Fatalf("CheckConnectBlockTemplate: Received unexpected error on "+
+//			"block 4 with bad nonce: %v", err)
+//	}
+//
+//	// Invalid block building on chain tip should fail to connect.
+//	invalidBlock := *blocks[4].MsgBlock()
+//	invalidBlock.Header.Bits--
+//	err = dag.CheckConnectBlockTemplateNoLock(util.NewBlock(&invalidBlock))
+//	if err == nil {
+//		t.Fatal("CheckConnectBlockTemplate: Did not received expected error " +
+//			"on block 4 with invalid difficulty bits")
+//	}
+//}
+//
 //func TestPastMedianTime(t *testing.T) {
 //	dag := newTestDAG(&dagconfig.MainnetParams)
 //	tip := dag.genesis
