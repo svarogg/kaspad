@@ -50,9 +50,8 @@ func (dag *BlockDAG) processOrphans(hash *daghash.Hash, flags common.BehaviorFla
 		// intentionally used over a range here as range does not
 		// reevaluate the slice on each iteration nor does it adjust the
 		// index for the modified slice.
-		orphanParents := dag.orphanedBlocks.OrphanParents(processHash)
-		for i := 0; i < len(orphanParents); i++ {
-			orphan := orphanParents[i]
+		for i := 0; i < len(dag.orphanedBlocks.OrphanParents(processHash)); i++ {
+			orphan := dag.orphanedBlocks.OrphanParents(processHash)[i]
 			if orphan == nil {
 				log.Warnf("Found a nil entry at index %d in the "+
 					"orphan dependency list for block %s", i,
