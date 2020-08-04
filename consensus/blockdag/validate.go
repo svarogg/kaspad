@@ -10,49 +10,10 @@ import (
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/validation/blockvalidation"
 	"github.com/kaspanet/kaspad/consensus/validation/utxovalidation"
-	"github.com/kaspanet/kaspad/util/mstime"
-	"github.com/pkg/errors"
-	"math"
-
-	"github.com/kaspanet/kaspad/consensus/txscript"
 	"github.com/kaspanet/kaspad/util"
 	"github.com/kaspanet/kaspad/wire"
+	"github.com/pkg/errors"
 )
-
-// IsFinalizedTransaction determines whether or not a transaction is finalized.
-func IsFinalizedTransaction(tx *util.Tx, blockBlueScore uint64, blockTime mstime.Time) bool {
-	msgTx := tx.MsgTx()
-
-	// Lock time of zero means the transaction is finalized.
-	lockTime := msgTx.LockTime
-	if lockTime == 0 {
-		return true
-	}
-
-	// The lock time field of a transaction is either a block blue score at
-	// which the transaction is finalized or a timestamp depending on if the
-	// value is before the txscript.LockTimeThreshold. When it is under the
-	// threshold it is a block blue score.
-	blockTimeOrBlueScore := int64(0)
-	if lockTime < txscript.LockTimeThreshold {
-		blockTimeOrBlueScore = int64(blockBlueScore)
-	} else {
-		blockTimeOrBlueScore = blockTime.UnixMilliseconds()
-	}
-	if int64(lockTime) < blockTimeOrBlueScore {
-		return true
-	}
-
-	// At this point, the transaction's lock time hasn't occurred yet, but
-	// the transaction might still be finalized if the sequence number
-	// for all transaction inputs is maxed out.
-	for _, txIn := range msgTx.TxIn {
-		if txIn.Sequence != math.MaxUint64 {
-			return false
-		}
-	}
-	return true
-}
 
 // checkBlockHeaderContext performs several validation checks on the block header
 // which depend on its position within the block dag.
@@ -159,24 +120,6 @@ func (dag *BlockDAG) checkBlockContext(block *util.Block, parents blocknode.Bloc
 	header := &block.MsgBlock().Header
 	if err = dag.checkBlockHeaderContext(header, bluestParent, fastAdd); err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func (dag *BlockDAG) validateAllTxsFinalized(block *util.Block, node *blocknode.BlockNode, bluestParent *blocknode.BlockNode) error {
-	blockTime := block.MsgBlock().Header.Timestamp
-	if !block.IsGenesis() {
-		blockTime = dag.PastMedianTime(bluestParent)
-	}
-
-	// Ensure all transactions in the block are finalized.
-	for _, tx := range block.Transactions() {
-		if !IsFinalizedTransaction(tx, node.BlueScore(), blockTime) {
-			str := fmt.Sprintf("block contains unfinalized "+
-				"transaction %s", tx.ID())
-			return common.NewRuleError(common.ErrUnfinalizedTx, str)
-		}
 	}
 
 	return nil

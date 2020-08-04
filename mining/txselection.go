@@ -1,6 +1,7 @@
 package mining
 
 import (
+	"github.com/kaspanet/kaspad/consensus/validation/transactionvalidation"
 	"github.com/kaspanet/kaspad/consensus/validation/utxovalidation"
 	"math"
 	"math/rand"
@@ -137,7 +138,7 @@ func (g *BlkTmplGenerator) collectCandidatesTxs(sourceTxs []*TxDesc) []*candidat
 		tx := txDesc.Tx
 
 		// A block can't contain non-finalized transactions.
-		if !blockdag.IsFinalizedTransaction(tx, nextBlockBlueScore,
+		if !transactionvalidation.IsFinalizedTransaction(tx, nextBlockBlueScore,
 			g.dag.Now()) {
 			log.Debugf("Skipping non-finalized tx %s", tx.ID())
 			continue

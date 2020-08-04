@@ -9,6 +9,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/notifications"
+	"github.com/kaspanet/kaspad/consensus/validation/blockvalidation"
 
 	"github.com/kaspanet/kaspad/dbaccess"
 	"github.com/kaspanet/kaspad/util"
@@ -104,7 +105,7 @@ func (dag *BlockDAG) maybeAcceptBlock(block *util.Block, flags common.BehaviorFl
 	fastAdd := flags&common.BFFastAdd == common.BFFastAdd
 	bluestParent := parents.Bluest()
 	if !fastAdd {
-		if err := dag.validateAllTxsFinalized(block, newNode, bluestParent); err != nil {
+		if err := blockvalidation.ValidateAllTxsFinalized(block, newNode, bluestParent, dag.pastMedianTimeFactory); err != nil {
 			return err
 		}
 	}

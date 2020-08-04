@@ -7,9 +7,9 @@ package mempool
 import (
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/utxo"
+	"github.com/kaspanet/kaspad/consensus/validation/transactionvalidation"
 	"github.com/kaspanet/kaspad/util/mstime"
 
-	"github.com/kaspanet/kaspad/consensus/blockdag"
 	"github.com/kaspanet/kaspad/consensus/txscript"
 	"github.com/kaspanet/kaspad/util"
 	"github.com/kaspanet/kaspad/wire"
@@ -205,7 +205,7 @@ func checkTransactionStandard(tx *util.Tx, blueScore uint64,
 
 	// The transaction must be finalized to be standard and therefore
 	// considered for inclusion in a block.
-	if !blockdag.IsFinalizedTransaction(tx, blueScore, medianTimePast) {
+	if !transactionvalidation.IsFinalizedTransaction(tx, blueScore, medianTimePast) {
 		return txRuleError(wire.RejectNonstandard,
 			"transaction is not finalized")
 	}
