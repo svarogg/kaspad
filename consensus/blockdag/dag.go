@@ -114,8 +114,8 @@ type BlockDAG struct {
 
 	lastFinalityPoint *blocknode.BlockNode
 
-	utxoDiffStore *utxodiffstore.UtxoDiffStore
-	multisetStore *multiset.MultisetStore
+	utxoDiffStore   *utxodiffstore.UtxoDiffStore
+	multisetManager *multiset.MultiSetManager
 
 	reachabilityTree *reachability.ReachabilityTree
 }
@@ -152,7 +152,7 @@ func New(config *Config) (*BlockDAG, error) {
 		syncRate:              syncrate.NewSyncRate(params),
 	}
 
-	dag.multisetStore = multiset.NewMultisetStore()
+	dag.multisetManager = multiset.NewMultiSetManager()
 	dag.reachabilityTree = reachability.NewReachabilityTree(blockNodeStore, params)
 	dag.ghostdag = ghostdag.NewGHOSTDAG(dag.reachabilityTree, params, dag.timeSource)
 	dag.virtual = virtualblock.NewVirtualBlock(dag.ghostdag, params, dag.blockNodeStore, nil)
@@ -330,83 +330,6 @@ func (dag *BlockDAG) connectBlock(node *blocknode.BlockNode,
 	return chainUpdates, nil
 }
 
-// calcMultiset returns the multiset of the past UTXO of the given block.
-func (dag *BlockDAG) calcMultiset(node *blocknode.BlockNode, acceptanceData common.MultiBlockTxsAcceptanceData,
-	selectedParentPastUTXO utxo.UTXOSet) (*secp256k1.MultiSet, error) {
-
-	return dag.pastUTXOMultiSet(node, acceptanceData, selectedParentPastUTXO)
-}
-
-func (dag *BlockDAG) pastUTXOMultiSet(node *blocknode.BlockNode, acceptanceData common.MultiBlockTxsAcceptanceData,
-	selectedParentPastUTXO utxo.UTXOSet) (*secp256k1.MultiSet, error) {
-
-	ms, err := dag.selectedParentMultiset(node)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, blockAcceptanceData := range acceptanceData {
-		for _, txAcceptanceData := range blockAcceptanceData.TxAcceptanceData {
-			if !txAcceptanceData.IsAccepted {
-				continue
-			}
-
-			tx := txAcceptanceData.Tx.MsgTx()
-
-			var err error
-			ms, err = addTxToMultiset(ms, tx, selectedParentPastUTXO, node.BlueScore())
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-	return ms, nil
-}
-
-// selectedParentMultiset returns the multiset of the node's selected
-// parent. If the node is the genesis BlockNode then it does not have
-// a selected parent, in which case return a new, empty multiset.
-func (dag *BlockDAG) selectedParentMultiset(node *blocknode.BlockNode) (*secp256k1.MultiSet, error) {
-	if node.IsGenesis() {
-		return secp256k1.NewMultiset(), nil
-	}
-
-	ms, err := dag.multisetStore.MultisetByBlockHash(node.SelectedParent().Hash())
-	if err != nil {
-		return nil, err
-	}
-
-	return ms, nil
-}
-
-func addTxToMultiset(ms *secp256k1.MultiSet, tx *wire.MsgTx, pastUTXO utxo.UTXOSet, blockBlueScore uint64) (*secp256k1.MultiSet, error) {
-	for _, txIn := range tx.TxIn {
-		entry, ok := pastUTXO.Get(txIn.PreviousOutpoint)
-		if !ok {
-			return nil, errors.Errorf("Couldn't find entry for outpoint %s", txIn.PreviousOutpoint)
-		}
-
-		var err error
-		ms, err = utxo.RemoveUTXOFromMultiset(ms, entry, &txIn.PreviousOutpoint)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	isCoinbase := tx.IsCoinBase()
-	for i, txOut := range tx.TxOut {
-		outpoint := *wire.NewOutpoint(tx.TxID(), uint32(i))
-		entry := utxo.NewUTXOEntry(txOut, isCoinbase, blockBlueScore)
-
-		var err error
-		ms, err = utxo.AddUTXOToMultiset(ms, entry, &outpoint)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return ms, nil
-}
-
 func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, virtualUTXODiff *utxo.UTXODiff,
 	txsAcceptanceData common.MultiBlockTxsAcceptanceData, feeData coinbase.CompactFeeData) error {
 
@@ -431,7 +354,7 @@ func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, virtualUTXODiff *ut
 		return err
 	}
 
-	err = dag.multisetStore.FlushToDB(dbTx)
+	err = dag.multisetManager.FlushToDB(dbTx)
 	if err != nil {
 		return err
 	}
@@ -487,7 +410,7 @@ func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, virtualUTXODiff *ut
 	dag.utxoDiffStore.ClearDirtyEntries()
 	dag.utxoDiffStore.ClearOldEntries()
 	dag.reachabilityTree.ClearDirtyEntries()
-	dag.multisetStore.ClearNewEntries()
+	dag.multisetManager.ClearNewEntries()
 
 	return nil
 }
@@ -727,7 +650,7 @@ func (dag *BlockDAG) applyDAGChanges(node *blocknode.BlockNode, newBlockPastUTXO
 		return nil, nil, errors.Wrap(err, "failed adding block to the reachability tree")
 	}
 
-	dag.multisetStore.SetMultiset(node.Hash(), newBlockMultiset)
+	dag.multisetManager.SetMultiset(node.Hash(), newBlockMultiset)
 
 	if err = dag.updateParents(node, newBlockPastUTXO); err != nil {
 		return nil, nil, errors.Wrapf(err, "failed updating parents of %s", node)
@@ -810,7 +733,7 @@ func (dag *BlockDAG) verifyAndBuildUTXO(node *blocknode.BlockNode, transactions 
 		return nil, nil, nil, nil, err
 	}
 
-	multiset, err = dag.calcMultiset(node, txsAcceptanceData, selectedParentPastUTXO)
+	multiset, err = dag.multisetManager.CalcMultiset(node, txsAcceptanceData, selectedParentPastUTXO)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}

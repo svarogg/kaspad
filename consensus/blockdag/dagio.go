@@ -110,7 +110,7 @@ func (dag *BlockDAG) initDAGState() error {
 	}
 
 	log.Debugf("Loading multiset data...")
-	err = dag.multisetStore.Init(dag.databaseContext)
+	err = dag.multisetManager.Init(dag.databaseContext)
 	if err != nil {
 		return err
 	}
