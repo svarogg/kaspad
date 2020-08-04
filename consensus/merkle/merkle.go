@@ -5,7 +5,9 @@
 package merkle
 
 import (
+	"github.com/kaspanet/kaspad/consensus/common"
 	"math"
+	"sort"
 
 	"github.com/kaspanet/kaspad/util"
 	"github.com/kaspanet/kaspad/util/daghash"
@@ -131,4 +133,22 @@ func buildMerkleTreeStore(hashes []*daghash.Hash) MerkleTree {
 	}
 
 	return merkles
+}
+
+func CalculateAcceptedIDMerkleRoot(multiBlockTxsAcceptanceData common.MultiBlockTxsAcceptanceData) *daghash.Hash {
+	var acceptedTxs []*util.Tx
+	for _, blockTxsAcceptanceData := range multiBlockTxsAcceptanceData {
+		for _, txAcceptance := range blockTxsAcceptanceData.TxAcceptanceData {
+			if !txAcceptance.IsAccepted {
+				continue
+			}
+			acceptedTxs = append(acceptedTxs, txAcceptance.Tx)
+		}
+	}
+	sort.Slice(acceptedTxs, func(i, j int) bool {
+		return daghash.LessTxID(acceptedTxs[i].ID(), acceptedTxs[j].ID())
+	})
+
+	acceptedIDMerkleTree := BuildIDMerkleTreeStore(acceptedTxs)
+	return acceptedIDMerkleTree.Root()
 }

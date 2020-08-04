@@ -25,9 +25,9 @@ import (
 	"github.com/kaspanet/kaspad/consensus/timesource"
 	"github.com/kaspanet/kaspad/consensus/utxo"
 	"github.com/kaspanet/kaspad/consensus/utxodiffstore"
+	"github.com/kaspanet/kaspad/consensus/validation/merklevalidation"
 	"github.com/kaspanet/kaspad/consensus/virtualblock"
 	"math"
-	"sort"
 	"sync"
 	"time"
 
@@ -284,40 +284,6 @@ func (dag *BlockDAG) addBlock(node *blocknode.BlockNode,
 	}
 	dag.blockCount++
 	return chainUpdates, nil
-}
-
-func calculateAcceptedIDMerkleRoot(multiBlockTxsAcceptanceData common.MultiBlockTxsAcceptanceData) *daghash.Hash {
-	var acceptedTxs []*util.Tx
-	for _, blockTxsAcceptanceData := range multiBlockTxsAcceptanceData {
-		for _, txAcceptance := range blockTxsAcceptanceData.TxAcceptanceData {
-			if !txAcceptance.IsAccepted {
-				continue
-			}
-			acceptedTxs = append(acceptedTxs, txAcceptance.Tx)
-		}
-	}
-	sort.Slice(acceptedTxs, func(i, j int) bool {
-		return daghash.LessTxID(acceptedTxs[i].ID(), acceptedTxs[j].ID())
-	})
-
-	acceptedIDMerkleTree := merkle.BuildIDMerkleTreeStore(acceptedTxs)
-	return acceptedIDMerkleTree.Root()
-}
-
-func (dag *BlockDAG) validateAcceptedIDMerkleRoot(node *blocknode.BlockNode, txsAcceptanceData common.MultiBlockTxsAcceptanceData) error {
-	if node.IsGenesis() {
-		return nil
-	}
-
-	calculatedAccepetedIDMerkleRoot := calculateAcceptedIDMerkleRoot(txsAcceptanceData)
-	header := node.Header()
-	if !header.AcceptedIDMerkleRoot.IsEqual(calculatedAccepetedIDMerkleRoot) {
-		str := fmt.Sprintf("block accepted ID merkle root is invalid - block "+
-			"header indicates %s, but calculated value is %s",
-			header.AcceptedIDMerkleRoot, calculatedAccepetedIDMerkleRoot)
-		return common.NewRuleError(common.ErrBadMerkleRoot, str)
-	}
-	return nil
 }
 
 // connectBlock handles connecting the passed node/block to the DAG.
@@ -715,7 +681,7 @@ func (dag *BlockDAG) NextAcceptedIDMerkleRootNoLock() (*daghash.Hash, error) {
 		return nil, err
 	}
 
-	return calculateAcceptedIDMerkleRoot(txsAcceptanceData), nil
+	return merkle.CalculateAcceptedIDMerkleRoot(txsAcceptanceData), nil
 }
 
 // TxsAcceptedByVirtual retrieves transactions accepted by the current virtual block
@@ -834,7 +800,7 @@ func (dag *BlockDAG) verifyAndBuildUTXO(node *blocknode.BlockNode, transactions 
 		return nil, nil, nil, nil, err
 	}
 
-	err = dag.validateAcceptedIDMerkleRoot(node, txsAcceptanceData)
+	err = merklevalidation.ValidateAcceptedIDMerkleRoot(node, txsAcceptanceData)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
