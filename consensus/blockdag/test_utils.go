@@ -8,6 +8,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/timesource"
 	"github.com/kaspanet/kaspad/consensus/utxo"
 	"github.com/kaspanet/kaspad/consensus/virtualblock"
+	"github.com/kaspanet/kaspad/sigcache"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -91,7 +92,7 @@ func DAGSetup(dbName string, openDb bool, config Config) (*BlockDAG, func(), err
 	}
 
 	config.TimeSource = timesource.New()
-	config.SigCache = txscript.NewSigCache(1000)
+	config.SigCache = sigcache.NewSigCache(1000)
 
 	// Create the DAG instance.
 	dag, err := New(&config)

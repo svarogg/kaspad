@@ -4,11 +4,11 @@ package mining
 
 import (
 	"github.com/kaspanet/kaspad/consensus/merkle"
+	"github.com/kaspanet/kaspad/sigcache"
 	"github.com/kaspanet/kaspad/util/mstime"
 	"github.com/pkg/errors"
 
 	"github.com/kaspanet/kaspad/consensus/blockdag"
-	"github.com/kaspanet/kaspad/consensus/txscript"
 	"github.com/kaspanet/kaspad/util"
 	"github.com/kaspanet/kaspad/util/daghash"
 	"github.com/kaspanet/kaspad/wire"
@@ -61,7 +61,7 @@ func PrepareBlockForTest(dag *blockdag.BlockDAG, parentHashes []*daghash.Hash, t
 		}
 	}
 
-	blockTemplateGenerator := NewBlkTmplGenerator(&policy, txSource, dag, txscript.NewSigCache(100000))
+	blockTemplateGenerator := NewBlkTmplGenerator(&policy, txSource, dag, sigcache.NewSigCache(100000))
 
 	OpTrueAddr, err := OpTrueAddress(dag.Params.Prefix)
 	if err != nil {

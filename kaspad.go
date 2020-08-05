@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/kaspanet/kaspad/addressmanager"
 	"github.com/kaspanet/kaspad/consensus/timesource"
+	"github.com/kaspanet/kaspad/sigcache"
 	"sync/atomic"
 
 	"github.com/kaspanet/kaspad/dbaccess"
@@ -19,7 +20,6 @@ import (
 
 	"github.com/kaspanet/kaspad/config"
 	"github.com/kaspanet/kaspad/consensus/blockdag"
-	"github.com/kaspanet/kaspad/consensus/txscript"
 	"github.com/kaspanet/kaspad/indexers/acceptanceindex"
 	"github.com/kaspanet/kaspad/mempool"
 	"github.com/kaspanet/kaspad/mining"
@@ -106,7 +106,7 @@ func (k *kaspad) stop() error {
 // kaspa network type specified by dagParams. Use start to begin accepting
 // connections from peers.
 func newKaspad(cfg *config.Config, databaseContext *dbaccess.DatabaseContext) (*kaspad, error) {
-	sigCache := txscript.NewSigCache(cfg.SigCacheMaxSize)
+	sigCache := sigcache.NewSigCache(cfg.SigCacheMaxSize)
 	acceptanceIndex := acceptanceindex.NewAcceptanceIndex()
 
 	// Create a new block DAG instance with the appropriate configuration.
@@ -148,7 +148,7 @@ func newKaspad(cfg *config.Config, databaseContext *dbaccess.DatabaseContext) (*
 }
 
 func setupDAG(cfg *config.Config, databaseContext *dbaccess.DatabaseContext,
-	sigCache *txscript.SigCache) (*blockdag.BlockDAG, error) {
+	sigCache *sigcache.SigCache) (*blockdag.BlockDAG, error) {
 
 	dag, err := blockdag.New(&blockdag.Config{
 		DatabaseContext: databaseContext,
@@ -160,7 +160,7 @@ func setupDAG(cfg *config.Config, databaseContext *dbaccess.DatabaseContext,
 	return dag, err
 }
 
-func setupMempool(cfg *config.Config, dag *blockdag.BlockDAG, sigCache *txscript.SigCache) *mempool.TxPool {
+func setupMempool(cfg *config.Config, dag *blockdag.BlockDAG, sigCache *sigcache.SigCache) *mempool.TxPool {
 	mempoolConfig := mempool.Config{
 		Policy: mempool.Policy{
 			AcceptNonStd:    cfg.RelayNonStd,
@@ -176,7 +176,7 @@ func setupMempool(cfg *config.Config, dag *blockdag.BlockDAG, sigCache *txscript
 	return mempool.New(&mempoolConfig)
 }
 
-func setupRPC(cfg *config.Config, dag *blockdag.BlockDAG, txMempool *mempool.TxPool, sigCache *txscript.SigCache,
+func setupRPC(cfg *config.Config, dag *blockdag.BlockDAG, txMempool *mempool.TxPool, sigCache *sigcache.SigCache,
 	acceptanceIndex *acceptanceindex.AcceptanceIndex, connectionManager *connmanager.ConnectionManager,
 	addressManager *addressmanager.AddressManager, protocolManager *protocol.Manager) (*rpc.Server, error) {
 

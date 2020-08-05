@@ -12,6 +12,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/validation/scriptvalidation"
 	"github.com/kaspanet/kaspad/consensus/validation/transactionvalidation"
 	"github.com/kaspanet/kaspad/consensus/validation/utxovalidation"
+	"github.com/kaspanet/kaspad/sigcache"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -59,7 +60,7 @@ type Config struct {
 	Policy Policy
 
 	// SigCache defines a signature cache to use.
-	SigCache *txscript.SigCache
+	SigCache *sigcache.SigCache
 
 	// DAG is the BlockDAG we want to use (mainly for UTXO checks)
 	DAG *blockdag.BlockDAG

@@ -12,6 +12,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/test"
 	"github.com/kaspanet/kaspad/consensus/timesource"
 	"github.com/kaspanet/kaspad/consensus/utxo"
+	"github.com/kaspanet/kaspad/sigcache"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -303,7 +304,7 @@ func TestNew(t *testing.T) {
 		DatabaseContext: databaseContext,
 		DAGParams:       &dagconfig.SimnetParams,
 		TimeSource:      timesource.New(),
-		SigCache:        txscript.NewSigCache(1000),
+		SigCache:        sigcache.NewSigCache(1000),
 	}
 	_, err = New(config)
 	if err != nil {
@@ -345,7 +346,7 @@ func TestAcceptingInInit(t *testing.T) {
 		DatabaseContext: databaseContext,
 		DAGParams:       &dagconfig.SimnetParams,
 		TimeSource:      timesource.New(),
-		SigCache:        txscript.NewSigCache(1000),
+		SigCache:        sigcache.NewSigCache(1000),
 	}
 	dag, err := New(config)
 	if err != nil {

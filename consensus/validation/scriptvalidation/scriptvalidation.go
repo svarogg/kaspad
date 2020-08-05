@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/utxo"
+	"github.com/kaspanet/kaspad/sigcache"
 	"github.com/kaspanet/kaspad/util/daghash"
 	"runtime"
 	"time"
@@ -33,7 +34,7 @@ type txValidator struct {
 	resultChan   chan error
 	utxoSet      utxo.UTXOSet
 	flags        txscript.ScriptFlags
-	sigCache     *txscript.SigCache
+	sigCache     *sigcache.SigCache
 }
 
 // sendResult sends the result of a script pair validation on the internal
@@ -168,7 +169,7 @@ func (v *txValidator) Validate(items []*txValidateItem) error {
 
 // newTxValidator returns a new instance of txValidator to be used for
 // validating transaction scripts asynchronously.
-func newTxValidator(utxoSet utxo.UTXOSet, flags txscript.ScriptFlags, sigCache *txscript.SigCache) *txValidator {
+func newTxValidator(utxoSet utxo.UTXOSet, flags txscript.ScriptFlags, sigCache *sigcache.SigCache) *txValidator {
 	return &txValidator{
 		validateChan: make(chan *txValidateItem),
 		quitChan:     make(chan struct{}),
@@ -181,7 +182,7 @@ func newTxValidator(utxoSet utxo.UTXOSet, flags txscript.ScriptFlags, sigCache *
 
 // ValidateTransactionScripts validates the scripts for the passed transaction
 // using multiple goroutines.
-func ValidateTransactionScripts(tx *util.Tx, utxoSet utxo.UTXOSet, flags txscript.ScriptFlags, sigCache *txscript.SigCache) error {
+func ValidateTransactionScripts(tx *util.Tx, utxoSet utxo.UTXOSet, flags txscript.ScriptFlags, sigCache *sigcache.SigCache) error {
 	// Collect all of the transaction inputs and required information for
 	// validation.
 	txIns := tx.MsgTx().TxIn
@@ -202,7 +203,7 @@ func ValidateTransactionScripts(tx *util.Tx, utxoSet utxo.UTXOSet, flags txscrip
 
 // CheckBlockScripts executes and validates the scripts for all transactions in
 // the passed block using multiple goroutines.
-func CheckBlockScripts(blockHash *daghash.Hash, utxoSet utxo.UTXOSet, transactions []*util.Tx, scriptFlags txscript.ScriptFlags, sigCache *txscript.SigCache) error {
+func CheckBlockScripts(blockHash *daghash.Hash, utxoSet utxo.UTXOSet, transactions []*util.Tx, scriptFlags txscript.ScriptFlags, sigCache *sigcache.SigCache) error {
 	// Collect all of the transaction inputs and required information for
 	// validation for all transactions in the block into a single slice.
 	numInputs := 0

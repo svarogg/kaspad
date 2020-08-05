@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/kaspanet/kaspad/logs"
+	"github.com/kaspanet/kaspad/sigcache"
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"strconv"
@@ -230,9 +231,9 @@ func createSpendingTx(sigScript, scriptPubKey []byte) *wire.MsgTx {
 // parameter.
 func testScripts(t *testing.T, tests [][]interface{}, useSigCache bool) {
 	// Create a signature cache to use only if requested.
-	var sigCache *SigCache
+	var sigCache *sigcache.SigCache
 	if useSigCache {
-		sigCache = NewSigCache(10)
+		sigCache = sigcache.NewSigCache(10)
 	}
 
 	for i, test := range tests {

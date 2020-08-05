@@ -5,12 +5,12 @@
 package mining
 
 import (
+	"github.com/kaspanet/kaspad/sigcache"
 	"github.com/kaspanet/kaspad/util/mstime"
 	"github.com/pkg/errors"
 	"time"
 
 	"github.com/kaspanet/kaspad/consensus/blockdag"
-	"github.com/kaspanet/kaspad/consensus/txscript"
 	"github.com/kaspanet/kaspad/util"
 	"github.com/kaspanet/kaspad/util/daghash"
 	"github.com/kaspanet/kaspad/wire"
@@ -89,7 +89,7 @@ type BlkTmplGenerator struct {
 	policy   *Policy
 	txSource TxSource
 	dag      *blockdag.BlockDAG
-	sigCache *txscript.SigCache
+	sigCache *sigcache.SigCache
 }
 
 // NewBlkTmplGenerator returns a new block template generator for the given
@@ -100,7 +100,7 @@ type BlkTmplGenerator struct {
 // consensus rules.
 func NewBlkTmplGenerator(policy *Policy,
 	txSource TxSource, dag *blockdag.BlockDAG,
-	sigCache *txscript.SigCache) *BlkTmplGenerator {
+	sigCache *sigcache.SigCache) *BlkTmplGenerator {
 
 	return &BlkTmplGenerator{
 		policy:   policy,

@@ -29,6 +29,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/validation/merklevalidation"
 	"github.com/kaspanet/kaspad/consensus/validation/utxovalidation"
 	"github.com/kaspanet/kaspad/consensus/virtualblock"
+	"github.com/kaspanet/kaspad/sigcache"
 	"sync"
 	"time"
 
@@ -39,7 +40,6 @@ import (
 	"github.com/kaspanet/kaspad/util/subnetworkid"
 
 	"github.com/kaspanet/go-secp256k1"
-	"github.com/kaspanet/kaspad/consensus/txscript"
 	"github.com/kaspanet/kaspad/dagconfig"
 	"github.com/kaspanet/kaspad/util"
 	"github.com/kaspanet/kaspad/util/daghash"
@@ -55,8 +55,7 @@ type BlockDAG struct {
 
 	databaseContext        *dbaccess.DatabaseContext
 	timeSource             timesource.TimeSource
-	sigCache               *txscript.SigCache
-	genesis                *blocknode.BlockNode
+	sigCache               *sigcache.SigCache
 	notifier               *notifications.ConsensusNotifier
 	coinbase               *coinbase.Coinbase
 	ghostdag               *ghostdag.GHOSTDAG
@@ -77,6 +76,8 @@ type BlockDAG struct {
 	// dagLock protects concurrent access to the vast majority of the
 	// fields in this struct below this point.
 	dagLock sync.RWMutex
+
+	genesis *blocknode.BlockNode
 
 	// blockCount holds the number of blocks in the DAG
 	blockCount uint64
@@ -772,7 +773,7 @@ type Config struct {
 	//
 	// This field can be nil if the caller is not interested in using a
 	// signature cache.
-	SigCache *txscript.SigCache
+	SigCache *sigcache.SigCache
 
 	// SubnetworkID identifies which subnetwork the DAG is associated
 	// with.

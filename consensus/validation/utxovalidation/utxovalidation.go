@@ -11,6 +11,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/utxo"
 	"github.com/kaspanet/kaspad/consensus/validation/scriptvalidation"
 	"github.com/kaspanet/kaspad/dagconfig"
+	"github.com/kaspanet/kaspad/sigcache"
 	"github.com/kaspanet/kaspad/util"
 	"github.com/kaspanet/kaspad/wire"
 	"github.com/pkg/errors"
@@ -45,7 +46,7 @@ const (
 //
 // This function MUST be called with the dag state lock held (for writes).
 func CheckConnectToPastUTXO(block *blocknode.BlockNode, pastUTXO utxo.UTXOSet,
-	transactions []*util.Tx, fastAdd bool, params *dagconfig.Params, sigCache *txscript.SigCache,
+	transactions []*util.Tx, fastAdd bool, params *dagconfig.Params, sigCache *sigcache.SigCache,
 	pastMedianTimeFactory *pastmediantime.PastMedianTimeFactory,
 	sequenceLockCalculator *sequencelock.SequenceLockCalculator) (coinbase.CompactFeeData, error) {
 

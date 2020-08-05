@@ -7,6 +7,7 @@ package txscript
 import (
 	"fmt"
 	"github.com/kaspanet/kaspad/logger"
+	"github.com/kaspanet/kaspad/sigcache"
 	"github.com/kaspanet/kaspad/wire"
 )
 
@@ -48,7 +49,7 @@ type Engine struct {
 	condStack       []int
 	numOps          int
 	flags           ScriptFlags
-	sigCache        *SigCache
+	sigCache        *sigcache.SigCache
 	isP2SH          bool     // treat execution as pay-to-script-hash
 	savedFirstStack [][]byte // stack from first script for ps2h scripts
 }
@@ -435,7 +436,7 @@ func (vm *Engine) SetAltStack(data [][]byte) {
 // transaction, and input index. The flags modify the behavior of the script
 // engine according to the description provided by each flag.
 func NewEngine(scriptPubKey []byte, tx *wire.MsgTx, txIdx int, flags ScriptFlags,
-	sigCache *SigCache) (*Engine, error) {
+	sigCache *sigcache.SigCache) (*Engine, error) {
 
 	// The provided transaction input index must refer to a valid input.
 	if txIdx < 0 || txIdx >= len(tx.TxIn) {
