@@ -123,7 +123,7 @@ func kaspadMain(startedChan chan<- struct{}) error {
 	}
 
 	// Create kaspad and start it.
-	kaspad, err := newKaspad(cfg, databaseContext, interrupt)
+	kaspad, err := newKaspad(cfg, databaseContext)
 	if err != nil {
 		log.Errorf("Unable to start kaspad: %+v", err)
 		return err

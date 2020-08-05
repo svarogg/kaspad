@@ -105,13 +105,13 @@ func (k *kaspad) stop() error {
 // newKaspad returns a new kaspad instance configured to listen on addr for the
 // kaspa network type specified by dagParams. Use start to begin accepting
 // connections from peers.
-func newKaspad(cfg *config.Config, databaseContext *dbaccess.DatabaseContext, interrupt <-chan struct{}) (*kaspad, error) {
+func newKaspad(cfg *config.Config, databaseContext *dbaccess.DatabaseContext) (*kaspad, error) {
 	indexManager, acceptanceIndex := setupIndexes(cfg)
 
 	sigCache := txscript.NewSigCache(cfg.SigCacheMaxSize)
 
 	// Create a new block DAG instance with the appropriate configuration.
-	dag, err := setupDAG(cfg, databaseContext, interrupt, sigCache, indexManager)
+	dag, err := setupDAG(cfg, databaseContext, sigCache, indexManager)
 	if err != nil {
 		return nil, err
 	}
@@ -148,11 +148,10 @@ func newKaspad(cfg *config.Config, databaseContext *dbaccess.DatabaseContext, in
 	}, nil
 }
 
-func setupDAG(cfg *config.Config, databaseContext *dbaccess.DatabaseContext, interrupt <-chan struct{},
+func setupDAG(cfg *config.Config, databaseContext *dbaccess.DatabaseContext,
 	sigCache *txscript.SigCache, indexManager blockdag.IndexManager) (*blockdag.BlockDAG, error) {
 
 	dag, err := blockdag.New(&blockdag.Config{
-		Interrupt:       interrupt,
 		DatabaseContext: databaseContext,
 		DAGParams:       cfg.NetParams(),
 		TimeSource:      timesource.New(),
