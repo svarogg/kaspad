@@ -1,4 +1,4 @@
-package indexers
+package acceptanceindex
 
 import (
 	"bytes"
@@ -19,9 +19,6 @@ type AcceptanceIndex struct {
 	dag             *blockdag.BlockDAG
 	databaseContext *dbaccess.DatabaseContext
 }
-
-// Ensure the AcceptanceIndex type implements the Indexer interface.
-var _ Indexer = (*AcceptanceIndex)(nil)
 
 // NewAcceptanceIndex returns a new instance of an indexer that is used to create a
 // mapping between block hashes and their txAcceptanceData.

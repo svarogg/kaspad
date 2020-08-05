@@ -56,7 +56,6 @@ type BlockDAG struct {
 	databaseContext        *dbaccess.DatabaseContext
 	timeSource             timesource.TimeSource
 	sigCache               *txscript.SigCache
-	indexManager           IndexManager
 	genesis                *blocknode.BlockNode
 	notifier               *notifications.ConsensusNotifier
 	coinbase               *coinbase.Coinbase
@@ -104,7 +103,6 @@ func New(config *Config) (*BlockDAG, error) {
 		databaseContext:       config.DatabaseContext,
 		timeSource:            config.TimeSource,
 		sigCache:              config.SigCache,
-		indexManager:          config.IndexManager,
 		blockNodeStore:        blockNodeStore,
 		delayedBlocks:         delayedblocks.New(config.TimeSource),
 		blockCount:            0,
@@ -132,15 +130,6 @@ func New(config *Config) (*BlockDAG, error) {
 	err := dag.initDAGState()
 	if err != nil {
 		return nil, err
-	}
-
-	// Initialize and catch up all of the currently active optional indexes
-	// as needed.
-	if config.IndexManager != nil {
-		err = config.IndexManager.Init(dag, dag.databaseContext)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	genesis, ok := blockNodeStore.LookupNode(params.GenesisHash)
@@ -310,16 +299,6 @@ func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, virtualUTXODiff *ut
 	err = subnetworks.RegisterSubnetworks(dbTx, block.Transactions())
 	if err != nil {
 		return err
-	}
-
-	// Allow the index manager to call each of the currently active
-	// optional indexes with the block being connected so they can
-	// update themselves accordingly.
-	if dag.indexManager != nil {
-		err := dag.indexManager.ConnectBlock(dbTx, block.Hash(), txsAcceptanceData)
-		if err != nil {
-			return err
-		}
 	}
 
 	// Apply the fee data into the database
@@ -794,13 +773,6 @@ type Config struct {
 	// This field can be nil if the caller is not interested in using a
 	// signature cache.
 	SigCache *txscript.SigCache
-
-	// IndexManager defines an index manager to use when initializing the
-	// DAG and connecting blocks.
-	//
-	// This field can be nil if the caller does not wish to make use of an
-	// index manager.
-	IndexManager IndexManager
 
 	// SubnetworkID identifies which subnetwork the DAG is associated
 	// with.

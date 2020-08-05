@@ -32,7 +32,7 @@ import (
 	"github.com/btcsuite/websocket"
 	"github.com/kaspanet/kaspad/config"
 	"github.com/kaspanet/kaspad/consensus/blockdag"
-	"github.com/kaspanet/kaspad/consensus/indexers"
+	"github.com/kaspanet/kaspad/indexers/acceptanceindex"
 	"github.com/kaspanet/kaspad/mempool"
 	"github.com/kaspanet/kaspad/mining"
 	"github.com/kaspanet/kaspad/rpc/model"
@@ -166,7 +166,7 @@ type Server struct {
 
 	dag                    *blockdag.BlockDAG
 	txMempool              *mempool.TxPool
-	acceptanceIndex        *indexers.AcceptanceIndex
+	acceptanceIndex        *acceptanceindex.AcceptanceIndex
 	blockTemplateGenerator *mining.BlkTmplGenerator
 	connectionManager      *connmanager.ConnectionManager
 	addressManager         *addressmanager.AddressManager
@@ -692,7 +692,7 @@ func NewRPCServer(
 	cfg *config.Config,
 	dag *blockdag.BlockDAG,
 	txMempool *mempool.TxPool,
-	acceptanceIndex *indexers.AcceptanceIndex,
+	acceptanceIndex *acceptanceindex.AcceptanceIndex,
 	blockTemplateGenerator *mining.BlkTmplGenerator,
 	connectionManager *connmanager.ConnectionManager,
 	addressManager *addressmanager.AddressManager,

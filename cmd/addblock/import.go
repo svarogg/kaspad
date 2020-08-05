@@ -7,7 +7,6 @@ package main
 import (
 	"encoding/binary"
 	"github.com/kaspanet/kaspad/consensus/common"
-	"github.com/kaspanet/kaspad/consensus/indexers"
 	"github.com/kaspanet/kaspad/consensus/timesource"
 	"github.com/kaspanet/kaspad/util/mstime"
 	"github.com/pkg/errors"
@@ -289,23 +288,9 @@ func (bi *blockImporter) Import() chan *importResults {
 // newBlockImporter returns a new importer for the provided file reader seeker
 // and database.
 func newBlockImporter(r io.ReadSeeker) (*blockImporter, error) {
-	// Create the acceptance index if needed.
-	var indexes []indexers.Indexer
-	if cfg.AcceptanceIndex {
-		log.Info("Acceptance index is enabled")
-		indexes = append(indexes, indexers.NewAcceptanceIndex())
-	}
-
-	// Create an index manager if any of the optional indexes are enabled.
-	var indexManager blockdag.IndexManager
-	if len(indexes) > 0 {
-		indexManager = indexers.NewManager(indexes)
-	}
-
 	dag, err := blockdag.New(&blockdag.Config{
-		DAGParams:    ActiveConfig().NetParams(),
-		TimeSource:   timesource.New(),
-		IndexManager: indexManager,
+		DAGParams:  ActiveConfig().NetParams(),
+		TimeSource: timesource.New(),
 	})
 	if err != nil {
 		return nil, err

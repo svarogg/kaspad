@@ -16,7 +16,7 @@ import (
 	"github.com/kaspanet/kaspad/dbaccess"
 
 	"github.com/kaspanet/kaspad/config"
-	"github.com/kaspanet/kaspad/consensus/indexers"
+	"github.com/kaspanet/kaspad/indexers/acceptanceindex"
 	"github.com/kaspanet/kaspad/limits"
 	"github.com/kaspanet/kaspad/signal"
 	"github.com/kaspanet/kaspad/util/panics"
@@ -114,7 +114,7 @@ func kaspadMain(startedChan chan<- struct{}) error {
 
 	// Drop indexes and exit if requested.
 	if cfg.DropAcceptanceIndex {
-		if err := indexers.DropAcceptanceIndex(databaseContext); err != nil {
+		if err := acceptanceindex.DropAcceptanceIndex(databaseContext); err != nil {
 			log.Errorf("%s", err)
 			return err
 		}

@@ -19,8 +19,8 @@ import (
 
 	"github.com/kaspanet/kaspad/config"
 	"github.com/kaspanet/kaspad/consensus/blockdag"
-	"github.com/kaspanet/kaspad/consensus/indexers"
 	"github.com/kaspanet/kaspad/consensus/txscript"
+	"github.com/kaspanet/kaspad/indexers/acceptanceindex"
 	"github.com/kaspanet/kaspad/mempool"
 	"github.com/kaspanet/kaspad/mining"
 	"github.com/kaspanet/kaspad/protocol"
@@ -106,12 +106,11 @@ func (k *kaspad) stop() error {
 // kaspa network type specified by dagParams. Use start to begin accepting
 // connections from peers.
 func newKaspad(cfg *config.Config, databaseContext *dbaccess.DatabaseContext) (*kaspad, error) {
-	indexManager, acceptanceIndex := setupIndexes(cfg)
-
 	sigCache := txscript.NewSigCache(cfg.SigCacheMaxSize)
+	acceptanceIndex := acceptanceindex.NewAcceptanceIndex()
 
 	// Create a new block DAG instance with the appropriate configuration.
-	dag, err := setupDAG(cfg, databaseContext, sigCache, indexManager)
+	dag, err := setupDAG(cfg, databaseContext, sigCache)
 	if err != nil {
 		return nil, err
 	}
@@ -149,34 +148,16 @@ func newKaspad(cfg *config.Config, databaseContext *dbaccess.DatabaseContext) (*
 }
 
 func setupDAG(cfg *config.Config, databaseContext *dbaccess.DatabaseContext,
-	sigCache *txscript.SigCache, indexManager blockdag.IndexManager) (*blockdag.BlockDAG, error) {
+	sigCache *txscript.SigCache) (*blockdag.BlockDAG, error) {
 
 	dag, err := blockdag.New(&blockdag.Config{
 		DatabaseContext: databaseContext,
 		DAGParams:       cfg.NetParams(),
 		TimeSource:      timesource.New(),
 		SigCache:        sigCache,
-		IndexManager:    indexManager,
 		SubnetworkID:    cfg.SubnetworkID,
 	})
 	return dag, err
-}
-
-func setupIndexes(cfg *config.Config) (blockdag.IndexManager, *indexers.AcceptanceIndex) {
-	// Create indexes if needed.
-	var indexes []indexers.Indexer
-	var acceptanceIndex *indexers.AcceptanceIndex
-	if cfg.AcceptanceIndex {
-		log.Info("acceptance index is enabled")
-		indexes = append(indexes, acceptanceIndex)
-	}
-
-	// Create an index manager if any of the optional indexes are enabled.
-	if len(indexes) < 0 {
-		return nil, nil
-	}
-	indexManager := indexers.NewManager(indexes)
-	return indexManager, acceptanceIndex
 }
 
 func setupMempool(cfg *config.Config, dag *blockdag.BlockDAG, sigCache *txscript.SigCache) *mempool.TxPool {
@@ -196,7 +177,7 @@ func setupMempool(cfg *config.Config, dag *blockdag.BlockDAG, sigCache *txscript
 }
 
 func setupRPC(cfg *config.Config, dag *blockdag.BlockDAG, txMempool *mempool.TxPool, sigCache *txscript.SigCache,
-	acceptanceIndex *indexers.AcceptanceIndex, connectionManager *connmanager.ConnectionManager,
+	acceptanceIndex *acceptanceindex.AcceptanceIndex, connectionManager *connmanager.ConnectionManager,
 	addressManager *addressmanager.AddressManager, protocolManager *protocol.Manager) (*rpc.Server, error) {
 
 	if !cfg.DisableRPC {
