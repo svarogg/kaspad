@@ -6,6 +6,7 @@ package blockdag
 
 import (
 	"github.com/kaspanet/kaspad/consensus/blocknode"
+	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/difficulty"
 	"github.com/kaspanet/kaspad/consensus/ghostdag"
 	"github.com/kaspanet/kaspad/consensus/pastmediantime"
@@ -100,6 +101,6 @@ func (fts *fakeTimeSource) Now() mstime.Time {
 	return fts.time
 }
 
-func newFakeTimeSource(fakeTime mstime.Time) timesource.TimeSource {
+func newFakeTimeSource(fakeTime mstime.Time) common.TimeSource {
 	return &fakeTimeSource{time: fakeTime}
 }

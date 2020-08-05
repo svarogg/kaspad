@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/merkle"
-	"github.com/kaspanet/kaspad/consensus/timesource"
 	"github.com/kaspanet/kaspad/consensus/validation/transactionvalidation"
 	"github.com/kaspanet/kaspad/dagconfig"
 	"github.com/kaspanet/kaspad/util"
@@ -21,7 +20,7 @@ import (
 // The flags do not modify the behavior of this function directly, however they
 // are needed to pass along to checkBlockHeaderSanity.
 func CheckBlockSanity(block *util.Block, params *dagconfig.Params,
-	subnetworkID *subnetworkid.SubnetworkID, timeSource timesource.TimeSource,
+	subnetworkID *subnetworkid.SubnetworkID, timeSource common.TimeSource,
 	flags common.BehaviorFlags) (time.Duration, error) {
 
 	delay, err := checkBlockHeaderSanity(block, params, timeSource, flags)
@@ -82,7 +81,7 @@ func CheckBlockSanity(block *util.Block, params *dagconfig.Params,
 // The flags do not modify the behavior of this function directly, however they
 // are needed to pass along to checkProofOfWork.
 func checkBlockHeaderSanity(block *util.Block, params *dagconfig.Params,
-	timeSource timesource.TimeSource, flags common.BehaviorFlags) (delay time.Duration, err error) {
+	timeSource common.TimeSource, flags common.BehaviorFlags) (delay time.Duration, err error) {
 
 	// Ensure the proof of work bits in the block header is in min/max range
 	// and the block hash is less than the target value described by the

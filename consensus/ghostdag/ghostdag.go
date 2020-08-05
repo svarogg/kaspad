@@ -2,8 +2,8 @@ package ghostdag
 
 import (
 	"github.com/kaspanet/kaspad/consensus/blocknode"
+	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/reachability"
-	"github.com/kaspanet/kaspad/consensus/timesource"
 	"github.com/kaspanet/kaspad/dagconfig"
 	"github.com/kaspanet/kaspad/wire"
 	"github.com/pkg/errors"
@@ -13,11 +13,11 @@ import (
 type GHOSTDAGManager struct {
 	reachabilityTree *reachability.ReachabilityTree
 	params           *dagconfig.Params
-	timeSource       timesource.TimeSource
+	timeSource       common.TimeSource
 }
 
 func NewManager(reachabilityTree *reachability.ReachabilityTree,
-	params *dagconfig.Params, timeSource timesource.TimeSource) *GHOSTDAGManager {
+	params *dagconfig.Params, timeSource common.TimeSource) *GHOSTDAGManager {
 
 	return &GHOSTDAGManager{
 		reachabilityTree: reachabilityTree,

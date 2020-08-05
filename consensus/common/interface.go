@@ -1,4 +1,6 @@
-package consensus
+package common
+
+import "github.com/kaspanet/kaspad/util/mstime"
 
 type BlockLocatorManager interface {
 }
@@ -46,6 +48,7 @@ type SyncRateManager interface {
 }
 
 type TimeSource interface {
+	Now() mstime.Time
 }
 
 type UTXODiffStore interface {

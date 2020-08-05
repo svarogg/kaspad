@@ -22,7 +22,6 @@ import (
 	"github.com/kaspanet/kaspad/consensus/sequencelock"
 	"github.com/kaspanet/kaspad/consensus/subnetworks"
 	"github.com/kaspanet/kaspad/consensus/syncrate"
-	"github.com/kaspanet/kaspad/consensus/timesource"
 	"github.com/kaspanet/kaspad/consensus/utxo"
 	"github.com/kaspanet/kaspad/consensus/utxodiffstore"
 	"github.com/kaspanet/kaspad/consensus/validation/blockvalidation"
@@ -54,7 +53,7 @@ type BlockDAG struct {
 	subnetworkID *subnetworkid.SubnetworkID
 
 	databaseContext        *dbaccess.DatabaseContext
-	timeSource             timesource.TimeSource
+	timeSource             common.TimeSource
 	sigCache               *sigcache.SigCache
 	notifier               *notifications.NotificationManager
 	coinbase               *coinbase.CoinbaseManager
@@ -764,7 +763,7 @@ type Config struct {
 
 	// TimeSource defines the time source to use for things such as
 	// block processing and determining whether or not the DAG is current.
-	TimeSource timesource.TimeSource
+	TimeSource common.TimeSource
 
 	// SigCache defines a signature cache to use when when validating
 	// signatures. This is typically most useful when individual

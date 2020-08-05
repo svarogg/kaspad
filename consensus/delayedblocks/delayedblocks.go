@@ -1,7 +1,7 @@
 package delayedblocks
 
 import (
-	"github.com/kaspanet/kaspad/consensus/timesource"
+	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/util"
 	"github.com/kaspanet/kaspad/util/daghash"
 	"github.com/kaspanet/kaspad/util/mstime"
@@ -13,13 +13,13 @@ import (
 // In that case we will delay the processing of the child block so it would be processed
 // after its parent.
 type DelayedBlockManager struct {
-	timeSource timesource.TimeSource
+	timeSource common.TimeSource
 
 	delayedBlocks      map[daghash.Hash]*DelayedBlock
 	delayedBlocksQueue delayedBlocksHeap
 }
 
-func New(timeSource timesource.TimeSource) *DelayedBlockManager {
+func New(timeSource common.TimeSource) *DelayedBlockManager {
 	return &DelayedBlockManager{
 		timeSource: timeSource,
 

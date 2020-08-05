@@ -4,12 +4,6 @@ import (
 	"github.com/kaspanet/kaspad/util/mstime"
 )
 
-// TimeSource is the interface to access time.
-type TimeSource interface {
-	// Now returns the current time.
-	Now() mstime.Time
-}
-
 // timeSource provides an implementation of the TimeSource interface
 // that simply returns the current local time.
 type timeSource struct{}
@@ -20,6 +14,6 @@ func (m *timeSource) Now() mstime.Time {
 }
 
 // New returns a new instance of a TimeSource
-func New() TimeSource {
+func New() *timeSource {
 	return &timeSource{}
 }

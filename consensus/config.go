@@ -1,6 +1,7 @@
 package consensus
 
 import (
+	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/dagconfig"
 	"github.com/kaspanet/kaspad/dbaccess"
 	"github.com/kaspanet/kaspad/sigcache"
@@ -13,21 +14,21 @@ type Config struct {
 	DatabaseContext *dbaccess.DatabaseContext
 	SigCache        *sigcache.SigCache
 
-	BlockLocatorManager    BlockLocatorManager
-	BlockNodeStore         BlockNodeStore
-	CoinbaseManager        CoinbaseManager
-	DelayedBlockManager    DelayedBlockManager
-	DifficultyManager      DifficultyManager
-	FinalityManager        FinalityManager
-	GHOSTDAGManager        GHOSTDAGManager
-	MultiSetManager        MultiSetManager
-	NotificationManager    NotificationManager
-	OrphanedBlockManager   OrphanedBlockManager
-	PastMedianTimeManager  PastMedianTimeManager
-	ReachabilityTree       ReachabilityTree
-	SequenceLockCalculator SequenceLockCalculator
-	SyncRateManager        SyncRateManager
-	TimeSource             TimeSource
-	UTXODiffStore          UTXODiffStore
-	VirtualBlock           VirtualBlock
+	BlockLocatorManager    common.BlockLocatorManager
+	BlockNodeStore         common.BlockNodeStore
+	CoinbaseManager        common.CoinbaseManager
+	DelayedBlockManager    common.DelayedBlockManager
+	DifficultyManager      common.DifficultyManager
+	FinalityManager        common.FinalityManager
+	GHOSTDAGManager        common.GHOSTDAGManager
+	MultiSetManager        common.MultiSetManager
+	NotificationManager    common.NotificationManager
+	OrphanedBlockManager   common.OrphanedBlockManager
+	PastMedianTimeManager  common.PastMedianTimeManager
+	ReachabilityTree       common.ReachabilityTree
+	SequenceLockCalculator common.SequenceLockCalculator
+	SyncRateManager        common.SyncRateManager
+	TimeSource             common.TimeSource
+	UTXODiffStore          common.UTXODiffStore
+	VirtualBlock           common.VirtualBlock
 }
