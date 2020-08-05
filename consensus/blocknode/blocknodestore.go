@@ -22,10 +22,10 @@ type BlockNodeStore struct {
 	dirty      map[*BlockNode]struct{}
 }
 
-// NewBlockNodeStore returns a new empty instance of a blockNode store. The store will
+// NewStore returns a new empty instance of a blockNode store. The store will
 // be dynamically populated as block nodes are loaded from the database and
 // manually added.
-func NewBlockNodeStore(dagParams *dagconfig.Params) *BlockNodeStore {
+func NewStore(dagParams *dagconfig.Params) *BlockNodeStore {
 	return &BlockNodeStore{
 		dagParams:  dagParams,
 		blockNodes: make(map[daghash.Hash]*BlockNode),

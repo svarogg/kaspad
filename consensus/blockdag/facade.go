@@ -373,7 +373,7 @@ func (dag *BlockDAG) initBlockNode(blockHeader *wire.BlockHeader, parents blockn
 	return dag.ghostdag.InitBlockNode(blockHeader, parents)
 }
 
-func (dag *BlockDAG) Notifier() *notifications.ConsensusNotifier {
+func (dag *BlockDAG) Notifier() *notifications.NotificationManager {
 	return dag.notifier
 }
 

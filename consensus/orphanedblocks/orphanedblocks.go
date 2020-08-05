@@ -23,7 +23,7 @@ type OrphanBlock struct {
 	Expiration mstime.Time
 }
 
-type OrphanedBlocks struct {
+type OrphanedBlockManager struct {
 	sync.RWMutex
 
 	blockNodeStore *blocknode.BlockNodeStore
@@ -33,8 +33,8 @@ type OrphanedBlocks struct {
 	newestOrphan  *OrphanBlock
 }
 
-func New(blockNodeStore *blocknode.BlockNodeStore) *OrphanedBlocks {
-	return &OrphanedBlocks{
+func NewManager(blockNodeStore *blocknode.BlockNodeStore) *OrphanedBlockManager {
+	return &OrphanedBlockManager{
 		blockNodeStore: blockNodeStore,
 
 		orphans:       make(map[daghash.Hash]*OrphanBlock),
@@ -50,7 +50,7 @@ func New(blockNodeStore *blocknode.BlockNodeStore) *OrphanedBlocks {
 // ProcessBlock with an orphan that already exists results in an error, so this
 // function provides a mechanism for a caller to intelligently detect *recent*
 // duplicate orphans and react accordingly.
-func (ob *OrphanedBlocks) IsKnownOrphan(hash *daghash.Hash) bool {
+func (ob *OrphanedBlockManager) IsKnownOrphan(hash *daghash.Hash) bool {
 	ob.RLock()
 	defer ob.RUnlock()
 	_, exists := ob.orphans[*hash]
@@ -59,7 +59,7 @@ func (ob *OrphanedBlocks) IsKnownOrphan(hash *daghash.Hash) bool {
 }
 
 // GetOrphanMissingAncestorHashes returns all of the missing parents in the orphan's sub-DAG
-func (ob *OrphanedBlocks) GetOrphanMissingAncestorHashes(orphanHash *daghash.Hash) []*daghash.Hash {
+func (ob *OrphanedBlockManager) GetOrphanMissingAncestorHashes(orphanHash *daghash.Hash) []*daghash.Hash {
 	ob.RLock()
 	defer ob.RUnlock()
 
@@ -87,7 +87,7 @@ func (ob *OrphanedBlocks) GetOrphanMissingAncestorHashes(orphanHash *daghash.Has
 
 // RemoveOrphanBlock removes the passed orphan block from the orphan pool and
 // previous orphan index.
-func (ob *OrphanedBlocks) RemoveOrphanBlock(orphan *OrphanBlock) {
+func (ob *OrphanedBlockManager) RemoveOrphanBlock(orphan *OrphanBlock) {
 	ob.Lock()
 	defer ob.Unlock()
 
@@ -126,7 +126,7 @@ func (ob *OrphanedBlocks) RemoveOrphanBlock(orphan *OrphanBlock) {
 // It also imposes a maximum limit on the number of outstanding orphan
 // blocks and will remove the oldest received orphan block if the limit is
 // exceeded.
-func (ob *OrphanedBlocks) AddOrphanBlock(block *util.Block) {
+func (ob *OrphanedBlockManager) AddOrphanBlock(block *util.Block) {
 	// Remove expired orphan blocks.
 	for _, oBlock := range ob.orphans {
 		if mstime.Now().After(oBlock.Expiration) {
@@ -174,11 +174,11 @@ func (ob *OrphanedBlocks) AddOrphanBlock(block *util.Block) {
 	}
 }
 
-func (ob *OrphanedBlocks) OrphanParents(parentHash *daghash.Hash) []*OrphanBlock {
+func (ob *OrphanedBlockManager) OrphanParents(parentHash *daghash.Hash) []*OrphanBlock {
 	prevOrphan := ob.orphanParents[*parentHash]
 	return prevOrphan
 }
 
-func (ob *OrphanedBlocks) Len() int {
+func (ob *OrphanedBlockManager) Len() int {
 	return len(ob.orphans)
 }

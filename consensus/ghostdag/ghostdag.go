@@ -10,16 +10,16 @@ import (
 	"sort"
 )
 
-type GHOSTDAG struct {
+type GHOSTDAGManager struct {
 	reachabilityTree *reachability.ReachabilityTree
 	params           *dagconfig.Params
 	timeSource       timesource.TimeSource
 }
 
-func NewGHOSTDAG(reachabilityTree *reachability.ReachabilityTree,
-	params *dagconfig.Params, timeSource timesource.TimeSource) *GHOSTDAG {
+func NewManager(reachabilityTree *reachability.ReachabilityTree,
+	params *dagconfig.Params, timeSource timesource.TimeSource) *GHOSTDAGManager {
 
-	return &GHOSTDAG{
+	return &GHOSTDAGManager{
 		reachabilityTree: reachabilityTree,
 		params:           params,
 		timeSource:       timeSource,
@@ -45,7 +45,7 @@ func NewGHOSTDAG(reachabilityTree *reachability.ReachabilityTree,
 //    bluesAnticoneSizes.
 //
 // For further details see the article https://eprint.iacr.org/2018/104.pdf
-func (g *GHOSTDAG) Run(newNode *blocknode.BlockNode) (selectedParentAnticone []*blocknode.BlockNode, err error) {
+func (g *GHOSTDAGManager) Run(newNode *blocknode.BlockNode) (selectedParentAnticone []*blocknode.BlockNode, err error) {
 	newNode.SetSelectedParent(newNode.Parents().Bluest())
 	newNode.SetBluesAnticoneSizes(make(map[*blocknode.BlockNode]dagconfig.KType))
 	newNode.BluesAnticoneSizes()[newNode.SelectedParent()] = 0
@@ -146,7 +146,7 @@ func (g *GHOSTDAG) Run(newNode *blocknode.BlockNode) (selectedParentAnticone []*
 // For each node in the queue:
 //   we check whether it is in the past of the selected parent.
 //   If not, we add the node to the resulting anticone-set and queue it for processing.
-func (g *GHOSTDAG) selectedParentAnticone(node *blocknode.BlockNode) ([]*blocknode.BlockNode, error) {
+func (g *GHOSTDAGManager) selectedParentAnticone(node *blocknode.BlockNode) ([]*blocknode.BlockNode, error) {
 	anticoneSet := blocknode.NewBlockNodeSet()
 	var anticoneSlice []*blocknode.BlockNode
 	selectedParentPast := blocknode.NewBlockNodeSet()
@@ -185,7 +185,7 @@ func (g *GHOSTDAG) selectedParentAnticone(node *blocknode.BlockNode) ([]*blockno
 	return anticoneSlice, nil
 }
 
-func (g *GHOSTDAG) isInPast(this *blocknode.BlockNode, other *blocknode.BlockNode) (bool, error) {
+func (g *GHOSTDAGManager) isInPast(this *blocknode.BlockNode, other *blocknode.BlockNode) (bool, error) {
 	return g.reachabilityTree.IsInPast(this, other)
 }
 
@@ -193,7 +193,7 @@ func (g *GHOSTDAG) isInPast(this *blocknode.BlockNode, other *blocknode.BlockNod
 // anticone of its selected parent (parent with highest blue score).
 // selectedParentAnticone is used to update reachability data we store for future reachability queries.
 // This function is NOT safe for concurrent access.
-func (g *GHOSTDAG) InitBlockNode(blockHeader *wire.BlockHeader, parents blocknode.BlockNodeSet) (
+func (g *GHOSTDAGManager) InitBlockNode(blockHeader *wire.BlockHeader, parents blocknode.BlockNodeSet) (
 	node *blocknode.BlockNode, selectedParentAnticone []*blocknode.BlockNode) {
 
 	node = blocknode.NewBlockNode(blockHeader, parents, g.timeSource.Now())

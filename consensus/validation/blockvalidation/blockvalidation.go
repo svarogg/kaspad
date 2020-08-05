@@ -17,7 +17,7 @@ import (
 )
 
 func ValidateAllTxsFinalized(block *util.Block, node *blocknode.BlockNode, bluestParent *blocknode.BlockNode,
-	pastMedianTimeFactory *pastmediantime.PastMedianTimeFactory) error {
+	pastMedianTimeFactory *pastmediantime.PastMedianTimeManager) error {
 
 	blockTime := block.MsgBlock().Header.Timestamp
 	if !block.IsGenesis() {
@@ -47,8 +47,8 @@ func ValidateAllTxsFinalized(block *util.Block, node *blocknode.BlockNode, blues
 // for how the flags modify its behavior.
 //
 // This function MUST be called with the dag state lock held (for writes).
-func CheckBlockContext(difficulty *difficulty.Difficulty,
-	pastMedianTimeFactory *pastmediantime.PastMedianTimeFactory,
+func CheckBlockContext(difficulty *difficulty.DifficultyManager,
+	pastMedianTimeFactory *pastmediantime.PastMedianTimeManager,
 	reachabilityTree *reachability.ReachabilityTree,
 	block *util.Block, parents blocknode.BlockNodeSet, flags common.BehaviorFlags) error {
 
@@ -111,8 +111,8 @@ func validateParents(reachabilityTree *reachability.ReachabilityTree,
 //  - BFFastAdd: No checks are performed.
 //
 // This function MUST be called with the dag state lock held (for writes).
-func checkBlockHeaderContext(difficulty *difficulty.Difficulty,
-	pastMedianTimeFactory *pastmediantime.PastMedianTimeFactory,
+func checkBlockHeaderContext(difficulty *difficulty.DifficultyManager,
+	pastMedianTimeFactory *pastmediantime.PastMedianTimeManager,
 	header *wire.BlockHeader, bluestParent *blocknode.BlockNode, fastAdd bool) error {
 
 	if !fastAdd {
@@ -127,7 +127,7 @@ func checkBlockHeaderContext(difficulty *difficulty.Difficulty,
 	return nil
 }
 
-func validateDifficulty(difficulty *difficulty.Difficulty, header *wire.BlockHeader, bluestParent *blocknode.BlockNode) error {
+func validateDifficulty(difficulty *difficulty.DifficultyManager, header *wire.BlockHeader, bluestParent *blocknode.BlockNode) error {
 	// Ensure the difficulty specified in the block header matches
 	// the calculated difficulty based on the previous block and
 	// difficulty retarget rules.
@@ -141,7 +141,7 @@ func validateDifficulty(difficulty *difficulty.Difficulty, header *wire.BlockHea
 	return nil
 }
 
-func validateMedianTime(pastMedianTimeFactory *pastmediantime.PastMedianTimeFactory, header *wire.BlockHeader, bluestParent *blocknode.BlockNode) error {
+func validateMedianTime(pastMedianTimeFactory *pastmediantime.PastMedianTimeManager, header *wire.BlockHeader, bluestParent *blocknode.BlockNode) error {
 	if !header.IsGenesis() {
 		// Ensure the timestamp for the block header is not before the
 		// median time of the last several blocks (medianTimeBlocks).

@@ -13,7 +13,7 @@ import (
 	"github.com/kaspanet/kaspad/util/bigintpool"
 )
 
-type Difficulty struct {
+type DifficultyManager struct {
 	params  *dagconfig.Params
 	virtual *virtualblock.VirtualBlock
 
@@ -22,8 +22,8 @@ type Difficulty struct {
 	powMaxBits uint32
 }
 
-func NewDifficulty(params *dagconfig.Params, virtual *virtualblock.VirtualBlock) *Difficulty {
-	return &Difficulty{
+func NewManager(params *dagconfig.Params, virtual *virtualblock.VirtualBlock) *DifficultyManager {
+	return &DifficultyManager{
 		params:     params,
 		virtual:    virtual,
 		powMaxBits: util.BigToCompact(params.PowMax),
@@ -32,7 +32,7 @@ func NewDifficulty(params *dagconfig.Params, virtual *virtualblock.VirtualBlock)
 
 // RequiredDifficulty calculates the required difficulty for a
 // block given its bluest parent.
-func (d *Difficulty) RequiredDifficulty(bluestParent *blocknode.BlockNode) uint32 {
+func (d *DifficultyManager) RequiredDifficulty(bluestParent *blocknode.BlockNode) uint32 {
 	// Genesis block.
 	if bluestParent == nil || bluestParent.BlueScore() < d.params.DifficultyAdjustmentWindowSize+1 {
 		return d.powMaxBits
@@ -72,7 +72,7 @@ func (d *Difficulty) RequiredDifficulty(bluestParent *blocknode.BlockNode) uint3
 
 // NextRequiredDifficulty calculates the required difficulty for a block that will
 // be built on top of the current tips.
-func (d *Difficulty) NextRequiredDifficulty() uint32 {
+func (d *DifficultyManager) NextRequiredDifficulty() uint32 {
 	difficulty := d.RequiredDifficulty(d.virtual.Parents().Bluest())
 	return difficulty
 }

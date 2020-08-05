@@ -25,11 +25,11 @@ type SequenceLock struct {
 
 type SequenceLockCalculator struct {
 	virtual               *virtualblock.VirtualBlock
-	pastMedianTimeFactory *pastmediantime.PastMedianTimeFactory
+	pastMedianTimeFactory *pastmediantime.PastMedianTimeManager
 }
 
-func NewSequenceLockCalculator(virtual *virtualblock.VirtualBlock,
-	pastMedianTimeFactory *pastmediantime.PastMedianTimeFactory) *SequenceLockCalculator {
+func NewCalculator(virtual *virtualblock.VirtualBlock,
+	pastMedianTimeFactory *pastmediantime.PastMedianTimeManager) *SequenceLockCalculator {
 
 	return &SequenceLockCalculator{
 		virtual:               virtual,

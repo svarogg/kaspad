@@ -20,13 +20,13 @@ var (
 	baseSubsidy uint64 = 50 * util.SompiPerKaspa
 )
 
-type Coinbase struct {
+type CoinbaseManager struct {
 	dbContext *dbaccess.DatabaseContext
 	params    *dagconfig.Params
 }
 
-func New(dbContext *dbaccess.DatabaseContext, params *dagconfig.Params) *Coinbase {
-	return &Coinbase{
+func NewManager(dbContext *dbaccess.DatabaseContext, params *dagconfig.Params) *CoinbaseManager {
+	return &CoinbaseManager{
 		dbContext: dbContext,
 		params:    params,
 	}
@@ -34,7 +34,7 @@ func New(dbContext *dbaccess.DatabaseContext, params *dagconfig.Params) *Coinbas
 
 // getBluesFeeData returns the CompactFeeData for all nodes' blues,
 // used to calculate the fees this BlockNode needs to pay
-func (cb *Coinbase) getBluesFeeData(node *blocknode.BlockNode) (map[daghash.Hash]CompactFeeData, error) {
+func (cb *CoinbaseManager) getBluesFeeData(node *blocknode.BlockNode) (map[daghash.Hash]CompactFeeData, error) {
 	bluesFeeData := make(map[daghash.Hash]CompactFeeData)
 
 	for _, blueBlock := range node.Blues() {
@@ -51,7 +51,7 @@ func (cb *Coinbase) getBluesFeeData(node *blocknode.BlockNode) (map[daghash.Hash
 
 // The following functions deal with building and validating the coinbase transaction
 
-func (cb *Coinbase) ValidateCoinbaseTransaction(node *blocknode.BlockNode, block *util.Block, txsAcceptanceData common.MultiBlockTxsAcceptanceData) error {
+func (cb *CoinbaseManager) ValidateCoinbaseTransaction(node *blocknode.BlockNode, block *util.Block, txsAcceptanceData common.MultiBlockTxsAcceptanceData) error {
 	if node.IsGenesis() {
 		return nil
 	}
@@ -76,7 +76,7 @@ func (cb *Coinbase) ValidateCoinbaseTransaction(node *blocknode.BlockNode, block
 }
 
 // ExpectedCoinbaseTransaction returns the coinbase transaction for the current block
-func (cb *Coinbase) ExpectedCoinbaseTransaction(node *blocknode.BlockNode, txsAcceptanceData common.MultiBlockTxsAcceptanceData, scriptPubKey []byte, extraData []byte) (*util.Tx, error) {
+func (cb *CoinbaseManager) ExpectedCoinbaseTransaction(node *blocknode.BlockNode, txsAcceptanceData common.MultiBlockTxsAcceptanceData, scriptPubKey []byte, extraData []byte) (*util.Tx, error) {
 	bluesFeeData, err := cb.getBluesFeeData(node)
 	if err != nil {
 		return nil, err
@@ -105,7 +105,7 @@ func (cb *Coinbase) ExpectedCoinbaseTransaction(node *blocknode.BlockNode, txsAc
 
 // coinbaseOutputForBlueBlock calculates the output that should go into the coinbase transaction of blueBlock
 // If blueBlock gets no fee - returns nil for txOut
-func (cb *Coinbase) coinbaseOutputForBlueBlock(blueBlock *blocknode.BlockNode,
+func (cb *CoinbaseManager) coinbaseOutputForBlueBlock(blueBlock *blocknode.BlockNode,
 	txsAcceptanceData common.MultiBlockTxsAcceptanceData,
 	feeData map[daghash.Hash]CompactFeeData) (*wire.TxOut, error) {
 

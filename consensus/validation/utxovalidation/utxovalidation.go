@@ -47,7 +47,7 @@ const (
 // This function MUST be called with the dag state lock held (for writes).
 func CheckConnectToPastUTXO(block *blocknode.BlockNode, pastUTXO utxo.UTXOSet,
 	transactions []*util.Tx, fastAdd bool, params *dagconfig.Params, sigCache *sigcache.SigCache,
-	pastMedianTimeFactory *pastmediantime.PastMedianTimeFactory,
+	pastMedianTimeFactory *pastmediantime.PastMedianTimeManager,
 	sequenceLockCalculator *sequencelock.SequenceLockCalculator) (coinbase.CompactFeeData, error) {
 
 	if !fastAdd {

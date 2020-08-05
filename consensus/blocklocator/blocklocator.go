@@ -25,16 +25,16 @@ import (
 //  [17 16 14 11 7 2 genesis]
 type BlockLocator []*daghash.Hash
 
-type BlockLocatorFactory struct {
+type BlockLocatorManager struct {
 	blockNodeStore   *blocknode.BlockNodeStore
 	reachabilityTree *reachability.ReachabilityTree
 	params           *dagconfig.Params
 }
 
-func NewBlockLocatorFactory(blockNodeStore *blocknode.BlockNodeStore,
-	reachabilityTree *reachability.ReachabilityTree, params *dagconfig.Params) *BlockLocatorFactory {
+func NewManager(blockNodeStore *blocknode.BlockNodeStore,
+	reachabilityTree *reachability.ReachabilityTree, params *dagconfig.Params) *BlockLocatorManager {
 
-	return &BlockLocatorFactory{
+	return &BlockLocatorManager{
 		blockNodeStore:   blockNodeStore,
 		reachabilityTree: reachabilityTree,
 		params:           params,
@@ -43,7 +43,7 @@ func NewBlockLocatorFactory(blockNodeStore *blocknode.BlockNodeStore,
 
 // BlockLocatorFromHashes returns a block locator from high and low hash.
 // See BlockLocator for details on the algorithm used to create a block locator.
-func (blf *BlockLocatorFactory) BlockLocatorFromHashes(highHash, lowHash *daghash.Hash) (BlockLocator, error) {
+func (blf *BlockLocatorManager) BlockLocatorFromHashes(highHash, lowHash *daghash.Hash) (BlockLocator, error) {
 	highNode, ok := blf.blockNodeStore.LookupNode(highHash)
 	if !ok {
 		return nil, errors.Errorf("block %s is unknown", highHash)
@@ -59,7 +59,7 @@ func (blf *BlockLocatorFactory) BlockLocatorFromHashes(highHash, lowHash *daghas
 
 // blockLocator returns a block locator for the passed high and low nodes.
 // See the BlockLocator type comments for more details.
-func (blf *BlockLocatorFactory) blockLocator(highNode, lowNode *blocknode.BlockNode) (BlockLocator, error) {
+func (blf *BlockLocatorManager) blockLocator(highNode, lowNode *blocknode.BlockNode) (BlockLocator, error) {
 	// We use the selected parent of the high node, so the
 	// block locator won't contain the high node.
 	highNode = highNode.SelectedParent()
@@ -100,7 +100,7 @@ func (blf *BlockLocatorFactory) blockLocator(highNode, lowNode *blocknode.BlockN
 // and the highest known block locator hash. This is used to create the
 // next block locator to find the highest shared known chain block with the
 // sync peer.
-func (blf *BlockLocatorFactory) FindNextLocatorBoundaries(locator BlockLocator) (highHash, lowHash *daghash.Hash) {
+func (blf *BlockLocatorManager) FindNextLocatorBoundaries(locator BlockLocator) (highHash, lowHash *daghash.Hash) {
 	// Find the most recent locator block hash in the DAG. In the case none of
 	// the hashes in the locator are in the DAG, fall back to the genesis block.
 	lowNode, _ := blf.blockNodeStore.LookupNode(blf.params.GenesisHash)
@@ -122,7 +122,7 @@ func (blf *BlockLocatorFactory) FindNextLocatorBoundaries(locator BlockLocator) 
 // AntiPastHashesBetween returns the hashes of the blocks between the
 // lowHash's antiPast and highHash's antiPast, or up to the provided
 // max number of block hashes.
-func (blf *BlockLocatorFactory) AntiPastHashesBetween(lowHash, highHash *daghash.Hash, maxHashes uint64) ([]*daghash.Hash, error) {
+func (blf *BlockLocatorManager) AntiPastHashesBetween(lowHash, highHash *daghash.Hash, maxHashes uint64) ([]*daghash.Hash, error) {
 	nodes, err := blf.antiPastBetween(lowHash, highHash, maxHashes)
 	if err != nil {
 		return nil, err
@@ -137,7 +137,7 @@ func (blf *BlockLocatorFactory) AntiPastHashesBetween(lowHash, highHash *daghash
 // AntiPastHeadersBetween returns the headers of the blocks between the
 // lowHash's antiPast and highHash's antiPast, or up to the provided
 // max number of block headers.
-func (blf *BlockLocatorFactory) AntiPastHeadersBetween(lowHash, highHash *daghash.Hash, maxHeaders uint64) ([]*wire.BlockHeader, error) {
+func (blf *BlockLocatorManager) AntiPastHeadersBetween(lowHash, highHash *daghash.Hash, maxHeaders uint64) ([]*wire.BlockHeader, error) {
 	nodes, err := blf.antiPastBetween(lowHash, highHash, maxHeaders)
 	if err != nil {
 		return nil, err
@@ -153,7 +153,7 @@ func (blf *BlockLocatorFactory) AntiPastHeadersBetween(lowHash, highHash *daghas
 // and highHash's antiPast, or up to the provided max number of blocks.
 //
 // This function MUST be called with the DAG state lock held (for reads).
-func (blf *BlockLocatorFactory) antiPastBetween(lowHash, highHash *daghash.Hash, maxEntries uint64) ([]*blocknode.BlockNode, error) {
+func (blf *BlockLocatorManager) antiPastBetween(lowHash, highHash *daghash.Hash, maxEntries uint64) ([]*blocknode.BlockNode, error) {
 	lowNode, ok := blf.blockNodeStore.LookupNode(lowHash)
 	if !ok {
 		return nil, errors.Errorf("Couldn't find low hash %s", lowHash)

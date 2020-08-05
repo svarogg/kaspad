@@ -97,7 +97,7 @@ package virtualblock
 //
 //	for _, test := range tests {
 //		// Create an empty VirtualBlock
-//		virtual := NewVirtualBlock(dag.ghostdag, nil)
+//		virtual := New(dag.ghostdag, nil)
 //
 //		// Set the tips. This will be the initial state
 //		virtual.SetTips(blocknode.BlockNodeSetFromSlice(test.tipsToSet...))
@@ -137,7 +137,7 @@ package virtualblock
 //	defer teardownFunc()
 //
 //	// Create an empty VirtualBlock
-//	virtual := NewVirtualBlock(dag.ghostdag, nil)
+//	virtual := New(dag.ghostdag, nil)
 //
 //	tip := dag.genesis
 //	virtual.AddTip(tip)
@@ -203,7 +203,7 @@ package virtualblock
 //	}
 //
 //	// We call updateSelectedParentSet manually without updating the tips, to check if it panics
-//	virtual2 := NewVirtualBlock(dag.ghostdag, nil)
+//	virtual2 := New(dag.ghostdag, nil)
 //	defer func() {
 //		if r := recover(); r == nil {
 //			t.Fatalf("updateSelectedParentSet didn't panic")
@@ -235,7 +235,7 @@ package virtualblock
 //	}
 //
 //	// Create a VirtualBlock with the toBeRemoved chain
-//	virtual := NewVirtualBlock(dag.ghostdag, blocknode.BlockNodeSetFromSlice(toBeRemovedNodes...))
+//	virtual := New(dag.ghostdag, blocknode.BlockNodeSetFromSlice(toBeRemovedNodes...))
 //
 //	// Create a chain to be added
 //	var toBeAddedNodes []*blocknode.BlockNode

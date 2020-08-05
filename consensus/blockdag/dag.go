@@ -56,19 +56,19 @@ type BlockDAG struct {
 	databaseContext        *dbaccess.DatabaseContext
 	timeSource             timesource.TimeSource
 	sigCache               *sigcache.SigCache
-	notifier               *notifications.ConsensusNotifier
-	coinbase               *coinbase.Coinbase
-	ghostdag               *ghostdag.GHOSTDAG
-	blockLocatorFactory    *blocklocator.BlockLocatorFactory
-	difficulty             *difficulty.Difficulty
-	pastMedianTimeFactory  *pastmediantime.PastMedianTimeFactory
-	syncRate               *syncrate.SyncRate
+	notifier               *notifications.NotificationManager
+	coinbase               *coinbase.CoinbaseManager
+	ghostdag               *ghostdag.GHOSTDAGManager
+	blockLocatorFactory    *blocklocator.BlockLocatorManager
+	difficulty             *difficulty.DifficultyManager
+	pastMedianTimeFactory  *pastmediantime.PastMedianTimeManager
+	syncRate               *syncrate.SyncRateManager
 	sequenceLockCalculator *sequencelock.SequenceLockCalculator
 	finalityManager        *finality.FinalityManager
 	blockNodeStore         *blocknode.BlockNodeStore
 	virtual                *virtualblock.VirtualBlock
-	orphanedBlocks         *orphanedblocks.OrphanedBlocks
-	delayedBlocks          *delayedblocks.DelayedBlocks
+	orphanedBlocks         *orphanedblocks.OrphanedBlockManager
+	delayedBlocks          *delayedblocks.DelayedBlockManager
 	utxoDiffStore          *utxodiffstore.UTXODiffStore
 	multisetManager        *multiset.MultiSetManager
 	reachabilityTree       *reachability.ReachabilityTree
@@ -98,7 +98,7 @@ func New(config *Config) (*BlockDAG, error) {
 
 	params := config.DAGParams
 
-	blockNodeStore := blocknode.NewBlockNodeStore(params)
+	blockNodeStore := blocknode.NewStore(params)
 	dag := &BlockDAG{
 		Params:                params,
 		databaseContext:       config.DatabaseContext,
@@ -108,22 +108,22 @@ func New(config *Config) (*BlockDAG, error) {
 		delayedBlocks:         delayedblocks.New(config.TimeSource),
 		blockCount:            0,
 		subnetworkID:          config.SubnetworkID,
-		notifier:              notifications.New(),
-		coinbase:              coinbase.New(config.DatabaseContext, params),
-		pastMedianTimeFactory: pastmediantime.NewPastMedianTimeFactory(params),
-		syncRate:              syncrate.NewSyncRate(params),
+		notifier:              notifications.NewManager(),
+		coinbase:              coinbase.NewManager(config.DatabaseContext, params),
+		pastMedianTimeFactory: pastmediantime.NewManager(params),
+		syncRate:              syncrate.NewManager(params),
 	}
 
-	dag.multisetManager = multiset.NewMultiSetManager()
+	dag.multisetManager = multiset.NewManager()
 	dag.reachabilityTree = reachability.NewReachabilityTree(blockNodeStore, params)
-	dag.ghostdag = ghostdag.NewGHOSTDAG(dag.reachabilityTree, params, dag.timeSource)
-	dag.virtual = virtualblock.NewVirtualBlock(dag.ghostdag, params, dag.blockNodeStore, nil)
-	dag.blockLocatorFactory = blocklocator.NewBlockLocatorFactory(dag.blockNodeStore, dag.reachabilityTree, params)
-	dag.utxoDiffStore = utxodiffstore.NewUTXODiffStore(dag.databaseContext, blockNodeStore, dag.virtual)
-	dag.difficulty = difficulty.NewDifficulty(params, dag.virtual)
-	dag.sequenceLockCalculator = sequencelock.NewSequenceLockCalculator(dag.virtual, dag.pastMedianTimeFactory)
-	dag.orphanedBlocks = orphanedblocks.New(blockNodeStore)
-	dag.finalityManager = finality.New(params, blockNodeStore, dag.virtual, dag.reachabilityTree, dag.utxoDiffStore, config.DatabaseContext)
+	dag.ghostdag = ghostdag.NewManager(dag.reachabilityTree, params, dag.timeSource)
+	dag.virtual = virtualblock.New(dag.ghostdag, params, dag.blockNodeStore, nil)
+	dag.blockLocatorFactory = blocklocator.NewManager(dag.blockNodeStore, dag.reachabilityTree, params)
+	dag.utxoDiffStore = utxodiffstore.New(dag.databaseContext, blockNodeStore, dag.virtual)
+	dag.difficulty = difficulty.NewManager(params, dag.virtual)
+	dag.sequenceLockCalculator = sequencelock.NewCalculator(dag.virtual, dag.pastMedianTimeFactory)
+	dag.orphanedBlocks = orphanedblocks.NewManager(blockNodeStore)
+	dag.finalityManager = finality.NewManager(params, blockNodeStore, dag.virtual, dag.reachabilityTree, dag.utxoDiffStore, config.DatabaseContext)
 
 	// Initialize the DAG state from the passed database. When the db
 	// does not yet contain any DAG state, both it and the DAG state

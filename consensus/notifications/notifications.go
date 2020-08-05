@@ -18,7 +18,7 @@ type NotificationType int
 // notifications about various blockDAG events.
 type NotificationCallback func(*Notification)
 
-type ConsensusNotifier struct {
+type NotificationManager struct {
 	notifications []NotificationCallback
 	sync.RWMutex
 }
@@ -41,8 +41,8 @@ var notificationTypeStrings = map[NotificationType]string{
 	NTChainChanged: "NTChainChanged",
 }
 
-func New() *ConsensusNotifier {
-	return &ConsensusNotifier{}
+func NewManager() *NotificationManager {
+	return &NotificationManager{}
 }
 
 // String returns the NotificationType in human-readable form.
@@ -54,7 +54,7 @@ func (n NotificationType) String() string {
 }
 
 // Notification defines notification that is sent to the caller via the callback
-// function provided during the call to New and consists of a notification type
+// function provided during the call to NewManager and consists of a notification type
 // as well as associated data that depends on the type as follows:
 // 	- Added:     *util.Block
 type Notification struct {
@@ -65,7 +65,7 @@ type Notification struct {
 // Subscribe to block DAG notifications. Registers a callback to be executed
 // when various events take place. See the documentation on Notification and
 // NotificationType for details on the types and contents of notifications.
-func (cn *ConsensusNotifier) Subscribe(callback NotificationCallback) {
+func (cn *NotificationManager) Subscribe(callback NotificationCallback) {
 	cn.Lock()
 	defer cn.Unlock()
 	cn.notifications = append(cn.notifications, callback)
@@ -73,8 +73,8 @@ func (cn *ConsensusNotifier) Subscribe(callback NotificationCallback) {
 
 // SendNotification sends a notification with the passed type and data if the
 // caller requested notifications by providing a callback function in the call
-// to New.
-func (cn *ConsensusNotifier) SendNotification(typ NotificationType, data interface{}) {
+// to NewManager.
+func (cn *NotificationManager) SendNotification(typ NotificationType, data interface{}) {
 	// Generate and send the notification.
 	n := Notification{Type: typ, Data: data}
 	cn.RLock()

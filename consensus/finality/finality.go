@@ -23,7 +23,7 @@ type FinalityManager struct {
 	lastFinalityPoint *blocknode.BlockNode
 }
 
-func New(params *dagconfig.Params, blockNodeStore *blocknode.BlockNodeStore,
+func NewManager(params *dagconfig.Params, blockNodeStore *blocknode.BlockNodeStore,
 	virtual *virtualblock.VirtualBlock, reachabilityTree *reachability.ReachabilityTree,
 	utxoDiffStore *utxodiffstore.UTXODiffStore, dbContext *dbaccess.DatabaseContext) *FinalityManager {
 

@@ -15,7 +15,7 @@ type MultiSetManager struct {
 	store *MultisetStore
 }
 
-func NewMultiSetManager() *MultiSetManager {
+func NewManager() *MultiSetManager {
 	return &MultiSetManager{
 		store: NewMultisetStore(),
 	}

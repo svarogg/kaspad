@@ -8,19 +8,19 @@ import (
 	"github.com/kaspanet/kaspad/util/mstime"
 )
 
-type PastMedianTimeFactory struct {
+type PastMedianTimeManager struct {
 	params *dagconfig.Params
 }
 
-func NewPastMedianTimeFactory(params *dagconfig.Params) *PastMedianTimeFactory {
-	return &PastMedianTimeFactory{
+func NewManager(params *dagconfig.Params) *PastMedianTimeManager {
+	return &PastMedianTimeManager{
 		params: params,
 	}
 }
 
 // PastMedianTime returns the median time of the previous few blocks
 // prior to, and including, the block node.
-func (pmtf *PastMedianTimeFactory) PastMedianTime(node *blocknode.BlockNode) mstime.Time {
+func (pmtf *PastMedianTimeManager) PastMedianTime(node *blocknode.BlockNode) mstime.Time {
 	window := blockwindow.BlueBlockWindow(node, 2*pmtf.params.TimestampDeviationTolerance-1)
 	medianTimestamp, err := window.MedianTimestamp()
 	if err != nil {

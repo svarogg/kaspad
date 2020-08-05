@@ -32,23 +32,23 @@ func (dag *BlockDAG) TestSetCoinbaseMaturity(maturity uint64) {
 // it is not usable with all functions and the tests must take care when making
 // use of it.
 func newTestDAG(params *dagconfig.Params) *BlockDAG {
-	blockNodeStore := blocknode.NewBlockNodeStore(params)
+	blockNodeStore := blocknode.NewStore(params)
 	dag := &BlockDAG{
 		Params:         params,
 		timeSource:     timesource.New(),
 		blockNodeStore: blockNodeStore,
 	}
 	dag.reachabilityTree = reachability.NewReachabilityTree(blockNodeStore, params)
-	dag.ghostdag = ghostdag.NewGHOSTDAG(dag.reachabilityTree, params, dag.timeSource)
-	dag.pastMedianTimeFactory = pastmediantime.NewPastMedianTimeFactory(params)
+	dag.ghostdag = ghostdag.NewManager(dag.reachabilityTree, params, dag.timeSource)
+	dag.pastMedianTimeFactory = pastmediantime.NewManager(params)
 
 	// Create a genesis block node and block blockNodeStore populated with it
 	// on the above fake DAG.
 	dag.genesis, _ = dag.initBlockNode(&params.GenesisBlock.Header, blocknode.NewBlockNodeSet())
 	blockNodeStore.AddNode(dag.genesis)
 
-	dag.virtual = virtualblock.NewVirtualBlock(dag.ghostdag, dag.Params, dag.blockNodeStore, blocknode.BlockNodeSetFromSlice(dag.genesis))
-	dag.difficulty = difficulty.NewDifficulty(params, dag.virtual)
+	dag.virtual = virtualblock.New(dag.ghostdag, dag.Params, dag.blockNodeStore, blocknode.BlockNodeSetFromSlice(dag.genesis))
+	dag.difficulty = difficulty.NewManager(params, dag.virtual)
 
 	return dag
 }

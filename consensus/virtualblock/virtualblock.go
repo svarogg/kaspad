@@ -20,7 +20,7 @@ import (
 // VirtualBlock is a virtual block whose parents are the tips of the DAG.
 type VirtualBlock struct {
 	mtx            sync.Mutex
-	ghostdag       *ghostdag.GHOSTDAG
+	ghostdag       *ghostdag.GHOSTDAGManager
 	params         *dagconfig.Params
 	blockNodeStore *blocknode.BlockNodeStore
 	utxoSet        *utxo.FullUTXOSet
@@ -36,8 +36,8 @@ type VirtualBlock struct {
 	selectedParentChainSlice []*blocknode.BlockNode
 }
 
-// NewVirtualBlock creates and returns a new VirtualBlock.
-func NewVirtualBlock(ghostdag *ghostdag.GHOSTDAG, params *dagconfig.Params,
+// New creates and returns a new VirtualBlock.
+func New(ghostdag *ghostdag.GHOSTDAGManager, params *dagconfig.Params,
 	blockNodeStore *blocknode.BlockNodeStore, tips blocknode.BlockNodeSet) *VirtualBlock {
 
 	// The mutex is intentionally not held since this is a constructor.

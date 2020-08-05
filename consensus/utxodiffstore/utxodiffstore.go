@@ -28,7 +28,7 @@ type UTXODiffStore struct {
 	mtx            *locks.PriorityMutex
 }
 
-func NewUTXODiffStore(dbContext *dbaccess.DatabaseContext,
+func New(dbContext *dbaccess.DatabaseContext,
 	blockNodeStore *blocknode.BlockNodeStore, virtual *virtualblock.VirtualBlock) *UTXODiffStore {
 
 	return &UTXODiffStore{
