@@ -50,8 +50,8 @@ func (dag *BlockDAG) processOrphans(hash *daghash.Hash, flags common.BehaviorFla
 		// intentionally used over a range here as range does not
 		// reevaluate the slice on each iteration nor does it adjust the
 		// index for the modified slice.
-		for i := 0; i < len(dag.orphanedBlocks.OrphanParents(processHash)); i++ {
-			orphan := dag.orphanedBlocks.OrphanParents(processHash)[i]
+		for i := 0; i < len(dag.orphanedBlockManager.OrphanParents(processHash)); i++ {
+			orphan := dag.orphanedBlockManager.OrphanParents(processHash)[i]
 			if orphan == nil {
 				log.Warnf("Found a nil entry at index %d in the "+
 					"orphan dependency list for block %s", i,
@@ -72,7 +72,7 @@ func (dag *BlockDAG) processOrphans(hash *daghash.Hash, flags common.BehaviorFla
 
 			// Remove the orphan from the orphan pool.
 			orphanHash := orphan.Block.Hash()
-			dag.orphanedBlocks.RemoveOrphanBlock(orphan)
+			dag.orphanedBlockManager.RemoveOrphanBlock(orphan)
 			i--
 
 			// Potentially accept the block into the block DAG.
@@ -125,12 +125,12 @@ func (dag *BlockDAG) processBlockNoLock(block *util.Block, flags common.Behavior
 	}
 
 	// The block must not already exist as an orphan.
-	if dag.orphanedBlocks.IsKnownOrphan(blockHash) {
+	if dag.orphanedBlockManager.IsKnownOrphan(blockHash) {
 		str := fmt.Sprintf("already have block (orphan) %s", blockHash)
 		return false, false, common.NewRuleError(common.ErrDuplicateBlock, str)
 	}
 
-	if dag.delayedBlocks.IsKnownDelayed(blockHash) {
+	if dag.delayedBlockManager.IsKnownDelayed(blockHash) {
 		str := fmt.Sprintf("already have block (delayed) %s", blockHash)
 		return false, false, common.NewRuleError(common.ErrDuplicateBlock, str)
 	}
@@ -168,7 +168,7 @@ func (dag *BlockDAG) processBlockNoLock(block *util.Block, flags common.Behavior
 	}
 
 	// Handle the case of a block with a valid timestamp(non-delayed) which points to a delayed block.
-	delay, isParentDelayed := dag.delayedBlocks.MaxDelayOfParents(missingParents)
+	delay, isParentDelayed := dag.delayedBlockManager.MaxDelayOfParents(missingParents)
 	if isParentDelayed {
 		// Add Millisecond to ensure that parent process time will be after its child.
 		delay += time.Millisecond
@@ -188,12 +188,12 @@ func (dag *BlockDAG) processBlockNoLock(block *util.Block, flags common.Behavior
 		// The number K*2 was chosen since in peace times anticone is limited to K blocks,
 		// while some red block can make it a bit bigger, but much more than that indicates
 		// there might be some problem with the netsync process.
-		if flags&common.BFIsSync == common.BFIsSync && dagconfig.KType(dag.orphanedBlocks.Len()) < dag.Params.K*2 {
+		if flags&common.BFIsSync == common.BFIsSync && dagconfig.KType(dag.orphanedBlockManager.Len()) < dag.Params.K*2 {
 			log.Debugf("Adding orphan block %s. This is normal part of netsync process", blockHash)
 		} else {
 			log.Infof("Adding orphan block %s", blockHash)
 		}
-		dag.orphanedBlocks.AddOrphanBlock(block)
+		dag.orphanedBlockManager.AddOrphanBlock(block)
 
 		return true, false, nil
 	}
@@ -220,7 +220,7 @@ func (dag *BlockDAG) processBlockNoLock(block *util.Block, flags common.Behavior
 		}
 	}
 
-	dag.syncRate.AddBlockProcessingTimestamp()
+	dag.syncRateManager.AddBlockProcessingTimestamp()
 
 	log.Debugf("Accepted block %s", blockHash)
 

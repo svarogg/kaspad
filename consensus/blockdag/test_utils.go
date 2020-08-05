@@ -127,7 +127,7 @@ func GetVirtualFromParentsForTest(dag *BlockDAG, parentHashes []*daghash.Hash) (
 		}
 		parents.Add(parent)
 	}
-	virtual := virtualblock.New(dag.ghostdag, dag.Params, dag.blockNodeStore, parents)
+	virtual := virtualblock.New(dag.ghostdagManager, dag.Params, dag.blockNodeStore, parents)
 
 	pastUTXO, _, _, err := dag.pastUTXO(&virtual.BlockNode)
 	if err != nil {
@@ -195,7 +195,7 @@ func PrepareBlockForTest(dag *BlockDAG, parentHashes []*daghash.Hash, transactio
 		return nil, err
 	}
 	block.Header.Timestamp = dag.NextBlockMinimumTime()
-	block.Header.Bits = dag.difficulty.NextRequiredDifficulty()
+	block.Header.Bits = dag.difficultyManager.NextRequiredDifficulty()
 
 	return block, nil
 }

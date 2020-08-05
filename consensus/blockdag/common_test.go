@@ -40,16 +40,16 @@ func newTestDAG(params *dagconfig.Params) *BlockDAG {
 		blockNodeStore: blockNodeStore,
 	}
 	dag.reachabilityTree = reachability.NewReachabilityTree(blockNodeStore, params)
-	dag.ghostdag = ghostdag.NewManager(dag.reachabilityTree, params, dag.timeSource)
-	dag.pastMedianTimeFactory = pastmediantime.NewManager(params)
+	dag.ghostdagManager = ghostdag.NewManager(dag.reachabilityTree, params, dag.timeSource)
+	dag.pastMedianTimeManager = pastmediantime.NewManager(params)
 
 	// Create a genesis block node and block blockNodeStore populated with it
 	// on the above fake DAG.
 	dag.genesis, _ = dag.initBlockNode(&params.GenesisBlock.Header, blocknode.NewBlockNodeSet())
 	blockNodeStore.AddNode(dag.genesis)
 
-	dag.virtual = virtualblock.New(dag.ghostdag, dag.Params, dag.blockNodeStore, blocknode.BlockNodeSetFromSlice(dag.genesis))
-	dag.difficulty = difficulty.NewManager(params, dag.virtual)
+	dag.virtual = virtualblock.New(dag.ghostdagManager, dag.Params, dag.blockNodeStore, blocknode.BlockNodeSetFromSlice(dag.genesis))
+	dag.difficultyManager = difficulty.NewManager(params, dag.virtual)
 
 	return dag
 }

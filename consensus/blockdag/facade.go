@@ -37,7 +37,7 @@ func (dag *BlockDAG) NextBlockCoinbaseTransactionNoLock(scriptPubKey []byte, ext
 	if err != nil {
 		return nil, err
 	}
-	return dag.coinbase.ExpectedCoinbaseTransaction(&dag.virtual.BlockNode, txsAcceptanceData, scriptPubKey, extraData)
+	return dag.coinbaseManager.ExpectedCoinbaseTransaction(&dag.virtual.BlockNode, txsAcceptanceData, scriptPubKey, extraData)
 }
 
 // NextAcceptedIDMerkleRootNoLock prepares the acceptedIDMerkleRoot for the next mined block
@@ -78,7 +78,7 @@ func (dag *BlockDAG) TxsAcceptedByBlockHash(blockHash *daghash.Hash) (common.Mul
 //
 // This function is safe for concurrent access.
 func (dag *BlockDAG) IsKnownBlock(hash *daghash.Hash) bool {
-	return dag.IsInDAG(hash) || dag.orphanedBlocks.IsKnownOrphan(hash) || dag.delayedBlocks.IsKnownDelayed(hash) || dag.IsKnownInvalid(hash)
+	return dag.IsInDAG(hash) || dag.orphanedBlockManager.IsKnownOrphan(hash) || dag.delayedBlockManager.IsKnownDelayed(hash) || dag.IsKnownInvalid(hash)
 }
 
 // AreKnownBlocks returns whether or not the DAG instances has all blocks represented
@@ -370,11 +370,11 @@ func (dag *BlockDAG) ForEachHash(fn func(hash daghash.Hash) error) error {
 // selectedParentAnticone is used to update reachability data we store for future reachability queries.
 // This function is NOT safe for concurrent access.
 func (dag *BlockDAG) initBlockNode(blockHeader *wire.BlockHeader, parents blocknode.BlockNodeSet) (node *blocknode.BlockNode, selectedParentAnticone []*blocknode.BlockNode) {
-	return dag.ghostdag.InitBlockNode(blockHeader, parents)
+	return dag.ghostdagManager.InitBlockNode(blockHeader, parents)
 }
 
 func (dag *BlockDAG) Notifier() *notifications.NotificationManager {
-	return dag.notifier
+	return dag.notificationManager
 }
 
 // PastMedianTime returns the median time of the previous few blocks
@@ -382,7 +382,7 @@ func (dag *BlockDAG) Notifier() *notifications.NotificationManager {
 //
 // This function is safe for concurrent access.
 func (dag *BlockDAG) PastMedianTime(node *blocknode.BlockNode) mstime.Time {
-	return dag.pastMedianTimeFactory.PastMedianTime(node)
+	return dag.pastMedianTimeManager.PastMedianTime(node)
 }
 
 // GasLimit returns the gas limit of a registered subnetwork. If the subnetwork does not
@@ -410,7 +410,7 @@ func (dag *BlockDAG) SelectedParentChain(blockHash *daghash.Hash) ([]*daghash.Ha
 // BlockLocatorFromHashes returns a block locator from high and low hash.
 // See BlockLocator for details on the algorithm used to create a block locator.
 func (dag *BlockDAG) BlockLocatorFromHashes(highHash, lowHash *daghash.Hash) (blocklocator.BlockLocator, error) {
-	return dag.blockLocatorFactory.BlockLocatorFromHashes(highHash, lowHash)
+	return dag.blockLocatorManager.BlockLocatorFromHashes(highHash, lowHash)
 }
 
 // FindNextLocatorBoundaries returns the lowest unknown block locator, hash
@@ -418,19 +418,19 @@ func (dag *BlockDAG) BlockLocatorFromHashes(highHash, lowHash *daghash.Hash) (bl
 // next block locator to find the highest shared known chain block with the
 // sync peer.
 func (dag *BlockDAG) FindNextLocatorBoundaries(locator blocklocator.BlockLocator) (highHash, lowHash *daghash.Hash) {
-	return dag.blockLocatorFactory.FindNextLocatorBoundaries(locator)
+	return dag.blockLocatorManager.FindNextLocatorBoundaries(locator)
 }
 
 // NextRequiredDifficulty calculates the required difficulty for a block that will
 // be built on top of the current tips.
 func (dag *BlockDAG) NextRequiredDifficulty() uint32 {
-	return dag.difficulty.NextRequiredDifficulty()
+	return dag.difficultyManager.NextRequiredDifficulty()
 }
 
 // IsSyncRateBelowThreshold checks whether the sync rate
 // is below the expected threshold.
 func (dag *BlockDAG) IsSyncRateBelowThreshold(maxDeviation float64) bool {
-	return dag.syncRate.IsSyncRateBelowThreshold(maxDeviation)
+	return dag.syncRateManager.IsSyncRateBelowThreshold(maxDeviation)
 }
 
 // CalcSequenceLock computes a relative lock-time SequenceLock for the passed
@@ -453,12 +453,12 @@ func (dag *BlockDAG) CalcSequenceLock(tx *util.Tx, utxoSet utxo.UTXOSet) (*seque
 // function provides a mechanism for a caller to intelligently detect *recent*
 // duplicate orphans and react accordingly.
 func (dag *BlockDAG) IsKnownOrphan(hash *daghash.Hash) bool {
-	return dag.orphanedBlocks.IsKnownOrphan(hash)
+	return dag.orphanedBlockManager.IsKnownOrphan(hash)
 }
 
 // GetOrphanMissingAncestorHashes returns all of the missing parents in the orphan's sub-DAG
 func (dag *BlockDAG) GetOrphanMissingAncestorHashes(orphanHash *daghash.Hash) []*daghash.Hash {
-	return dag.orphanedBlocks.GetOrphanMissingAncestorHashes(orphanHash)
+	return dag.orphanedBlockManager.GetOrphanMissingAncestorHashes(orphanHash)
 }
 
 // IsKnownFinalizedBlock returns whether the block is below the finality point.
@@ -483,14 +483,14 @@ func (dag *BlockDAG) LastFinalityPointHash() *daghash.Hash {
 // lowHash's antiPast and highHash's antiPast, or up to the provided
 // max number of block hashes.
 func (dag *BlockDAG) AntiPastHashesBetween(lowHash, highHash *daghash.Hash, maxHashes uint64) ([]*daghash.Hash, error) {
-	return dag.blockLocatorFactory.AntiPastHashesBetween(lowHash, highHash, maxHashes)
+	return dag.blockLocatorManager.AntiPastHashesBetween(lowHash, highHash, maxHashes)
 }
 
 // antiPastHeadersBetween returns the headers of the blocks between the
 // lowHash's antiPast and highHash's antiPast, or up to the provided
 // max number of block headers.
 func (dag *BlockDAG) AntiPastHeadersBetween(lowHash, highHash *daghash.Hash, maxHeaders uint64) ([]*wire.BlockHeader, error) {
-	return dag.blockLocatorFactory.AntiPastHeadersBetween(lowHash, highHash, maxHeaders)
+	return dag.blockLocatorManager.AntiPastHeadersBetween(lowHash, highHash, maxHeaders)
 }
 
 // CheckConnectBlockTemplate fully validates that connecting the passed block to

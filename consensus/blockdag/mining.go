@@ -20,7 +20,7 @@ import (
 // This function MUST be called with the DAG state lock held (for reads).
 func (dag *BlockDAG) BlockForMining(transactions []*util.Tx) (*wire.MsgBlock, error) {
 	blockTimestamp := dag.NextBlockTime()
-	requiredDifficulty := dag.difficulty.NextRequiredDifficulty()
+	requiredDifficulty := dag.difficultyManager.NextRequiredDifficulty()
 
 	// Create a new block ready to be solved.
 	hashMerkleTree := merkle.BuildHashMerkleTreeStore(transactions)
@@ -61,7 +61,7 @@ func (dag *BlockDAG) NextBlockMultiset() (*secp256k1.MultiSet, error) {
 		return nil, err
 	}
 
-	return dag.multisetManager.CalcMultiset(&dag.virtual.BlockNode, txsAcceptanceData, selectedParentPastUTXO)
+	return dag.multiSetManager.CalcMultiset(&dag.virtual.BlockNode, txsAcceptanceData, selectedParentPastUTXO)
 }
 
 // CoinbasePayloadExtraData returns coinbase payload extra data parameter

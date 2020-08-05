@@ -49,27 +49,27 @@ import (
 // It includes functionality such as rejecting duplicate blocks, ensuring blocks
 // follow all rules, and orphan handling.
 type BlockDAG struct {
-	Params       *dagconfig.Params
-	subnetworkID *subnetworkid.SubnetworkID
+	Params          *dagconfig.Params
+	subnetworkID    *subnetworkid.SubnetworkID
+	databaseContext *dbaccess.DatabaseContext
+	sigCache        *sigcache.SigCache
 
-	databaseContext        *dbaccess.DatabaseContext
 	timeSource             common.TimeSource
-	sigCache               *sigcache.SigCache
-	notifier               *notifications.NotificationManager
-	coinbase               *coinbase.CoinbaseManager
-	ghostdag               *ghostdag.GHOSTDAGManager
-	blockLocatorFactory    *blocklocator.BlockLocatorManager
-	difficulty             *difficulty.DifficultyManager
-	pastMedianTimeFactory  *pastmediantime.PastMedianTimeManager
-	syncRate               *syncrate.SyncRateManager
+	notificationManager    *notifications.NotificationManager
+	coinbaseManager        *coinbase.CoinbaseManager
+	ghostdagManager        *ghostdag.GHOSTDAGManager
+	blockLocatorManager    *blocklocator.BlockLocatorManager
+	difficultyManager      *difficulty.DifficultyManager
+	pastMedianTimeManager  *pastmediantime.PastMedianTimeManager
+	syncRateManager        *syncrate.SyncRateManager
 	sequenceLockCalculator *sequencelock.SequenceLockCalculator
 	finalityManager        *finality.FinalityManager
 	blockNodeStore         *blocknode.BlockNodeStore
 	virtual                *virtualblock.VirtualBlock
-	orphanedBlocks         *orphanedblocks.OrphanedBlockManager
-	delayedBlocks          *delayedblocks.DelayedBlockManager
+	orphanedBlockManager   *orphanedblocks.OrphanedBlockManager
+	delayedBlockManager    *delayedblocks.DelayedBlockManager
 	utxoDiffStore          *utxodiffstore.UTXODiffStore
-	multisetManager        *multiset.MultiSetManager
+	multiSetManager        *multiset.MultiSetManager
 	reachabilityTree       *reachability.ReachabilityTree
 
 	// dagLock protects concurrent access to the vast majority of the
@@ -104,24 +104,24 @@ func New(config *Config) (*BlockDAG, error) {
 		timeSource:            config.TimeSource,
 		sigCache:              config.SigCache,
 		blockNodeStore:        blockNodeStore,
-		delayedBlocks:         delayedblocks.New(config.TimeSource),
+		delayedBlockManager:   delayedblocks.New(config.TimeSource),
 		blockCount:            0,
 		subnetworkID:          config.SubnetworkID,
-		notifier:              notifications.NewManager(),
-		coinbase:              coinbase.NewManager(config.DatabaseContext, params),
-		pastMedianTimeFactory: pastmediantime.NewManager(params),
-		syncRate:              syncrate.NewManager(params),
+		notificationManager:   notifications.NewManager(),
+		coinbaseManager:       coinbase.NewManager(config.DatabaseContext, params),
+		pastMedianTimeManager: pastmediantime.NewManager(params),
+		syncRateManager:       syncrate.NewManager(params),
 	}
 
-	dag.multisetManager = multiset.NewManager()
+	dag.multiSetManager = multiset.NewManager()
 	dag.reachabilityTree = reachability.NewReachabilityTree(blockNodeStore, params)
-	dag.ghostdag = ghostdag.NewManager(dag.reachabilityTree, params, dag.timeSource)
-	dag.virtual = virtualblock.New(dag.ghostdag, params, dag.blockNodeStore, nil)
-	dag.blockLocatorFactory = blocklocator.NewManager(dag.blockNodeStore, dag.reachabilityTree, params)
+	dag.ghostdagManager = ghostdag.NewManager(dag.reachabilityTree, params, dag.timeSource)
+	dag.virtual = virtualblock.New(dag.ghostdagManager, params, dag.blockNodeStore, nil)
+	dag.blockLocatorManager = blocklocator.NewManager(dag.blockNodeStore, dag.reachabilityTree, params)
 	dag.utxoDiffStore = utxodiffstore.New(dag.databaseContext, blockNodeStore, dag.virtual)
-	dag.difficulty = difficulty.NewManager(params, dag.virtual)
-	dag.sequenceLockCalculator = sequencelock.NewCalculator(dag.virtual, dag.pastMedianTimeFactory)
-	dag.orphanedBlocks = orphanedblocks.NewManager(blockNodeStore)
+	dag.difficultyManager = difficulty.NewManager(params, dag.virtual)
+	dag.sequenceLockCalculator = sequencelock.NewCalculator(dag.virtual, dag.pastMedianTimeManager)
+	dag.orphanedBlockManager = orphanedblocks.NewManager(blockNodeStore)
 	dag.finalityManager = finality.NewManager(params, blockNodeStore, dag.virtual, dag.reachabilityTree, dag.utxoDiffStore, config.DatabaseContext)
 
 	// Initialize the DAG state from the passed database. When the db
@@ -222,7 +222,7 @@ func (dag *BlockDAG) connectBlock(node *blocknode.BlockNode,
 		return nil, errors.Wrapf(err, "error verifying UTXO for %s", node)
 	}
 
-	err = dag.coinbase.ValidateCoinbaseTransaction(node, block, txsAcceptanceData)
+	err = dag.coinbaseManager.ValidateCoinbaseTransaction(node, block, txsAcceptanceData)
 	if err != nil {
 		return nil, err
 	}
@@ -270,7 +270,7 @@ func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, virtualUTXODiff *ut
 		return err
 	}
 
-	err = dag.multisetManager.FlushToDB(dbTx)
+	err = dag.multiSetManager.FlushToDB(dbTx)
 	if err != nil {
 		return err
 	}
@@ -316,7 +316,7 @@ func (dag *BlockDAG) saveChangesFromBlock(block *util.Block, virtualUTXODiff *ut
 	dag.utxoDiffStore.ClearDirtyEntries()
 	dag.utxoDiffStore.ClearOldEntries()
 	dag.reachabilityTree.ClearDirtyEntries()
-	dag.multisetManager.ClearNewEntries()
+	dag.multiSetManager.ClearNewEntries()
 
 	return nil
 }
@@ -344,7 +344,7 @@ func (dag *BlockDAG) applyDAGChanges(node *blocknode.BlockNode, newBlockPastUTXO
 		return nil, nil, errors.Wrap(err, "failed adding block to the reachability tree")
 	}
 
-	dag.multisetManager.SetMultiset(node.Hash(), newBlockMultiset)
+	dag.multiSetManager.SetMultiset(node.Hash(), newBlockMultiset)
 
 	if err = dag.updateParents(node, newBlockPastUTXO); err != nil {
 		return nil, nil, errors.Wrapf(err, "failed updating parents of %s", node)
@@ -401,12 +401,12 @@ func (dag *BlockDAG) verifyAndBuildUTXO(node *blocknode.BlockNode, transactions 
 		return nil, nil, nil, nil, err
 	}
 
-	feeData, err := utxovalidation.CheckConnectToPastUTXO(node, pastUTXO, transactions, fastAdd, dag.Params, dag.sigCache, dag.pastMedianTimeFactory, dag.sequenceLockCalculator)
+	feeData, err := utxovalidation.CheckConnectToPastUTXO(node, pastUTXO, transactions, fastAdd, dag.Params, dag.sigCache, dag.pastMedianTimeManager, dag.sequenceLockCalculator)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
 
-	multiset, err = dag.multisetManager.CalcMultiset(node, txsAcceptanceData, selectedParentPastUTXO)
+	multiset, err = dag.multiSetManager.CalcMultiset(node, txsAcceptanceData, selectedParentPastUTXO)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -723,7 +723,7 @@ func (dag *BlockDAG) addDelayedBlock(block *util.Block, delay time.Duration) err
 	processTime := dag.Now().Add(delay)
 	log.Debugf("Adding block to delayed blocks queue (block hash: %s, process time: %s)", block.Hash().String(), processTime)
 
-	dag.delayedBlocks.Add(block, processTime)
+	dag.delayedBlockManager.Add(block, processTime)
 
 	return dag.processDelayedBlocks()
 }
@@ -732,12 +732,12 @@ func (dag *BlockDAG) addDelayedBlock(block *util.Block, delay time.Duration) err
 // This method is invoked after processing a block (ProcessBlock method).
 func (dag *BlockDAG) processDelayedBlocks() error {
 	// Check if the delayed block with the earliest process time should be processed
-	for dag.delayedBlocks.Len() > 0 {
-		earliestDelayedBlockProcessTime := dag.delayedBlocks.Peek().ProcessTime()
+	for dag.delayedBlockManager.Len() > 0 {
+		earliestDelayedBlockProcessTime := dag.delayedBlockManager.Peek().ProcessTime()
 		if earliestDelayedBlockProcessTime.After(dag.Now()) {
 			break
 		}
-		delayedBlock := dag.delayedBlocks.Pop()
+		delayedBlock := dag.delayedBlockManager.Pop()
 		_, _, err := dag.processBlockNoLock(delayedBlock.Block(), common.BFAfterDelay)
 		if err != nil {
 			log.Errorf("Error while processing delayed block (block %s)", delayedBlock.Block().Hash().String())
@@ -808,7 +808,7 @@ func (dag *BlockDAG) CheckConnectBlockTemplateNoLock(block *util.Block) error {
 		return err
 	}
 
-	err = blockvalidation.CheckBlockContext(dag.difficulty, dag.pastMedianTimeFactory, dag.reachabilityTree, block, parents, flags)
+	err = blockvalidation.CheckBlockContext(dag.difficultyManager, dag.pastMedianTimeManager, dag.reachabilityTree, block, parents, flags)
 	if err != nil {
 		return err
 	}
@@ -816,7 +816,7 @@ func (dag *BlockDAG) CheckConnectBlockTemplateNoLock(block *util.Block) error {
 	templateNode, _ := dag.initBlockNode(&header, dag.virtual.Tips())
 
 	_, err = utxovalidation.CheckConnectToPastUTXO(templateNode,
-		dag.UTXOSet(), block.Transactions(), false, dag.Params, dag.sigCache, dag.pastMedianTimeFactory, dag.sequenceLockCalculator)
+		dag.UTXOSet(), block.Transactions(), false, dag.Params, dag.sigCache, dag.pastMedianTimeManager, dag.sequenceLockCalculator)
 
 	return err
 }

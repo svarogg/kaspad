@@ -58,7 +58,7 @@ func (dag *BlockDAG) maybeAcceptBlock(block *util.Block, flags common.BehaviorFl
 
 	// The block must pass all of the validation rules which depend on the
 	// position of the block within the block DAG.
-	err = blockvalidation.CheckBlockContext(dag.difficulty, dag.pastMedianTimeFactory, dag.reachabilityTree, block, parents, flags)
+	err = blockvalidation.CheckBlockContext(dag.difficultyManager, dag.pastMedianTimeManager, dag.reachabilityTree, block, parents, flags)
 	if err != nil {
 		return err
 	}
@@ -105,7 +105,7 @@ func (dag *BlockDAG) maybeAcceptBlock(block *util.Block, flags common.BehaviorFl
 	fastAdd := flags&common.BFFastAdd == common.BFFastAdd
 	bluestParent := parents.Bluest()
 	if !fastAdd {
-		if err := blockvalidation.ValidateAllTxsFinalized(block, newNode, bluestParent, dag.pastMedianTimeFactory); err != nil {
+		if err := blockvalidation.ValidateAllTxsFinalized(block, newNode, bluestParent, dag.pastMedianTimeManager); err != nil {
 			return err
 		}
 	}
@@ -121,12 +121,12 @@ func (dag *BlockDAG) maybeAcceptBlock(block *util.Block, flags common.BehaviorFl
 	// DAG. The caller would typically want to react by relaying the
 	// inventory to other peers.
 	dag.dagLock.Unlock()
-	dag.notifier.SendNotification(notifications.NTBlockAdded, &notifications.BlockAddedNotificationData{
+	dag.notificationManager.SendNotification(notifications.NTBlockAdded, &notifications.BlockAddedNotificationData{
 		Block:         block,
 		WasUnorphaned: flags&common.BFWasUnorphaned != 0,
 	})
 	if len(chainUpdates.AddedChainBlockHashes) > 0 {
-		dag.notifier.SendNotification(notifications.NTChainChanged, &notifications.ChainChangedNotificationData{
+		dag.notificationManager.SendNotification(notifications.NTChainChanged, &notifications.ChainChangedNotificationData{
 			RemovedChainBlockHashes: chainUpdates.RemovedChainBlockHashes,
 			AddedChainBlockHashes:   chainUpdates.AddedChainBlockHashes,
 		})
