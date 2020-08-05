@@ -7,8 +7,8 @@ package main
 import (
 	"encoding/binary"
 	"github.com/kaspanet/kaspad/consensus/common"
+	"github.com/kaspanet/kaspad/consensus/indexers"
 	"github.com/kaspanet/kaspad/consensus/timesource"
-	"github.com/kaspanet/kaspad/indexers"
 	"github.com/kaspanet/kaspad/util/mstime"
 	"github.com/pkg/errors"
 	"io"

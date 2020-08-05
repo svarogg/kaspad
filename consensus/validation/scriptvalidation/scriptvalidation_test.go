@@ -6,8 +6,8 @@ package scriptvalidation
 
 import (
 	"fmt"
+	"github.com/kaspanet/kaspad/consensus/test"
 	"github.com/kaspanet/kaspad/consensus/utxo"
-	"github.com/kaspanet/kaspad/testdata"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -23,7 +23,7 @@ func TestCheckBlockScripts(t *testing.T) {
 
 	testBlockNum := 277647
 	blockDataFile := fmt.Sprintf("%d.dat", testBlockNum)
-	blocks, err := testdata.LoadBlocks(filepath.Join("testdata/", blockDataFile))
+	blocks, err := test.LoadBlocks(filepath.Join("test/", blockDataFile))
 	if err != nil {
 		t.Errorf("Error loading file: %v\n", err)
 		return

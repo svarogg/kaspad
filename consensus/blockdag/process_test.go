@@ -2,8 +2,8 @@ package blockdag
 
 import (
 	"github.com/kaspanet/kaspad/consensus/common"
+	"github.com/kaspanet/kaspad/consensus/test"
 	"github.com/kaspanet/kaspad/dagconfig"
-	"github.com/kaspanet/kaspad/testdata"
 	"github.com/kaspanet/kaspad/util/daghash"
 	"path/filepath"
 	"testing"
@@ -22,7 +22,7 @@ func TestProcessOrphans(t *testing.T) {
 	dag.TestSetCoinbaseMaturity(0)
 
 	blocksFile := "blk_0_to_4.dat"
-	blocks, err := testdata.LoadBlocks(filepath.Join("../../testdata/", blocksFile))
+	blocks, err := test.LoadBlocks(filepath.Join("../test/", blocksFile))
 	if err != nil {
 		t.Fatalf("TestProcessOrphans: "+
 			"Error loading file '%s': %s\n", blocksFile, err)

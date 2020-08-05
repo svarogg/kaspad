@@ -2,7 +2,7 @@ package indexers
 
 import (
 	"github.com/kaspanet/kaspad/consensus/common"
-	"github.com/kaspanet/kaspad/testdata"
+	"github.com/kaspanet/kaspad/consensus/test"
 	"github.com/kaspanet/kaspad/util/fs"
 	"io"
 	"io/ioutil"
@@ -85,7 +85,7 @@ func TestAcceptanceIndexRecover(t *testing.T) {
 
 	var blocks []*util.Block
 	for _, file := range testFiles {
-		blockTmp, err := testdata.LoadBlocks(filepath.Join("../testdata/", file))
+		blockTmp, err := test.LoadBlocks(filepath.Join("../test/", file))
 		if err != nil {
 			t.Fatalf("Error loading file: %v\n", err)
 		}

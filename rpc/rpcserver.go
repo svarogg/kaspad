@@ -32,7 +32,7 @@ import (
 	"github.com/btcsuite/websocket"
 	"github.com/kaspanet/kaspad/config"
 	"github.com/kaspanet/kaspad/consensus/blockdag"
-	"github.com/kaspanet/kaspad/indexers"
+	"github.com/kaspanet/kaspad/consensus/indexers"
 	"github.com/kaspanet/kaspad/mempool"
 	"github.com/kaspanet/kaspad/mining"
 	"github.com/kaspanet/kaspad/rpc/model"

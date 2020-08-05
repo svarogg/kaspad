@@ -5,7 +5,7 @@ import (
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/merkle"
 	"github.com/kaspanet/kaspad/consensus/notifications"
-	"github.com/kaspanet/kaspad/testdata"
+	"github.com/kaspanet/kaspad/consensus/test"
 	"math"
 	"path/filepath"
 	"strings"
@@ -606,7 +606,7 @@ func TestGasLimit(t *testing.T) {
 
 // TestBlockAddedNotifications ensures that notification callbacks are fired on events.
 func TestBlockAddedNotifications(t *testing.T) {
-	blocks, err := testdata.LoadBlocks(filepath.Join("../../testdata/blk_0_to_4.dat"))
+	blocks, err := test.LoadBlocks(filepath.Join("../test/blk_0_to_4.dat"))
 	if err != nil {
 		t.Fatalf("Error loading file: %v\n", err)
 	}

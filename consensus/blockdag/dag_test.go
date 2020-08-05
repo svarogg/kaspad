@@ -9,9 +9,9 @@ import (
 	"github.com/kaspanet/kaspad/consensus/blocknode"
 	"github.com/kaspanet/kaspad/consensus/common"
 	"github.com/kaspanet/kaspad/consensus/merkle"
+	"github.com/kaspanet/kaspad/consensus/test"
 	"github.com/kaspanet/kaspad/consensus/timesource"
 	"github.com/kaspanet/kaspad/consensus/utxo"
-	"github.com/kaspanet/kaspad/testdata"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -41,7 +41,7 @@ func TestBlockCount(t *testing.T) {
 
 	var blocks []*util.Block
 	for _, file := range testFiles {
-		blockTmp, err := testdata.LoadBlocks(filepath.Join("../../testdata/", file))
+		blockTmp, err := test.LoadBlocks(filepath.Join("../test/", file))
 		if err != nil {
 			t.Fatalf("Error loading file: %v\n", err)
 		}
@@ -94,7 +94,7 @@ func TestIsKnownBlock(t *testing.T) {
 
 	var blocks []*util.Block
 	for _, file := range testFiles {
-		blockTmp, err := testdata.LoadBlocks(filepath.Join("../../testdata/", file))
+		blockTmp, err := test.LoadBlocks(filepath.Join("../test/", file))
 		if err != nil {
 			t.Fatalf("Error loading file: %v\n", err)
 		}
@@ -135,7 +135,7 @@ func TestIsKnownBlock(t *testing.T) {
 	}
 
 	for _, file := range testFiles {
-		blockTmp, err := testdata.LoadBlocks(filepath.Join("../../testdata/", file))
+		blockTmp, err := test.LoadBlocks(filepath.Join("../test/", file))
 		if err != nil {
 			t.Fatalf("Error loading file: %v\n", err)
 		}
@@ -162,7 +162,7 @@ func TestIsKnownBlock(t *testing.T) {
 	}
 
 	for _, file := range testFiles {
-		blockTmp, err := testdata.LoadBlocks(filepath.Join("../../testdata/", file))
+		blockTmp, err := test.LoadBlocks(filepath.Join("../test/", file))
 		if err != nil {
 			t.Fatalf("Error loading file: %v\n", err)
 		}
@@ -353,7 +353,7 @@ func TestAcceptingInInit(t *testing.T) {
 	}
 
 	// Load the test block
-	blocks, err := testdata.LoadBlocks("../../testdata/blk_0_to_4.dat")
+	blocks, err := test.LoadBlocks("../test/blk_0_to_4.dat")
 	if err != nil {
 		t.Fatalf("Error loading file: %v\n", err)
 	}

@@ -32,7 +32,7 @@ package validation
 //
 //	var blocks []*util.Block
 //	for _, file := range testFiles {
-//		blockTmp, err := testdata.LoadBlocks(filepath.Join("../../testdata/", file))
+//		blockTmp, err := test.LoadBlocks(filepath.Join("../../test/", file))
 //		if err != nil {
 //			t.Fatalf("Error loading file: %v\n", err)
 //		}
