@@ -3,6 +3,7 @@ package consensus
 import (
 	"github.com/kaspanet/kaspad/dagconfig"
 	"github.com/kaspanet/kaspad/dbaccess"
+	"github.com/kaspanet/kaspad/sigcache"
 	"github.com/kaspanet/kaspad/util/subnetworkid"
 )
 
@@ -10,6 +11,7 @@ type Config struct {
 	DAGParams       *dagconfig.Params
 	SubnetworkID    *subnetworkid.SubnetworkID
 	DatabaseContext *dbaccess.DatabaseContext
+	SigCache        *sigcache.SigCache
 
 	BlockLocatorManager    BlockLocatorManager
 	BlockNodeStore         BlockNodeStore
@@ -18,17 +20,14 @@ type Config struct {
 	DifficultyManager      DifficultyManager
 	FinalityManager        FinalityManager
 	GHOSTDAGManager        GHOSTDAGManager
-	IndexManager           IndexManager
 	MultiSetManager        MultiSetManager
 	NotificationManager    NotificationManager
+	OrphanedBlockManager   OrphanedBlockManager
 	PastMedianTimeManager  PastMedianTimeManager
 	ReachabilityTree       ReachabilityTree
 	SequenceLockCalculator SequenceLockCalculator
-	SigCache               SigCache
-	SubnetworkManager      SubnetworkManager
+	SyncRateManager        SyncRateManager
 	TimeSource             TimeSource
-	UTXOManager            UTXOManager
 	UTXODiffStore          UTXODiffStore
-	ValidationManager      ValidationManager
 	VirtualBlock           VirtualBlock
 }

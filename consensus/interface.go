@@ -21,9 +21,6 @@ type FinalityManager interface {
 type GHOSTDAGManager interface {
 }
 
-type IndexManager interface {
-}
-
 type MultiSetManager interface {
 }
 
@@ -42,9 +39,6 @@ type ReachabilityTree interface {
 type SequenceLockCalculator interface {
 }
 
-type SigCache interface {
-}
-
 type SubnetworkManager interface {
 }
 
@@ -54,13 +48,7 @@ type SyncRateManager interface {
 type TimeSource interface {
 }
 
-type UTXOManager interface {
-}
-
 type UTXODiffStore interface {
-}
-
-type ValidationManager interface {
 }
 
 type VirtualBlock interface {
