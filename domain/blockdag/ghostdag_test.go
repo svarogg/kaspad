@@ -1,8 +1,8 @@
 package blockdag
 
 import (
+	"encoding/binary"
 	"fmt"
-	"reflect"
 	"sort"
 	"strings"
 	"testing"
@@ -19,6 +19,270 @@ type testBlockData struct {
 	expectedScore          uint64
 	expectedSelectedParent string
 	expectedBlues          []string
+	hash                   *uint64
+}
+
+func newUint64(n uint64) *uint64 {
+	return &n
+}
+
+// CalculateGhostDag prints the ghostdag result.
+func TestPrintGhostDag(t *testing.T) {
+	dagParams := dagconfig.SimnetParams
+
+	tests := []struct {
+		k            dagconfig.KType
+		expectedReds []string
+		genesisID    string
+		dagData      []*testBlockData
+	}{
+		{
+			k:         4,
+			genesisID: "0",
+			dagData: []*testBlockData{
+				{
+					id:      "1",
+					hash:    newUint64(950),
+					parents: []string{"0"},
+				},
+				{
+					id:      "2",
+					hash:    newUint64(400),
+					parents: []string{"0"},
+				},
+				{
+					id:      "3",
+					hash:    newUint64(889),
+					parents: []string{"0"},
+				},
+				{
+					id:      "4",
+					hash:    newUint64(875),
+					parents: []string{"1"},
+				},
+				{
+					id:      "5",
+					hash:    newUint64(57),
+					parents: []string{"2", "3"},
+				},
+				{
+					id:      "6",
+					hash:    newUint64(301),
+					parents: []string{"3"},
+				},
+				{
+					id:      "7",
+					hash:    newUint64(33),
+					parents: []string{"6"},
+				},
+				{
+					id:      "8",
+					hash:    newUint64(223),
+					parents: []string{"1", "2"},
+				},
+				{
+					id:      "9",
+					hash:    newUint64(379),
+					parents: []string{"5", "6"},
+				},
+				{
+					id:      "10",
+					hash:    newUint64(119),
+					parents: []string{"8", "4"},
+				},
+				{
+					id:      "11",
+					hash:    newUint64(746),
+					parents: []string{"7", "9"},
+				},
+				{
+					id:      "12",
+					hash:    newUint64(771),
+					parents: []string{"10", "9"},
+				},
+				{
+					id:      "13",
+					hash:    newUint64(83),
+					parents: []string{"5", "8"},
+				},
+				{
+					id:      "14",
+					hash:    newUint64(258),
+					parents: []string{"13", "10"},
+				},
+				{
+					id:      "15",
+					hash:    newUint64(979),
+					parents: []string{"11", "13"},
+				},
+				{
+					id:      "16",
+					hash:    newUint64(405),
+					parents: []string{"11"},
+				},
+				{
+					id:      "17",
+					hash:    newUint64(508),
+					parents: []string{"14"},
+				},
+				{
+					id:      "18",
+					hash:    newUint64(728),
+					parents: []string{"13"},
+				},
+				{
+					id:      "19",
+					hash:    newUint64(30),
+					parents: []string{"18", "15"},
+				},
+				{
+					id:      "20",
+					hash:    newUint64(705),
+					parents: []string{"16", "17"},
+				},
+				{
+					id:      "21",
+					hash:    newUint64(32),
+					parents: []string{"18", "20"},
+				},
+				{
+					id:      "22",
+					hash:    newUint64(242),
+					parents: []string{"19", "21"},
+				},
+				{
+					id:      "23",
+					hash:    newUint64(207),
+					parents: []string{"12", "17"},
+				},
+				{
+					id:      "24",
+					hash:    newUint64(268),
+					parents: []string{"20", "23"},
+				},
+				{
+					id:      "25",
+					hash:    newUint64(589),
+					parents: []string{"21"},
+				},
+				{
+					id:      "26",
+					hash:    newUint64(664),
+					parents: []string{"22", "24", "25"},
+				},
+				{
+					id:      "27",
+					hash:    newUint64(280),
+					parents: []string{"16"},
+				},
+				{
+					id:      "28",
+					hash:    newUint64(485),
+					parents: []string{"23", "25"},
+				},
+				{
+					id:      "29",
+					hash:    newUint64(37),
+					parents: []string{"26", "28"},
+				},
+				{
+					id:      "30",
+					hash:    newUint64(245),
+					parents: []string{"27"},
+				},
+			},
+		},
+	}
+
+	for i, test := range tests {
+		func() {
+			resetExtraNonceForTest()
+			dagParams.K = test.k
+			dag, teardownFunc, err := DAGSetup(fmt.Sprintf("TestGHOSTDAG%d", i), true, Config{
+				DAGParams: &dagParams,
+			})
+			if err != nil {
+				t.Fatalf("Failed to setup dag instance: %v", err)
+			}
+			defer teardownFunc()
+
+			genesisNode := dag.genesis
+			blockByIDMap := make(map[string]*blockNode)
+			idByBlockMap := make(map[*blockNode]string)
+			blockByIDMap[test.genesisID] = genesisNode
+			idByBlockMap[genesisNode] = test.genesisID
+
+			for _, blockData := range test.dagData {
+				parents := blockSet{}
+				for _, parentID := range blockData.parents {
+					parent := blockByIDMap[parentID]
+					parents.add(parent)
+				}
+
+				block, err := PrepareBlockForTest(dag, parents.hashes(), nil)
+				if err != nil {
+					t.Fatalf("TestPrintGhostDag: block %v got unexpected error from PrepareBlockForTest: %v", blockData.id, err)
+				}
+
+				utilBlock := util.NewBlock(block)
+				if blockData.hash != nil {
+					hash := utilBlock.Hash()
+					bytes := [daghash.HashSize]byte{}
+					binary.LittleEndian.PutUint64(bytes[:], *blockData.hash)
+					hash.SetBytes(bytes[:])
+				}
+				isOrphan, isDelayed, err := dag.ProcessBlock(utilBlock, BFNoPoWCheck)
+				if err != nil {
+					t.Fatalf("TestPrintGhostDag: dag.ProcessBlock got unexpected error for block %v: %v", blockData.id, err)
+				}
+				if isDelayed {
+					t.Fatalf("TestGHOSTDAG: block %s "+
+						"is too far in the future", blockData.id)
+				}
+				if isOrphan {
+					t.Fatalf("TestPrintGhostDag: block %v was unexpectedly orphan", blockData.id)
+				}
+
+				node, ok := dag.index.LookupNode(utilBlock.Hash())
+				if !ok {
+					t.Fatalf("block %s does not exist in the DAG", utilBlock.Hash())
+				}
+
+				blockByIDMap[blockData.id] = node
+				idByBlockMap[node] = blockData.id
+
+				bluesIDs := make([]string, 0, len(node.blues))
+				for _, blue := range node.blues {
+					bluesIDs = append(bluesIDs, idByBlockMap[blue])
+				}
+				selectedParentID := idByBlockMap[node.selectedParent]
+
+				t.Errorf(" Test %d: Block %v. blues: %v. selectedParent: %v, blueScore: %v", i, blockData.id, bluesIDs,
+					selectedParentID, node.blueScore)
+			}
+
+			reds := make(map[string]bool)
+
+			for id := range blockByIDMap {
+				reds[id] = true
+			}
+
+			for tip := &dag.virtual.blockNode; tip.selectedParent != nil; tip = tip.selectedParent {
+				tipID := idByBlockMap[tip]
+				delete(reds, tipID)
+				for _, blue := range tip.blues {
+					blueID := idByBlockMap[blue]
+					delete(reds, blueID)
+				}
+			}
+			redsIDs := make([]string, 0, len(reds))
+			for id := range reds {
+				redsIDs = append(redsIDs, id)
+			}
+			sort.Strings(redsIDs)
+			t.Errorf("Test %d: Reds: %v", i, redsIDs)
+		}()
+	}
 }
 
 // TestGHOSTDAG iterates over several dag simulations, and checks
