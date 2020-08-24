@@ -515,7 +515,12 @@ func (dag *BlockDAG) fetchBlockByHash(hash *daghash.Hash) (*util.Block, error) {
 	if err != nil {
 		return nil, err
 	}
-	return util.NewBlockFromBytes(blockBytes)
+	ret, err := util.NewBlockFromBytes(blockBytes)
+	if err != nil {
+		return nil, err
+	}
+	*ret.Hash() = *hash
+	return ret, nil
 }
 
 func storeBlock(dbContext *dbaccess.TxContext, block *util.Block) error {

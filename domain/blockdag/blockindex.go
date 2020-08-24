@@ -138,8 +138,7 @@ func (bi *blockIndex) clearDirtyEntries() {
 }
 
 func (dag *BlockDAG) addNodeToIndexWithInvalidAncestor(block *util.Block) error {
-	blockHeader := &block.MsgBlock().Header
-	newNode, _ := dag.newBlockNode(blockHeader, newBlockSet())
+	newNode, _ := dag.newBlockNode(block, newBlockSet())
 	newNode.status = statusInvalidAncestor
 	dag.index.AddNode(newNode)
 

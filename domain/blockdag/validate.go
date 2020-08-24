@@ -1106,8 +1106,6 @@ func (dag *BlockDAG) CheckConnectBlockTemplateNoLock(block *util.Block) error {
 	// Skip the proof of work check as this is just a block template.
 	flags := BFNoPoWCheck
 
-	header := block.MsgBlock().Header
-
 	err := dag.checkBlockSanity(block, flags)
 	if err != nil {
 		return err
@@ -1123,7 +1121,7 @@ func (dag *BlockDAG) CheckConnectBlockTemplateNoLock(block *util.Block) error {
 		return err
 	}
 
-	templateNode, _ := dag.newBlockNode(&header, dag.virtual.tips())
+	templateNode, _ := dag.newBlockNode(block, dag.virtual.tips())
 
 	_, err = dag.checkConnectToPastUTXO(templateNode,
 		dag.UTXOSet(), block.Transactions(), false)

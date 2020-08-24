@@ -2,6 +2,7 @@ package blockdag
 
 import (
 	"github.com/kaspanet/kaspad/domain/dagconfig"
+	"github.com/kaspanet/kaspad/util"
 	"github.com/kaspanet/kaspad/util/daghash"
 	"testing"
 )
@@ -24,8 +25,8 @@ func TestBlueAnticoneSizesSize(t *testing.T) {
 		t.Fatalf("KType must be unsigned")
 	}
 
-	blockHeader := dagconfig.SimnetParams.GenesisBlock.Header
-	node, _ := dag.newBlockNode(&blockHeader, newBlockSet())
+	block := util.NewBlock(dagconfig.SimnetParams.GenesisBlock)
+	node, _ := dag.newBlockNode(block, newBlockSet())
 	fakeBlue := &blockNode{hash: &daghash.Hash{1}}
 	dag.index.AddNode(fakeBlue)
 	// Setting maxKType to maximum value of KType.

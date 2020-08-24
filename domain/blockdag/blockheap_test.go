@@ -1,6 +1,7 @@
 package blockdag
 
 import (
+	"github.com/kaspanet/kaspad/util"
 	"testing"
 
 	"github.com/kaspanet/kaspad/domain/dagconfig"
@@ -18,13 +19,13 @@ func TestBlockHeap(t *testing.T) {
 	}
 	defer teardownFunc()
 
-	block0Header := dagconfig.SimnetParams.GenesisBlock.Header
-	block0, _ := dag.newBlockNode(&block0Header, newBlockSet())
+	block0 := util.NewBlock(dagconfig.SimnetParams.GenesisBlock)
+	blockNode0, _ := dag.newBlockNode(block0, newBlockSet())
 
-	block100000Header := Block100000.Header
-	block100000, _ := dag.newBlockNode(&block100000Header, blockSetFromSlice(block0))
+	block100000 := util.NewBlock(&Block100000)
+	blockNode100000, _ := dag.newBlockNode(block100000, blockSetFromSlice(blockNode0))
 
-	block0smallHash, _ := dag.newBlockNode(&block0Header, newBlockSet())
+	block0smallHash, _ := dag.newBlockNode(block0, newBlockSet())
 	block0smallHash.hash = &daghash.Hash{}
 
 	tests := []struct {
@@ -43,48 +44,48 @@ func TestBlockHeap(t *testing.T) {
 		},
 		{
 			name:            "heap with one push must have length 1",
-			toPush:          []*blockNode{block0},
+			toPush:          []*blockNode{blockNode0},
 			expectedLength:  1,
 			expectedPopDown: nil,
 			expectedPopUp:   nil,
 		},
 		{
 			name:            "heap with one push and one pop",
-			toPush:          []*blockNode{block0},
+			toPush:          []*blockNode{blockNode0},
 			expectedLength:  0,
-			expectedPopDown: block0,
-			expectedPopUp:   block0,
+			expectedPopDown: blockNode0,
+			expectedPopUp:   blockNode0,
 		},
 		{
 			name: "push two blocks with different heights, heap shouldn't have to rebalance " +
 				"for down direction, but will have to rebalance for up direction",
-			toPush:          []*blockNode{block100000, block0},
+			toPush:          []*blockNode{blockNode100000, blockNode0},
 			expectedLength:  1,
-			expectedPopDown: block100000,
-			expectedPopUp:   block0,
+			expectedPopDown: blockNode100000,
+			expectedPopUp:   blockNode0,
 		},
 		{
 			name: "push two blocks with different heights, heap shouldn't have to rebalance " +
 				"for up direction, but will have to rebalance for down direction",
-			toPush:          []*blockNode{block0, block100000},
+			toPush:          []*blockNode{blockNode0, blockNode100000},
 			expectedLength:  1,
-			expectedPopDown: block100000,
-			expectedPopUp:   block0,
+			expectedPopDown: blockNode100000,
+			expectedPopUp:   blockNode0,
 		},
 		{
 			name: "push two blocks with equal heights but different hashes, heap shouldn't have to rebalance " +
 				"for down direction, but will have to rebalance for up direction",
-			toPush:          []*blockNode{block0, block0smallHash},
+			toPush:          []*blockNode{blockNode0, block0smallHash},
 			expectedLength:  1,
-			expectedPopDown: block0,
+			expectedPopDown: blockNode0,
 			expectedPopUp:   block0smallHash,
 		},
 		{
 			name: "push two blocks with equal heights but different hashes, heap shouldn't have to rebalance " +
 				"for up direction, but will have to rebalance for down direction",
-			toPush:          []*blockNode{block0smallHash, block0},
+			toPush:          []*blockNode{block0smallHash, blockNode0},
 			expectedLength:  1,
-			expectedPopDown: block0,
+			expectedPopDown: blockNode0,
 			expectedPopUp:   block0smallHash,
 		},
 	}

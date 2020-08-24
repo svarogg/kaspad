@@ -107,7 +107,8 @@ func newTestDAG(params *dagconfig.Params) *BlockDAG {
 
 	// Create a genesis block node and block index index populated with it
 	// on the above fake DAG.
-	dag.genesis, _ = dag.newBlockNode(&params.GenesisBlock.Header, newBlockSet())
+	block := util.NewBlock(params.GenesisBlock)
+	dag.genesis, _ = dag.newBlockNode(block, newBlockSet())
 	index.AddNode(dag.genesis)
 
 	dag.virtual = newVirtualBlock(dag, blockSetFromSlice(dag.genesis))
@@ -127,7 +128,8 @@ func newTestNode(dag *BlockDAG, parents blockSet, blockVersion int32, bits uint3
 		AcceptedIDMerkleRoot: &daghash.ZeroHash,
 		UTXOCommitment:       &daghash.ZeroHash,
 	}
-	node, _ := dag.newBlockNode(header, parents)
+	block := util.NewBlock(appmessage.NewMsgBlock(header))
+	node, _ := dag.newBlockNode(block, parents)
 	return node
 }
 

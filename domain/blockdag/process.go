@@ -184,7 +184,7 @@ func (dag *BlockDAG) createBlockNodeFromBlock(block *util.Block) (
 	if err != nil {
 		return nil, nil, err
 	}
-	newNode, selectedParentAnticone = dag.newBlockNode(&block.MsgBlock().Header, parents)
+	newNode, selectedParentAnticone = dag.newBlockNode(block, parents)
 	newNode.status = statusDataStored
 	dag.index.AddNode(newNode)
 

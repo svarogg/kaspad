@@ -6,6 +6,7 @@ package blockdag
 
 import (
 	"fmt"
+	"github.com/kaspanet/kaspad/util"
 	"math"
 
 	"github.com/kaspanet/kaspad/domain/dagconfig"
@@ -106,7 +107,8 @@ type blockNode struct {
 // anticone of its selected parent (parent with highest blue score).
 // selectedParentAnticone is used to update reachability data we store for future reachability queries.
 // This function is NOT safe for concurrent access.
-func (dag *BlockDAG) newBlockNode(blockHeader *appmessage.BlockHeader, parents blockSet) (node *blockNode, selectedParentAnticone []*blockNode) {
+func (dag *BlockDAG) newBlockNode(block *util.Block, parents blockSet) (node *blockNode,
+	selectedParentAnticone []*blockNode) {
 	node = &blockNode{
 		parents:            parents,
 		children:           make(blockSet),
@@ -116,8 +118,9 @@ func (dag *BlockDAG) newBlockNode(blockHeader *appmessage.BlockHeader, parents b
 	}
 
 	// blockHeader is nil only for the virtual block
-	if blockHeader != nil {
-		node.hash = blockHeader.BlockHash()
+	if block != nil {
+		blockHeader := &block.MsgBlock().Header
+		node.hash = block.Hash()
 		node.version = blockHeader.Version
 		node.bits = blockHeader.Bits
 		node.nonce = blockHeader.Nonce
