@@ -104,13 +104,9 @@ func (bs blockSet) String() string {
 
 func (bs blockSet) bluest() *blockNode {
 	var bluestNode *blockNode
-	var maxScore uint64
 	for node := range bs {
-		if bluestNode == nil ||
-			node.blueScore > maxScore ||
-			(node.blueScore == maxScore && daghash.Less(node.hash, bluestNode.hash)) {
+		if bluestNode == nil || bluestNode.less(node) {
 			bluestNode = node
-			maxScore = node.blueScore
 		}
 	}
 	return bluestNode
