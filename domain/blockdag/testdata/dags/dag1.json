@@ -64,10 +64,10 @@
         {
             "ID": "5",
             "ExpectedScore": 3,
-            "ExpectedSelectedParent": "2",
+            "ExpectedSelectedParent": "3",
             "ExpectedBlues": [
-                "2",
-                "3"
+                "3",
+                "2"
             ],
             "Parents": [
                 "2",
@@ -99,10 +99,10 @@
         {
             "ID": "8",
             "ExpectedScore": 3,
-            "ExpectedSelectedParent": "2",
+            "ExpectedSelectedParent": "1",
             "ExpectedBlues": [
-                "2",
-                "1"
+                "1",
+                "2"
             ],
             "Parents": [
                 "1",
@@ -151,11 +151,11 @@
         {
             "ID": "12",
             "ExpectedScore": 8,
-            "ExpectedSelectedParent": "9",
+            "ExpectedSelectedParent": "10",
             "ExpectedBlues": [
-                "9",
-                "8",
-                "10"
+                "10",
+                "5",
+                "9"
             ],
             "Parents": [
                 "10",
