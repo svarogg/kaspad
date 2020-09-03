@@ -243,3 +243,23 @@ func TestBlockSetUnion(t *testing.T) {
 		}
 	}
 }
+
+func TestBlockSet_bluest(t *testing.T) {
+	node0 := &blockNode{hash: &daghash.Hash{10}, blueScore: 1}
+	node1 := &blockNode{hash: &daghash.Hash{60}, blueScore: 4}
+	node2 := &blockNode{hash: &daghash.Hash{20}, blueScore: 2}
+	node3 := &blockNode{hash: &daghash.Hash{30}, blueScore: 1}
+	node4 := &blockNode{hash: &daghash.Hash{40}, blueScore: 4}
+	node5 := &blockNode{hash: &daghash.Hash{50}, blueScore: 3}
+	bluest := node1
+	set := blockSetFromSlice(node0, node1, node2, node3, node4, node5)
+
+	if !set.bluest().hash.IsEqual(bluest.hash) {
+		t.Errorf("blockSet.bluest: expected: %s, found: %s", bluest, set.bluest())
+	}
+
+	sortedHashes := set.hashes()
+	if !sortedHashes[len(sortedHashes)-1].IsEqual(set.bluest().hash) {
+		t.Errorf("blockSet.bluest: bluest returned: %s, but last hash in sorted is: %s", set.bluest(), sortedHashes[len(sortedHashes)-1])
+	}
+}
