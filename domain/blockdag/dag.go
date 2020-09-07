@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/kaspanet/kaspad/app/appmessage"
 	"github.com/kaspanet/kaspad/util/mstime"
+	"math/big"
 	"sync"
 
 	"github.com/kaspanet/kaspad/infrastructure/db/dbaccess"
@@ -263,6 +264,15 @@ func (dag *BlockDAG) BlueScoreByBlockHash(hash *daghash.Hash) (uint64, error) {
 	}
 
 	return node.blueScore, nil
+}
+
+// BlueWorkByBlockHash returns the blue work of a block with the given hash.
+func (dag *BlockDAG) BlueWorkByBlockHash(hash *daghash.Hash) (*big.Int, error) {
+	node, ok := dag.index.LookupNode(hash)
+	if !ok {
+		return nil, errors.Errorf("block %s is unknown", hash)
+	}
+	return node.blueWork, nil
 }
 
 // BluesByBlockHash returns the blues of the block for the given hash.

@@ -616,13 +616,15 @@ func serializeBlockNode(node *blockNode) ([]byte, error) {
 }
 
 // blockIndexKey generates the binary key for an entry in the block index
-// bucket. The key is composed of the block blue score encoded as a big-endian
-// 64-bit unsigned int followed by the 32 byte block hash.
-// The blue score component is important for iteration order.
-func blockIndexKey(blockHash *daghash.Hash, blueScore uint64) []byte {
-	indexKey := make([]byte, daghash.HashSize+8)
-	binary.BigEndian.PutUint64(indexKey[0:8], blueScore)
-	copy(indexKey[8:daghash.HashSize+8], blockHash[:])
+// bucket. The key is composed of the block blue word encoded as a big-endian
+// 256-bit unsigned int followed by the 32 byte block hash.
+// The blue work component is important for iteration order.
+func blockIndexKey(blockHash *daghash.Hash, blueWork *big.Int) []byte {
+	indexKey := make([]byte, daghash.HashSize+32)
+	// blueWork can never overflow 256bit
+	bytes := blueWork.Bytes()
+	copy(indexKey[32-len(bytes):], bytes)
+	copy(indexKey[32:], blockHash[:])
 	return indexKey
 }
 
@@ -664,12 +666,12 @@ func (dag *BlockDAG) BlockHashesFrom(lowHash *daghash.Hash, limit int) ([]*dagha
 	if !dag.IsInDAG(lowHash) {
 		return nil, errors.Errorf("block %s not found", lowHash)
 	}
-	blueScore, err := dag.BlueScoreByBlockHash(lowHash)
+	blueWork, err := dag.BlueWorkByBlockHash(lowHash)
 	if err != nil {
 		return nil, err
 	}
 
-	key := blockIndexKey(lowHash, blueScore)
+	key := blockIndexKey(lowHash, blueWork)
 	cursor, err := dbaccess.BlockIndexCursorFrom(dag.databaseContext, key)
 	if dbaccess.IsNotFoundError(err) {
 		return nil, errors.Wrapf(err, "block %s not in block index", lowHash)
