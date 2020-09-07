@@ -6,11 +6,11 @@ package blockdag
 
 import (
 	"fmt"
-	"math"
-
 	"github.com/kaspanet/kaspad/domain/dagconfig"
 	"github.com/kaspanet/kaspad/util/mstime"
 	"github.com/pkg/errors"
+	"math"
+	"math/big"
 
 	"github.com/kaspanet/kaspad/app/appmessage"
 	"github.com/kaspanet/kaspad/util/daghash"
@@ -68,8 +68,11 @@ type blockNode struct {
 	// children are all the blocks that refer to this block as a parent
 	children blockSet
 
-	// blues are all blue blocks in this block's worldview that are in its selected parent anticone
+	// blues are all blue blocks in this block's worldview that are in its selected parent anticone, including the selected parent
 	blues []*blockNode
+
+	// blueWork is the count of all the work blue blocks in this block's past did.
+	blueWork *big.Int
 
 	// blueScore is the count of all the blue blocks in this block's past
 	blueScore uint64
@@ -132,9 +135,9 @@ func (dag *BlockDAG) newBlockNode(blockHeader *appmessage.BlockHeader, parents b
 	if len(parents) == 0 {
 		// The genesis block is defined to have a blueScore of 0
 		node.blueScore = 0
+		node.blueWork = new(big.Int)
 		return node, nil
 	}
-
 	selectedParentAnticone, err := dag.ghostdag(node)
 	if err != nil {
 		panic(errors.Wrap(err, "unexpected error in GHOSTDAG"))
@@ -149,12 +152,18 @@ func (node *blockNode) updateParentsChildren() {
 	}
 }
 
+// less returns true iff blockNode node is less than blockNode other
 func (node *blockNode) less(other *blockNode) bool {
-	if node.blueScore == other.blueScore {
+	switch node.blueWork.Cmp(other.blueWork) {
+	case 1:
+		return false
+	case -1:
+		return true
+	case 0:
 		return daghash.Less(node.hash, other.hash)
+	default:
+		panic("unreachable")
 	}
-
-	return node.blueScore < other.blueScore
 }
 
 // Header constructs a block header from the node and returns it.
@@ -223,6 +232,7 @@ func (node *blockNode) isGenesis() bool {
 	return len(node.parents) == 0
 }
 
+// The result should only be used to navigate within a chain.
 func (node *blockNode) finalityScore(dag *BlockDAG) uint64 {
 	return node.blueScore / uint64(dag.FinalityInterval())
 }

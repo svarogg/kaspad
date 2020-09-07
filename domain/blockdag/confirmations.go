@@ -46,6 +46,7 @@ func (dag *BlockDAG) UTXOConfirmations(outpoint *appmessage.Outpoint) (uint64, b
 	if !ok {
 		return 0, false
 	}
+	// This cannot overflow because entry.blueScore is the blueScore of the accepting block which is on the same chain as the selectedTip(monotonic)
 	confirmations := dag.SelectedTipBlueScore() - utxoEntry.BlockBlueScore() + 1
 
 	return confirmations, true
@@ -67,6 +68,7 @@ func (dag *BlockDAG) blockConfirmations(node *blockNode) (uint64, error) {
 		return 0, nil
 	}
 
+	// This cannot overflow because they're on the same chain (blueScore in the same chain is monotonic) (assuming the chain hasn't changed under us)
 	return dag.selectedTip().blueScore - acceptingBlock.blueScore + 1, nil
 }
 

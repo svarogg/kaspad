@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 
 	"github.com/kaspanet/kaspad/domain/dagconfig"
 	"github.com/kaspanet/kaspad/infrastructure/db/dbaccess"
@@ -464,6 +465,21 @@ func (dag *BlockDAG) deserializeBlockNode(blockRow []byte) (*blockNode, error) {
 		return nil, err
 	}
 
+	blueWorkCount, err := appmessage.ReadVarInt(buffer)
+	if err != nil {
+		return nil, err
+	}
+	blueWorkBytes := make([]byte, blueWorkCount)
+	n, err := buffer.Read(blueWorkBytes[:])
+	if err != nil {
+		return nil, err
+	}
+	if uint64(n) != blueWorkCount {
+		return nil,
+			errors.Errorf("blueWork: expected %d bytes. got %d bytes", blueWorkCount, n)
+	}
+	node.blueWork = new(big.Int).SetBytes(blueWorkBytes)
+
 	bluesCount, err := appmessage.ReadVarInt(buffer)
 	if err != nil {
 		return nil, err
@@ -553,6 +569,21 @@ func serializeBlockNode(node *blockNode) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	blueWorkBytes := node.blueWork.Bytes()
+	err = appmessage.WriteVarInt(w, uint64(len(blueWorkBytes)))
+	if err != nil {
+		return nil, err
+	}
+	n, err := w.Write(blueWorkBytes)
+	if err != nil {
+		return nil, err
+	}
+	if n != len(blueWorkBytes) {
+		return nil,
+			errors.Errorf("blueWork: tried writing %d bytes. instead wrote %d bytes", len(blueWorkBytes), n)
+	}
+	node.blueWork = new(big.Int).SetBytes(blueWorkBytes)
 
 	err = appmessage.WriteVarInt(w, uint64(len(node.blues)))
 	if err != nil {

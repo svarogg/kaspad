@@ -2,7 +2,9 @@ package blockdag
 
 import (
 	"github.com/kaspanet/kaspad/domain/dagconfig"
+	"github.com/kaspanet/kaspad/util"
 	"github.com/pkg/errors"
+	"math/big"
 	"sort"
 )
 
@@ -116,6 +118,12 @@ func (dag *BlockDAG) ghostdag(newNode *blockNode) (selectedParentAnticone []*blo
 	}
 
 	newNode.blueScore = newNode.selectedParent.blueScore + uint64(len(newNode.blues))
+
+	newNode.blueWork = new(big.Int).Set(newNode.selectedParent.blueWork)
+	for _, parent := range newNode.blues {
+		newNode.blueWork.Add(newNode.blueWork, util.CalcWork(parent.bits))
+	}
+
 	return selectedParentAnticone, nil
 }
 

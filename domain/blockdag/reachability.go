@@ -856,11 +856,11 @@ func (rt *reachabilityTree) addBlock(node *blockNode, selectedParentAnticone []*
 	}
 
 	// Update the reindex root.
-	// Note that we check for blue score here in order to find out
-	// whether the new node is going to be the virtual's selected
-	// parent. We don't check node == virtual.selectedParent because
+	// Note that we check if it's less in order to find out whether
+	// the new node is going to be the virtual's selected parent.
+	// We don't check node == virtual.selectedParent because
 	// at this stage the virtual had not yet been updated.
-	if node.blueScore > rt.dag.SelectedTipBlueScore() {
+	if rt.dag.selectedTip().less(node) {
 		updateStartTime := time.Now()
 		modifiedNodes := newModifiedTreeNodes()
 		err := rt.updateReindexRoot(newTreeNode, modifiedNodes)
