@@ -82,7 +82,6 @@ func TestHandleRequestSelectedTip(t *testing.T) {
 	})
 
 	t.Run("CallMultipleTimes", func(t *testing.T) {
-		const callTimes = 5
 		go func() {
 			err = HandleRequestSelectedTip(ctx, incomingRoute, outgoingRoute)
 			if err != nil {
@@ -102,7 +101,7 @@ func TestHandleRequestSelectedTip(t *testing.T) {
 			}
 		}
 	})
-	
+
 	t.Run("CallOnClosedRoute", func(t *testing.T) {
 		closedRoute := router.NewRoute()
 		closedRoute.Close()
@@ -115,21 +114,21 @@ func TestHandleRequestSelectedTip(t *testing.T) {
 	t.Run("CallOnNilRoutes", func(t *testing.T) {
 		err := HandleRequestSelectedTip(ctx, nil, nil)
 		if err == nil {
-			t.Fatal("HandleRejects: expected err, got nil")
+			t.Fatal("HandleRequestSelectedTip: expected err, got nil")
 		}
 	})
 
 	t.Run("CallWithEnqueuedInvalidMessage", func(t *testing.T) {
 		go func() {
 			err = HandleRequestSelectedTip(ctx, incomingRoute, outgoingRoute)
-			if err != nil {
-				t.Fatalf("HandleRequestSelectedTip: %s", err)
+			if err == nil {
+				t.Fatal("HandleRequestSelectedTip: expected err, got nil")
 			}
 		}()
 
 		err := incomingRoute.Enqueue(appmessage.NewMsgPing(1))
 		if err != nil {
-			t.Fatalf("HandleRejects: %s", err)
+			t.Fatalf("HandleRequestSelectedTip: %s", err)
 		}
 
 		_, err = outgoingRoute.DequeueWithTimeout(dequeueTimeout)

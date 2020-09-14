@@ -93,8 +93,6 @@ func TestRequestSelectedTip(t *testing.T) {
 
 	t.Run("CallMultipleTimes", func(t *testing.T) {
 		peer := peerpkg.New(&netadapter.NetConnection{})
-
-		const callTimes = 3
 		const minGetSelectedTipInterval = time.Minute
 		go func() {
 			err = RequestSelectedTip(ctx, incomingRoute, outgoingRoute, peer)

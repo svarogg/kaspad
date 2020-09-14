@@ -1,12 +1,14 @@
 package selectedtip
 
 import (
-	"github.com/kaspanet/kaspad/domain/blockdag"
 	"time"
+
+	"github.com/kaspanet/kaspad/domain/blockdag"
 )
 
 const (
 	dequeueTimeout = 2 * time.Second
+	callTimes      = 5
 )
 
 type mockContext struct {

@@ -9,6 +9,7 @@ import (
 
 const (
 	dequeueTimeout = 2 * time.Second
+	callTimes      = 5
 )
 
 type mockContext struct {

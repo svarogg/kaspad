@@ -40,32 +40,122 @@ func TestHandleRequestIBDBlocks(t *testing.T) {
 
 	firstBlock := blockdag.PrepareAndProcessBlockForTest(t, dag, []*daghash.Hash{dagConfig.DAGParams.GenesisHash}, nil)
 	secondBlock := blockdag.PrepareAndProcessBlockForTest(t, dag, []*daghash.Hash{firstBlock.BlockHash()}, nil)
-
+	_ = secondBlock
 	ctx := &mockContext{dag: dag}
 	incomingRoute := router.NewRoute()
 	outgoingRoute := router.NewRoute()
 
-	go func() {
+	t.Run("SimpleCall", func(t *testing.T) {
+		go func() {
+			err := HandleRequestIBDBlocks(ctx, incomingRoute, outgoingRoute)
+			if err != nil {
+				t.Fatalf("HandleRequestIBDBlocks: %s", err)
+			}
+		}()
+
+		err = incomingRoute.Enqueue(appmessage.NewMsgRequstIBDBlocks(firstBlock.BlockHash(), secondBlock.BlockHash()))
+		if err != nil {
+			t.Fatalf("HandleRequestIBDBlocks: %s", err)
+		}
+
+		for {
+			msg, err := outgoingRoute.Dequeue()
+			if err != nil {
+				t.Fatalf("HandleRequestIBDBlocks: %s", err)
+			}
+
+			_, ok := msg.(*appmessage.MsgDoneIBDBlocks)
+			if ok {
+				return
+			}
+		}
+	})
+
+	t.Run("CheckOutgoingMessageType", func(t *testing.T) {
+		go func() {
+			err := HandleRequestIBDBlocks(ctx, incomingRoute, outgoingRoute)
+			if err != nil {
+				t.Fatalf("HandleRequestIBDBlocks: %s", err)
+			}
+		}()
+
+		err = incomingRoute.Enqueue(appmessage.NewMsgRequstIBDBlocks(firstBlock.BlockHash(), secondBlock.BlockHash()))
+		if err != nil {
+			t.Fatalf("HandleRequestIBDBlocks: %s", err)
+		}
+
+		for {
+			msg, err := outgoingRoute.Dequeue()
+			if err != nil {
+				t.Fatalf("HandleRequestIBDBlocks: %s", err)
+			}
+
+			switch msg.(type) {
+			case *appmessage.MsgDoneIBDBlocks:
+				return
+			case *appmessage.MsgIBDBlock:
+				continue
+			default:
+				t.Fatalf("HandleRequestIBDBlocks: expected %s or %s, got %s",
+					appmessage.CmdDoneIBDBlocks, appmessage.CmdIBDBlock, msg.Command())
+			}
+		}
+	})
+
+	t.Run("CallMultipleTimes", func(t *testing.T) {
+		go func() {
+			err := HandleRequestIBDBlocks(ctx, incomingRoute, outgoingRoute)
+			if err != nil {
+				t.Fatalf("HandleRequestIBDBlocks: %s", err)
+			}
+		}()
+
+		for i := 0; i < callTimes; i++ {
+			err = incomingRoute.Enqueue(appmessage.NewMsgRequstIBDBlocks(firstBlock.BlockHash(), secondBlock.BlockHash()))
+			if err != nil {
+				t.Fatalf("HandleRequestIBDBlocks: %s", err)
+			}
+
+			for {
+				msg, err := outgoingRoute.DequeueWithTimeout(dequeueTimeout)
+				if err != nil {
+					t.Fatalf("HandleRequestIBDBlocks: %s", err)
+				}
+
+				_, ok := msg.(*appmessage.MsgDoneIBDBlocks)
+				if ok {
+					break
+				}
+			}
+		}
+	})
+
+	t.Run("CallOnClosedRoute", func(t *testing.T) {
+		closedRoute := router.NewRoute()
+		closedRoute.Close()
+		err := HandleRequestIBDBlocks(ctx, closedRoute, outgoingRoute)
+		if err == nil {
+			t.Fatalf("HandleRequestIBDBlocks: expected error, got nil")
+		}
+	})
+
+	t.Run("CallOnNilRoutes", func(t *testing.T) {
+		err := HandleRequestIBDBlocks(ctx, nil, nil)
+		if err == nil {
+			t.Fatalf("HandleRequestIBDBlocks: expected error, got nil")
+		}
+	})
+
+	t.Run("CallWithEnqueuedInvalidMessage", func(t *testing.T) {
+		err = incomingRoute.Enqueue(appmessage.NewMsgPing(1))
+		if err != nil {
+			t.Fatalf("HandleRequestIBDBlocks: %s", err)
+		}
+
 		err := HandleRequestIBDBlocks(ctx, incomingRoute, outgoingRoute)
-		if err != nil {
-			t.Fatalf("HandleRequestIBDBlocks: %s", err)
+		if err == nil {
+			t.Fatalf("HandleRequestIBDBlocks: expected error, got nil")
 		}
-	}()
+	})
 
-	err = incomingRoute.Enqueue(appmessage.NewMsgRequstIBDBlocks(firstBlock.BlockHash(), secondBlock.BlockHash()))
-	if err != nil {
-		t.Fatalf("HandleRequestIBDBlocks: %s", err)
-	}
-
-	for {
-		msg, err := outgoingRoute.Dequeue()
-		if err != nil {
-			t.Fatalf("HandleRequestIBDBlocks: %s", err)
-		}
-
-		_, ok := msg.(*appmessage.MsgDoneIBDBlocks)
-		if ok {
-			return
-		}
-	}
 }
