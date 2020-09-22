@@ -1,5 +1,8 @@
 package newarch
 
+// TODO: We pass hash everywhere, and it takes a lot of ram if we copy it, and if we don't copy it we need to check if
+// it's safe to do pointer comparison.
+
 import (
 	"github.com/kaspanet/go-secp256k1"
 	"github.com/kaspanet/kaspad/app/appmessage"
@@ -37,19 +40,46 @@ type BlockRelations interface {
 }
 
 type GhostdagData interface {
-	Add(GhostdagDatum) // TODO
+	Add(_ BlockGhostDAGData)
+	Get(hash daghash.Hash) BlockGhostDAGData
 }
 
+type BlockGhostDAGData interface {
+	BlueScore() uint64
+	Blues() []*daghash.Hash
+	Reds() []*daghash.Hash
+	SelectedParent() *daghash.Hash
+}
+
+type blockStatus uint32
 type BlockStatuses interface {
+	Set(hash daghash.Hash, status blockStatus)
+	Get(hash daghash.Hash) blockStatus
 }
 
 type ReachabilityStore interface {
+	Set(hash daghash.Hash, data reachabilityData)
+	Get(hash daghash.Hash) reachabilityData
+}
+type reachabilityData interface {
+	// TBD
+}
+
+type UTXODiff interface {
+	// TBD
 }
 
 type ConsensusState interface {
+	UpdateWithDiff(diff UTXODiff)
+	GetUTXOByOutpoint(outpoint appmessage.Outpoint) blockdag.UTXOEntry
 }
+
 type UTXODiffs interface {
+	Set(hash daghash.Hash, diff UTXODiff)
+	Get(hash daghash.Hash)
 }
 
 type BlockHeaders interface {
+	Set(hash daghash.Hash, header appmessage.BlockHeader)
+	Get(hash daghash.Hash) appmessage.BlockHeader
 }

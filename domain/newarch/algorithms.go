@@ -11,6 +11,7 @@ type BlockIndex interface {
 }
 
 type Pruning interface {
+	PruneIfNeeded()
 }
 
 type Ghostdag interface {
@@ -29,7 +30,7 @@ type Difficulty interface {
 type UTXOSetVerifer interface {
 	ValidateBlockTransactions(block *appmessage.MsgBlock)
 	UpdateBlockUTXOSet(block *appmessage.MsgBlock) error               // TODO: Should somehow get the output from the above validation function
-	GetUTXOByOutpoint(outpoint appmessage.Outpoint) blockdag.UTXOEntry // should be used only be mempool
+	GetUTXOByOutpoint(outpoint appmessage.Outpoint) blockdag.UTXOEntry // should be used only in mempool
 }
 
 func newUTXOSetVerifierImpl(_ MsgBlocks, _ UTXODiffs) UTXOSetVerifer {
@@ -58,4 +59,11 @@ type Finality interface {
 
 func newFinalityImpl(_ BlockRelations, _ GhostdagData, _ Reachability, _ BlockStatuses) Finality {
 	return nil
+}
+
+type LimitVerifer interface {
+	CheckBlockMass() error
+	CheckMergeSetMass() error
+	CheckMergeSetSize() error
+	CheckMergeDepth() error
 }
