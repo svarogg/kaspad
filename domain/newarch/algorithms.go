@@ -46,7 +46,7 @@ func newReachabilityImpl(_ ReachabilityStore, _ GhostdagData) {
 }
 
 type ConstructBlockTemplate interface {
-	Construct(parents []*daghash.Hash, transactions []*appmessage.MsgTx) appmessage.MsgBlock
+	Construct(parents []*daghash.Hash, transactions []*appmessage.MsgTx) (appmessage.MsgBlock, error)
 }
 
 type InsertBlock interface {
