@@ -12,6 +12,7 @@ import (
 	"io"
 
 	"github.com/kaspanet/kaspad/domain/dagconfig"
+	"github.com/kaspanet/kaspad/domain/txscript"
 	"github.com/kaspanet/kaspad/infrastructure/db/dbaccess"
 	"github.com/pkg/errors"
 
@@ -83,6 +84,66 @@ func deserializeOutpoint(r io.Reader) (*appmessage.Outpoint, error) {
 	}
 
 	return outpoint, nil
+}
+
+// updateUTXOSet updates the UTXO set in the database based on the provided
+// UTXO diff.
+func (dag *BlockDAG) updateUTXOMap(dbContext dbaccess.Context, virtualUTXODiff *UTXODiff) ([]string, error) {
+	utxoMap := make(utxoMap)
+
+	for outpoint, entry := range virtualUTXODiff.toRemove {
+		_, address, _ := txscript.ExtractScriptPubKeyAddress(entry.ScriptPubKey(), dag.Params.Prefix)
+		addressStr := address.EncodeAddress()
+		collection, ok := utxoMap.get(addressStr)
+		if !ok {
+			collection, err := dag.UTXOSet().getUTXOsByAddress(addressStr)
+			if err != nil {
+				return nil, err
+			}
+			utxoMap[addressStr] = collection
+		}
+		collection.remove(outpoint)
+	}
+
+	for outpoint, entry := range virtualUTXODiff.toAdd {
+		_, address, _ := txscript.ExtractScriptPubKeyAddress(entry.ScriptPubKey(), dag.Params.Prefix)
+		addressStr := address.EncodeAddress()
+		collection, ok := utxoMap.get(addressStr)
+		if !ok {
+			collection, err := dag.UTXOSet().getUTXOsByAddress(addressStr)
+			if err != nil && !dbaccess.IsNotFoundError(err) {
+				return nil, err
+			}
+
+			if collection == nil {
+				collection = make(utxoCollection)
+			}
+
+			utxoMap[addressStr] = collection
+		}
+		collection.add(outpoint, entry)
+	}
+
+	buffer := &bytes.Buffer{}
+	for address, utxoCollection := range utxoMap {
+		buffer.Reset()
+		err := serializeUTXOCollection(buffer, utxoCollection)
+		if err != nil {
+			return nil, err
+		}
+
+		serializedUTXOCollection := buffer.Bytes()
+		err = dbaccess.AddToUTXOMap(dbContext, []byte(address), serializedUTXOCollection)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	changedAddresses := make([]string, 0, len(utxoMap))
+	for key := range utxoMap {
+		changedAddresses = append(changedAddresses, key)
+	}
+	return changedAddresses, nil
 }
 
 // updateUTXOSet updates the UTXO set in the database based on the provided

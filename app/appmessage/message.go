@@ -103,6 +103,12 @@ const (
 	CmdShutDownResponseMessage
 	CmdGetHeadersRequestMessage
 	CmdGetHeadersResponseMessage
+	CmdNotifyTransactionAddedRequestMessage
+	CmdNotifyTransactionAddedResponseMessage
+	CmdTransactionAddedNotificationMessage
+	CmdNotifyUTXOOfAddressChangedRequestMessage
+	CmdNotifyUTXOOfAddressChangedResponseMessage
+	CmdUTXOOfAddressChangedNotificationMessage
 )
 
 // ProtocolMessageCommandToString maps all MessageCommands to their string representation
@@ -180,6 +186,12 @@ var RPCMessageCommandToString = map[MessageCommand]string{
 	CmdGetMempoolEntriesResponseMessage:            "GetMempoolEntriesResponseMessage",
 	CmdGetHeadersRequestMessage:                    "GetHeadersRequest",
 	CmdGetHeadersResponseMessage:                   "GetHeadersResponse",
+	CmdNotifyTransactionAddedRequestMessage:        "NotifyTransactionAddedRequestMessage",
+	CmdNotifyTransactionAddedResponseMessage:       "NotifyTransactionAddedResponseMessage",
+	CmdTransactionAddedNotificationMessage:         "TransactionAddedNotificationMessage",
+	CmdNotifyUTXOOfAddressChangedRequestMessage:    "NotifyUTXOOfAddressChangedRequestMessage",
+	CmdNotifyUTXOOfAddressChangedResponseMessage:   "NotifyUTXOOfAddressChangedResponseMessage",
+	CmdUTXOOfAddressChangedNotificationMessage:     "UTXOOfAddressChangedNotificationMessage",
 }
 
 // Message is an interface that describes a kaspa message. A type that

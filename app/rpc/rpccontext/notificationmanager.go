@@ -1,10 +1,13 @@
 package rpccontext
 
 import (
+	"sync"
+
 	"github.com/kaspanet/kaspad/app/appmessage"
 	routerpkg "github.com/kaspanet/kaspad/infrastructure/network/netadapter/router"
+	"github.com/kaspanet/kaspad/util"
+	"github.com/kaspanet/kaspad/util/daghash"
 	"github.com/pkg/errors"
-	"sync"
 )
 
 // NotificationManager manages notifications for the RPC
@@ -16,9 +19,13 @@ type NotificationManager struct {
 // NotificationListener represents a registered RPC notification listener
 type NotificationListener struct {
 	propagateBlockAddedNotifications               bool
+	propagateTransactionAddedNotifications         bool
 	propagateChainChangedNotifications             bool
 	propagateFinalityConflictNotifications         bool
 	propagateFinalityConflictResolvedNotifications bool
+	propagateUTXOOfAddressChangedNotifications     bool
+	subscribedTransactions                         map[daghash.Hash]struct{}
+	subscribedAddresses                            map[string]struct{}
 }
 
 // NewNotificationManager creates a new NotificationManager
@@ -67,6 +74,54 @@ func (nm *NotificationManager) NotifyBlockAdded(notification *appmessage.BlockAd
 			err := router.OutgoingRoute().Enqueue(notification)
 			if err != nil {
 				return err
+			}
+		}
+	}
+	return nil
+}
+
+// NotifyTransactionAdded notifies the notification manager that a transaction has been added to the DAG
+func (nm *NotificationManager) NotifyTransactionAdded(transactions []*util.Tx) error {
+	nm.RLock()
+	defer nm.RUnlock()
+
+	for router, listener := range nm.listeners {
+		if listener.propagateTransactionAddedNotifications {
+			for _, tx := range transactions {
+				if _, ok := listener.subscribedTransactions[*tx.Hash()]; ok {
+					delete(listener.subscribedTransactions, *tx.Hash())
+					notification := appmessage.NewTransactionAddedNotificationMessage(tx.MsgTx())
+					err := router.OutgoingRoute().Enqueue(notification)
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// NotifyUTXOOfAddressChanged notifies the notification manager that a ssociated utxo set with address was changed
+func (nm *NotificationManager) NotifyUTXOOfAddressChanged(notification *appmessage.UTXOOfAddressChangedNotificationMessage) error {
+	nm.RLock()
+	defer nm.RUnlock()
+
+	for router, listener := range nm.listeners {
+		if listener.propagateUTXOOfAddressChangedNotifications {
+			changedAddressesForListener := []string{}
+			for _, address := range notification.ChangedAddresses {
+				if _, ok := listener.subscribedAddresses[address]; ok {
+					changedAddressesForListener = append(changedAddressesForListener, address)
+				}
+			}
+
+			if len(changedAddressesForListener) > 0 {
+				notification := appmessage.NewUTXOOfAddressChangedNotificationMessage(changedAddressesForListener)
+				err := router.OutgoingRoute().Enqueue(notification)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -124,6 +179,7 @@ func (nm *NotificationManager) NotifyFinalityConflictResolved(notification *appm
 func newNotificationListener() *NotificationListener {
 	return &NotificationListener{
 		propagateBlockAddedNotifications:               false,
+		propagateTransactionAddedNotifications:         false,
 		propagateChainChangedNotifications:             false,
 		propagateFinalityConflictNotifications:         false,
 		propagateFinalityConflictResolvedNotifications: false,
@@ -134,6 +190,32 @@ func newNotificationListener() *NotificationListener {
 // to the remote listener
 func (nl *NotificationListener) PropagateBlockAddedNotifications() {
 	nl.propagateBlockAddedNotifications = true
+}
+
+// PropagateTransactionAddedNotifications instructs the listener to send transaction added notifications
+// to the remote listener
+func (nl *NotificationListener) PropagateTransactionAddedNotifications(txHash *daghash.Hash) {
+	nl.propagateTransactionAddedNotifications = true
+
+	if nl.subscribedTransactions == nil {
+		nl.subscribedTransactions = make(map[daghash.Hash]struct{})
+	}
+
+	nl.subscribedTransactions[*txHash] = struct{}{}
+}
+
+// PropagateUTXOOfAddressChangedNotifications instructs the listener to send utxo of address changed notifications
+// to the remote listener
+func (nl *NotificationListener) PropagateUTXOOfAddressChangedNotifications(addresses []string) {
+	nl.propagateUTXOOfAddressChangedNotifications = true
+
+	if nl.subscribedAddresses == nil {
+		nl.subscribedAddresses = make(map[string]struct{})
+	}
+
+	for _, address := range addresses {
+		nl.subscribedAddresses[address] = struct{}{}
+	}
 }
 
 // PropagateChainChangedNotifications instructs the listener to send chain changed notifications

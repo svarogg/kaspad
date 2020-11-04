@@ -153,6 +153,12 @@ func handleBlockDAGNotifications(notification *blockdag.Notification,
 	acceptanceIndex *indexers.AcceptanceIndex, rpcManager *rpc.Manager) error {
 
 	switch notification.Type {
+	case blockdag.NTUTXOOfAddressChanged:
+		data := notification.Data.(*blockdag.UTXOOfAddressChangedNotificationData)
+		err := rpcManager.NotifyUTXOOfAddressChanged(data.ChangedAddresses)
+		if err != nil {
+			return err
+		}
 	case blockdag.NTChainChanged:
 		if acceptanceIndex == nil {
 			return nil

@@ -24,6 +24,9 @@ const (
 	// the blockDAG.
 	NTBlockAdded NotificationType = iota
 
+	// NTUTXOOfAddressChanged indicates the associated utxo set with address was changed
+	NTUTXOOfAddressChanged
+
 	// NTChainChanged indicates that selected parent
 	// chain had changed.
 	NTChainChanged
@@ -39,6 +42,7 @@ const (
 // names for pretty printing.
 var notificationTypeStrings = map[NotificationType]string{
 	NTBlockAdded:               "NTBlockAdded",
+	NTUTXOOfAddressChanged:     "NTUTXOOfAddressChanged",
 	NTChainChanged:             "NTChainChanged",
 	NTFinalityConflict:         "NTFinalityConflict",
 	NTFinalityConflictResolved: "NTFinalityConflictResolved",
@@ -88,6 +92,12 @@ func (dag *BlockDAG) sendNotification(typ NotificationType, data interface{}) {
 type BlockAddedNotificationData struct {
 	Block         *util.Block
 	WasUnorphaned bool
+}
+
+// UTXOOfAddressChangedNotificationData  defines data to be sent along with a UTXOSetChanged
+// notification
+type UTXOOfAddressChangedNotificationData struct {
+	ChangedAddresses []string
 }
 
 // ChainChangedNotificationData defines data to be sent along with a ChainChanged

@@ -57,8 +57,25 @@ func NewManager(
 func (m *Manager) NotifyBlockAddedToDAG(block *util.Block) error {
 	m.context.BlockTemplateState.NotifyBlockAdded(block)
 
-	notification := appmessage.NewBlockAddedNotificationMessage(block.MsgBlock())
-	return m.context.NotificationManager.NotifyBlockAdded(notification)
+	blockAddedNotification := appmessage.NewBlockAddedNotificationMessage(block.MsgBlock())
+
+	err := m.context.NotificationManager.NotifyBlockAdded(blockAddedNotification)
+	if err != nil {
+		return err
+	}
+
+	err = m.context.NotificationManager.NotifyTransactionAdded(block.Transactions())
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// NotifyUTXOOfAddressChanged notifies the manager that a associated utxo set with address was changed
+func (m *Manager) NotifyUTXOOfAddressChanged(addresses []string) error {
+	notification := appmessage.NewUTXOOfAddressChangedNotificationMessage(addresses)
+	return m.context.NotificationManager.NotifyUTXOOfAddressChanged(notification)
 }
 
 // NotifyChainChanged notifies the manager that the DAG's selected parent chain has changed

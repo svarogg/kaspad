@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"math/big"
+	"strconv"
+
 	"github.com/kaspanet/kaspad/app/appmessage"
 	"github.com/kaspanet/kaspad/domain/dagconfig"
 	"github.com/kaspanet/kaspad/domain/txscript"
 	"github.com/kaspanet/kaspad/util"
 	"github.com/kaspanet/kaspad/util/daghash"
 	"github.com/kaspanet/kaspad/util/pointers"
-	"math/big"
-	"strconv"
 )
 
 // BuildBlockVerboseData builds a BlockVerboseData from the given block.
@@ -212,7 +213,7 @@ func (ctx *Context) buildTransactionVerboseOutputs(mtx *appmessage.MsgTx, filter
 		// couldn't parse and there is no additional information about
 		// it anyways.
 		scriptClass, addr, _ := txscript.ExtractScriptPubKeyAddress(
-			v.ScriptPubKey, ctx.DAG.Params)
+			v.ScriptPubKey, ctx.DAG.Params.Prefix)
 
 		// Encode the addresses while checking if the address passes the
 		// filter when needed.
