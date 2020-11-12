@@ -3,14 +3,15 @@ package blockdag
 import (
 	"bytes"
 	"fmt"
+	"github.com/kaspanet/kaspad/domain/addressindex"
+	"github.com/kaspanet/kaspad/domain/txscript"
+	"github.com/kaspanet/kaspad/util"
 	"math"
 	"sort"
 	"strings"
 	"unsafe"
 
-	"github.com/kaspanet/kaspad/domain/txscript"
 	"github.com/kaspanet/kaspad/infrastructure/db/dbaccess"
-	"github.com/kaspanet/kaspad/util"
 
 	"github.com/pkg/errors"
 
@@ -168,39 +169,6 @@ func (uc utxoCollection) clone() utxoCollection {
 	}
 
 	return clone
-}
-
-// utxoMap represents a set of UTXOs sets indexed by their addresses
-type utxoMap map[string]utxoCollection
-
-// get returns the utxoCollection represented by provided address,
-// and a boolean value indicating if said address is in the set or not
-func (um utxoMap) get(address string) (utxoCollection, bool) {
-	if collection, ok := um[address]; ok {
-		return collection, true
-	}
-
-	return nil, false
-}
-
-// addOutpoint adds a new UTXO entry to this utxoMap
-func (um utxoMap) addOutpoint(outpoint appmessage.Outpoint, entry *UTXOEntry, prefix util.Bech32Prefix) {
-	_, address, _ := txscript.ExtractScriptPubKeyAddress(entry.ScriptPubKey(), prefix)
-	addressStr := address.EncodeAddress()
-
-	if collection, ok := um[addressStr]; ok {
-		collection.add(outpoint, entry)
-	}
-}
-
-// removeOutpoint removes a UTXO entry from this utxoMap if it exists
-func (um utxoMap) removeOutpoint(outpoint appmessage.Outpoint, entry *UTXOEntry, prefix util.Bech32Prefix) {
-	_, address, _ := txscript.ExtractScriptPubKeyAddress(entry.ScriptPubKey(), prefix)
-	addressStr := address.EncodeAddress()
-
-	if collection, ok := um[addressStr]; ok {
-		collection.remove(outpoint)
-	}
 }
 
 // UTXODiff represents a diff between two UTXO Sets.
@@ -499,6 +467,25 @@ func (d UTXODiff) String() string {
 	return fmt.Sprintf("toAdd: %s; toRemove: %s", d.toAdd, d.toRemove)
 }
 
+func (d *UTXODiff) toUTXOMaps(prefix util.Bech32Prefix) (toAdd addressindex.UTXOMap, toRemove addressindex.UTXOMap) {
+	toAdd = make(addressindex.UTXOMap)
+	toRemove = make(addressindex.UTXOMap)
+
+	for outpoint, entry := range d.toAdd {
+		_, address, _ := txscript.ExtractScriptPubKeyAddress(entry.ScriptPubKey(), prefix)
+		addressStr := address.EncodeAddress()
+		toAdd.Add(addressStr, outpoint)
+	}
+
+	for outpoint, entry := range d.toRemove {
+		_, address, _ := txscript.ExtractScriptPubKeyAddress(entry.ScriptPubKey(), prefix)
+		addressStr := address.EncodeAddress()
+		toRemove.Add(addressStr, outpoint)
+	}
+
+	return toAdd, toRemove
+}
+
 // UTXOSet represents a set of unspent transaction outputs
 // Every DAG has exactly one fullUTXOSet.
 // When a new block arrives, it is validated and applied to the fullUTXOSet in the following manner:
@@ -520,20 +507,13 @@ type UTXOSet interface {
 	Get(outpoint appmessage.Outpoint) (*UTXOEntry, bool)
 }
 
-// FullUTXOConfig is a descriptor which specifies the FullUTXOSet instance configuration.
-type FullUTXOConfig struct {
-	MaxUTXOCacheSize uint64
-	Prefix           util.Bech32Prefix
-}
-
 // FullUTXOSet represents a full list of transaction outputs and their values
 type FullUTXOSet struct {
-	utxoCache     utxoCollection
-	utxoMapCache  utxoMap
-	dbContext     dbaccess.Context
-	estimatedSize uint64
-	outpointBuff  *bytes.Buffer
-	config        *FullUTXOConfig
+	utxoCache        utxoCollection
+	dbContext        dbaccess.Context
+	estimatedSize    uint64
+	maxUTXOCacheSize uint64
+	outpointBuff     *bytes.Buffer
 }
 
 // NewFullUTXOSet creates a new utxoSet with full list of transaction outputs and their values
@@ -544,11 +524,11 @@ func NewFullUTXOSet() *FullUTXOSet {
 }
 
 // NewFullUTXOSetFromContext creates a new utxoSet and map the data context with caching
-func NewFullUTXOSetFromContext(context dbaccess.Context, config *FullUTXOConfig) *FullUTXOSet {
+func NewFullUTXOSetFromContext(context dbaccess.Context, cacheSize uint64) *FullUTXOSet {
 	return &FullUTXOSet{
-		dbContext: context,
-		config:    config,
-		utxoCache: make(utxoCollection),
+		dbContext:        context,
+		maxUTXOCacheSize: cacheSize,
+		utxoCache:        make(utxoCollection),
 	}
 }
 
@@ -616,10 +596,10 @@ func (fus *FullUTXOSet) contains(outpoint appmessage.Outpoint) bool {
 // clone returns a clone of this utxoSet
 func (fus *FullUTXOSet) clone() UTXOSet {
 	return &FullUTXOSet{
-		utxoCache:     fus.utxoCache.clone(),
-		dbContext:     fus.dbContext,
-		estimatedSize: fus.estimatedSize,
-		config:        fus.config,
+		utxoCache:        fus.utxoCache.clone(),
+		dbContext:        fus.dbContext,
+		estimatedSize:    fus.estimatedSize,
+		maxUTXOCacheSize: fus.maxUTXOCacheSize,
 	}
 }
 
@@ -636,7 +616,7 @@ func getSizeOfUTXOEntryAndOutpoint(entry *UTXOEntry) uint64 {
 
 // checkAndCleanCachedData checks the FullUTXOSet estimated size and clean it if it reaches the limit
 func (fus *FullUTXOSet) checkAndCleanCachedData() {
-	if fus.estimatedSize > fus.config.MaxUTXOCacheSize {
+	if fus.estimatedSize > fus.maxUTXOCacheSize {
 		fus.utxoCache = make(utxoCollection)
 		fus.estimatedSize = 0
 	}
@@ -644,7 +624,6 @@ func (fus *FullUTXOSet) checkAndCleanCachedData() {
 
 // add adds a new UTXO entry to this FullUTXOSet
 func (fus *FullUTXOSet) add(outpoint appmessage.Outpoint, entry *UTXOEntry) {
-	fus.utxoMapCache.addOutpoint(outpoint, entry, fus.config.Prefix)
 	fus.utxoCache[outpoint] = entry
 	fus.estimatedSize += getSizeOfUTXOEntryAndOutpoint(entry)
 	fus.checkAndCleanCachedData()
@@ -652,12 +631,7 @@ func (fus *FullUTXOSet) add(outpoint appmessage.Outpoint, entry *UTXOEntry) {
 
 // remove removes a UTXO entry from this collection if it exists
 func (fus *FullUTXOSet) remove(outpoint appmessage.Outpoint) {
-	entry, ok := fus.Get(outpoint)
-	if ok {
-		fus.utxoMapCache.removeOutpoint(outpoint, entry, fus.config.Prefix)
-	}
-
-	entry, ok = fus.utxoCache.get(outpoint)
+	entry, ok := fus.utxoCache.get(outpoint)
 	if ok {
 		delete(fus.utxoCache, outpoint)
 		fus.estimatedSize -= getSizeOfUTXOEntryAndOutpoint(entry)
@@ -696,33 +670,6 @@ func (fus *FullUTXOSet) Get(outpoint appmessage.Outpoint) (*UTXOEntry, bool) {
 
 	fus.add(outpoint, entry)
 	return entry, true
-}
-
-// getUTXOsByAddress returns a set of UTXOs associated with an address
-func (fus *FullUTXOSet) getUTXOsByAddress(address string) (utxoCollection, error) {
-	collection, ok := fus.utxoMapCache[address]
-	if ok {
-		return collection, nil
-	}
-
-	value, err := dbaccess.GetFromUTXOMap(fus.dbContext, []byte(address))
-	if err != nil {
-		if dbaccess.IsNotFoundError(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	collection, err = deserializeUTXOCollection(bytes.NewReader(value))
-	if err != nil {
-		if dbaccess.IsNotFoundError(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	fus.utxoMapCache[address] = collection
-	return collection, nil
 }
 
 func (fus *FullUTXOSet) String() string {

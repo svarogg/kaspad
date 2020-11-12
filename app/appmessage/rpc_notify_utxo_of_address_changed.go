@@ -13,8 +13,10 @@ func (msg *NotifyUTXOOfAddressChangedRequestMessage) Command() MessageCommand {
 }
 
 // NewNotifyUTXOOfAddressChangedRequestMessage returns a instance of the message
-func NewNotifyUTXOOfAddressChangedRequestMessage() *NotifyUTXOOfAddressChangedRequestMessage {
-	return &NotifyUTXOOfAddressChangedRequestMessage{}
+func NewNotifyUTXOOfAddressChangedRequestMessage(addresses []string) *NotifyUTXOOfAddressChangedRequestMessage {
+	return &NotifyUTXOOfAddressChangedRequestMessage{
+		Addresses: addresses,
+	}
 }
 
 // NotifyUTXOOfAddressChangedResponseMessage is an appmessage corresponding to

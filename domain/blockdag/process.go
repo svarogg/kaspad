@@ -341,13 +341,13 @@ func (dag *BlockDAG) updateVirtualAndTips(node *blockNode, dbTx *dbaccess.TxCont
 		}
 
 		// Update the UTXO map using the diffSet that was melded into the full UTXO set.
-		changedAddresses, err := dag.updateUTXOMap(dbTx, virtualUTXODiff)
+		changedUTXOAddresses, err := dag.addressIndex.Update(virtualUTXODiff.toUTXOMaps(dag.Params.Prefix))
 		if err != nil {
 			return nil, err
 		}
 
 		dag.sendNotification(NTUTXOOfAddressChanged, &UTXOOfAddressChangedNotificationData{
-			ChangedAddresses: changedAddresses,
+			ChangedAddresses: changedUTXOAddresses.Addresses(),
 		})
 	}
 	return chainUpdates, nil

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync/atomic"
 
+	"github.com/kaspanet/kaspad/app/wallet"
+
 	"github.com/kaspanet/kaspad/infrastructure/network/addressmanager"
 
 	"github.com/kaspanet/kaspad/infrastructure/network/netadapter/id"
@@ -112,6 +114,10 @@ func NewComponentManager(cfg *config.Config, databaseContext *dbaccess.DatabaseC
 
 	rpcManager := setupRPC(cfg, txMempool, dag, sigCache, netAdapter, protocolManager, connectionManager, addressManager, acceptanceIndex, interrupt)
 
+	if cfg.Wallet {
+		setupWallet(rpcManager, protocolManager, dag, acceptanceIndex)
+	}
+
 	return &ComponentManager{
 		cfg:               cfg,
 		protocolManager:   protocolManager,
@@ -138,24 +144,32 @@ func setupRPC(
 
 	blockTemplateGenerator := mining.NewBlkTmplGenerator(&mining.Policy{BlockMaxMass: cfg.BlockMaxMass}, txMempool, dag, sigCache)
 	rpcManager := rpc.NewManager(cfg, netAdapter, dag, protocolManager, connectionManager, blockTemplateGenerator, txMempool, addressManager, acceptanceIndex, shutDownChan)
-	protocolManager.SetOnBlockAddedToDAGHandler(rpcManager.NotifyBlockAddedToDAG)
 	protocolManager.SetOnTransactionAddedToMempoolHandler(rpcManager.NotifyTransactionAddedToMempool)
+	return rpcManager
+}
+
+func setupWallet(rpcManager *rpc.Manager, protocolManager *protocol.Manager, dag *blockdag.BlockDAG, acceptanceIndex *indexers.AcceptanceIndex) *wallet.Manager {
+	walletManager := wallet.NewManager(rpcManager)
+	walletManager.RegisterWalletHandlers(rpcManager)
+	protocolManager.SetOnBlockAddedToDAGHandler(walletManager.NotifyBlockAddedToDAG)
+
 	dag.Subscribe(func(notification *blockdag.Notification) {
-		err := handleBlockDAGNotifications(notification, acceptanceIndex, rpcManager)
+		err := handleBlockDAGNotifications(notification, acceptanceIndex, walletManager)
 		if err != nil {
 			panic(err)
 		}
 	})
-	return rpcManager
+
+	return walletManager
 }
 
 func handleBlockDAGNotifications(notification *blockdag.Notification,
-	acceptanceIndex *indexers.AcceptanceIndex, rpcManager *rpc.Manager) error {
+	acceptanceIndex *indexers.AcceptanceIndex, walletManager *wallet.Manager) error {
 
 	switch notification.Type {
 	case blockdag.NTUTXOOfAddressChanged:
 		data := notification.Data.(*blockdag.UTXOOfAddressChangedNotificationData)
-		err := rpcManager.NotifyUTXOOfAddressChanged(data.ChangedAddresses)
+		err := walletManager.NotifyUTXOOfAddressChanged(data.ChangedAddresses)
 		if err != nil {
 			return err
 		}
@@ -164,20 +178,20 @@ func handleBlockDAGNotifications(notification *blockdag.Notification,
 			return nil
 		}
 		chainChangedNotificationData := notification.Data.(*blockdag.ChainChangedNotificationData)
-		err := rpcManager.NotifyChainChanged(chainChangedNotificationData.RemovedChainBlockHashes,
+		err := walletManager.NotifyChainChanged(chainChangedNotificationData.RemovedChainBlockHashes,
 			chainChangedNotificationData.AddedChainBlockHashes)
 		if err != nil {
 			return err
 		}
 	case blockdag.NTFinalityConflict:
 		finalityConflictNotificationData := notification.Data.(*blockdag.FinalityConflictNotificationData)
-		err := rpcManager.NotifyFinalityConflict(finalityConflictNotificationData.ViolatingBlockHash.String())
+		err := walletManager.NotifyFinalityConflict(finalityConflictNotificationData.ViolatingBlockHash.String())
 		if err != nil {
 			return err
 		}
 	case blockdag.NTFinalityConflictResolved:
 		finalityConflictResolvedNotificationData := notification.Data.(*blockdag.FinalityConflictResolvedNotificationData)
-		err := rpcManager.NotifyFinalityConflictResolved(finalityConflictResolvedNotificationData.FinalityBlockHash.String())
+		err := walletManager.NotifyFinalityConflictResolved(finalityConflictResolvedNotificationData.FinalityBlockHash.String())
 		if err != nil {
 			return err
 		}

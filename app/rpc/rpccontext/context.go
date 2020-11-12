@@ -2,6 +2,7 @@ package rpccontext
 
 import (
 	"github.com/kaspanet/kaspad/app/protocol"
+	"github.com/kaspanet/kaspad/app/wallet/walletnotification"
 	"github.com/kaspanet/kaspad/domain/blockdag"
 	"github.com/kaspanet/kaspad/domain/blockdag/indexers"
 	"github.com/kaspanet/kaspad/domain/mempool"
@@ -26,7 +27,7 @@ type Context struct {
 	ShutDownChan           chan<- struct{}
 
 	BlockTemplateState  *BlockTemplateState
-	NotificationManager *NotificationManager
+	NotificationManager *walletnotification.Manager
 }
 
 // NewContext creates a new RPC context
@@ -54,6 +55,5 @@ func NewContext(cfg *config.Config,
 		ShutDownChan:           shutDownChan,
 	}
 	context.BlockTemplateState = NewBlockTemplateState(context)
-	context.NotificationManager = NewNotificationManager()
 	return context
 }

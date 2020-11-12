@@ -32,10 +32,7 @@ func newVirtualBlock(dag *BlockDAG, parents blockSet) *virtualBlock {
 	// The mutex is intentionally not held since this is a constructor.
 	var virtual virtualBlock
 	virtual.dag = dag
-	virtual.utxoSet = NewFullUTXOSetFromContext(dag.databaseContext, &FullUTXOConfig{
-		MaxUTXOCacheSize: dag.maxUTXOCacheSize,
-		Prefix:           dag.Params.Prefix,
-	})
+	virtual.utxoSet = NewFullUTXOSetFromContext(dag.databaseContext, dag.maxUTXOCacheSize)
 	virtual.selectedParentChainSet = newBlockSet()
 	virtual.selectedParentChainSlice = nil
 	virtual.blockNode, _ = dag.newBlockNode(nil, parents)

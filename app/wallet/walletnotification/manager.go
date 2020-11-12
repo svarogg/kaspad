@@ -1,4 +1,4 @@
-package rpccontext
+package walletnotification
 
 import (
 	"sync"
@@ -10,14 +10,14 @@ import (
 	"github.com/pkg/errors"
 )
 
-// NotificationManager manages notifications for the RPC
-type NotificationManager struct {
+// Manager manages notifications for the RPC
+type Manager struct {
 	sync.RWMutex
-	listeners map[*routerpkg.Router]*NotificationListener
+	listeners map[*routerpkg.Router]*Listener
 }
 
-// NotificationListener represents a registered RPC notification listener
-type NotificationListener struct {
+// Listener represents a registered RPC notification listener
+type Listener struct {
 	propagateBlockAddedNotifications               bool
 	propagateTransactionAddedNotifications         bool
 	propagateChainChangedNotifications             bool
@@ -28,15 +28,15 @@ type NotificationListener struct {
 	subscribedAddresses                            map[string]struct{}
 }
 
-// NewNotificationManager creates a new NotificationManager
-func NewNotificationManager() *NotificationManager {
-	return &NotificationManager{
-		listeners: make(map[*routerpkg.Router]*NotificationListener),
+// NewNotificationManager creates a new Manager
+func NewNotificationManager() *Manager {
+	return &Manager{
+		listeners: make(map[*routerpkg.Router]*Listener),
 	}
 }
 
 // AddListener registers a listener with the given router
-func (nm *NotificationManager) AddListener(router *routerpkg.Router) {
+func (nm *Manager) AddListener(router *routerpkg.Router) {
 	nm.Lock()
 	defer nm.Unlock()
 
@@ -45,7 +45,7 @@ func (nm *NotificationManager) AddListener(router *routerpkg.Router) {
 }
 
 // RemoveListener unregisters the given router
-func (nm *NotificationManager) RemoveListener(router *routerpkg.Router) {
+func (nm *Manager) RemoveListener(router *routerpkg.Router) {
 	nm.Lock()
 	defer nm.Unlock()
 
@@ -53,7 +53,7 @@ func (nm *NotificationManager) RemoveListener(router *routerpkg.Router) {
 }
 
 // Listener retrieves the listener registered with the given router
-func (nm *NotificationManager) Listener(router *routerpkg.Router) (*NotificationListener, error) {
+func (nm *Manager) Listener(router *routerpkg.Router) (*Listener, error) {
 	nm.RLock()
 	defer nm.RUnlock()
 
@@ -65,7 +65,7 @@ func (nm *NotificationManager) Listener(router *routerpkg.Router) (*Notification
 }
 
 // NotifyBlockAdded notifies the notification manager that a block has been added to the DAG
-func (nm *NotificationManager) NotifyBlockAdded(notification *appmessage.BlockAddedNotificationMessage) error {
+func (nm *Manager) NotifyBlockAdded(notification *appmessage.BlockAddedNotificationMessage) error {
 	nm.RLock()
 	defer nm.RUnlock()
 
@@ -81,7 +81,7 @@ func (nm *NotificationManager) NotifyBlockAdded(notification *appmessage.BlockAd
 }
 
 // NotifyTransactionAdded notifies the notification manager that a transaction has been added to the DAG
-func (nm *NotificationManager) NotifyTransactionAdded(transactions []*util.Tx) error {
+func (nm *Manager) NotifyTransactionAdded(transactions []*util.Tx) error {
 	nm.RLock()
 	defer nm.RUnlock()
 
@@ -103,13 +103,13 @@ func (nm *NotificationManager) NotifyTransactionAdded(transactions []*util.Tx) e
 }
 
 // NotifyUTXOOfAddressChanged notifies the notification manager that a ssociated utxo set with address was changed
-func (nm *NotificationManager) NotifyUTXOOfAddressChanged(notification *appmessage.UTXOOfAddressChangedNotificationMessage) error {
+func (nm *Manager) NotifyUTXOOfAddressChanged(notification *appmessage.UTXOOfAddressChangedNotificationMessage) error {
 	nm.RLock()
 	defer nm.RUnlock()
 
 	for router, listener := range nm.listeners {
 		if listener.propagateUTXOOfAddressChangedNotifications {
-			changedAddressesForListener := []string{}
+			var changedAddressesForListener []string
 			for _, address := range notification.ChangedAddresses {
 				if _, ok := listener.subscribedAddresses[address]; ok {
 					changedAddressesForListener = append(changedAddressesForListener, address)
@@ -129,7 +129,7 @@ func (nm *NotificationManager) NotifyUTXOOfAddressChanged(notification *appmessa
 }
 
 // NotifyChainChanged notifies the notification manager that the DAG's selected parent chain has changed
-func (nm *NotificationManager) NotifyChainChanged(notification *appmessage.ChainChangedNotificationMessage) error {
+func (nm *Manager) NotifyChainChanged(notification *appmessage.ChainChangedNotificationMessage) error {
 	nm.RLock()
 	defer nm.RUnlock()
 
@@ -145,7 +145,7 @@ func (nm *NotificationManager) NotifyChainChanged(notification *appmessage.Chain
 }
 
 // NotifyFinalityConflict notifies the notification manager that there's a finality conflict in the DAG
-func (nm *NotificationManager) NotifyFinalityConflict(notification *appmessage.FinalityConflictNotificationMessage) error {
+func (nm *Manager) NotifyFinalityConflict(notification *appmessage.FinalityConflictNotificationMessage) error {
 	nm.RLock()
 	defer nm.RUnlock()
 
@@ -161,7 +161,7 @@ func (nm *NotificationManager) NotifyFinalityConflict(notification *appmessage.F
 }
 
 // NotifyFinalityConflictResolved notifies the notification manager that a finality conflict in the DAG has been resolved
-func (nm *NotificationManager) NotifyFinalityConflictResolved(notification *appmessage.FinalityConflictResolvedNotificationMessage) error {
+func (nm *Manager) NotifyFinalityConflictResolved(notification *appmessage.FinalityConflictResolvedNotificationMessage) error {
 	nm.RLock()
 	defer nm.RUnlock()
 
@@ -176,8 +176,8 @@ func (nm *NotificationManager) NotifyFinalityConflictResolved(notification *appm
 	return nil
 }
 
-func newNotificationListener() *NotificationListener {
-	return &NotificationListener{
+func newNotificationListener() *Listener {
+	return &Listener{
 		propagateBlockAddedNotifications:               false,
 		propagateTransactionAddedNotifications:         false,
 		propagateChainChangedNotifications:             false,
@@ -188,13 +188,13 @@ func newNotificationListener() *NotificationListener {
 
 // PropagateBlockAddedNotifications instructs the listener to send block added notifications
 // to the remote listener
-func (nl *NotificationListener) PropagateBlockAddedNotifications() {
+func (nl *Listener) PropagateBlockAddedNotifications() {
 	nl.propagateBlockAddedNotifications = true
 }
 
 // PropagateTransactionAddedNotifications instructs the listener to send transaction added notifications
 // to the remote listener
-func (nl *NotificationListener) PropagateTransactionAddedNotifications(txHash *daghash.Hash) {
+func (nl *Listener) PropagateTransactionAddedNotifications(txHash *daghash.Hash) {
 	nl.propagateTransactionAddedNotifications = true
 
 	if nl.subscribedTransactions == nil {
@@ -206,7 +206,7 @@ func (nl *NotificationListener) PropagateTransactionAddedNotifications(txHash *d
 
 // PropagateUTXOOfAddressChangedNotifications instructs the listener to send utxo of address changed notifications
 // to the remote listener
-func (nl *NotificationListener) PropagateUTXOOfAddressChangedNotifications(addresses []string) {
+func (nl *Listener) PropagateUTXOOfAddressChangedNotifications(addresses []string) {
 	nl.propagateUTXOOfAddressChangedNotifications = true
 
 	if nl.subscribedAddresses == nil {
@@ -220,18 +220,18 @@ func (nl *NotificationListener) PropagateUTXOOfAddressChangedNotifications(addre
 
 // PropagateChainChangedNotifications instructs the listener to send chain changed notifications
 // to the remote listener
-func (nl *NotificationListener) PropagateChainChangedNotifications() {
+func (nl *Listener) PropagateChainChangedNotifications() {
 	nl.propagateChainChangedNotifications = true
 }
 
 // PropagateFinalityConflictNotifications instructs the listener to send finality conflict notifications
 // to the remote listener
-func (nl *NotificationListener) PropagateFinalityConflictNotifications() {
+func (nl *Listener) PropagateFinalityConflictNotifications() {
 	nl.propagateFinalityConflictNotifications = true
 }
 
 // PropagateFinalityConflictResolvedNotifications instructs the listener to send finality conflict resolved notifications
 // to the remote listener
-func (nl *NotificationListener) PropagateFinalityConflictResolvedNotifications() {
+func (nl *Listener) PropagateFinalityConflictResolvedNotifications() {
 	nl.propagateFinalityConflictResolvedNotifications = true
 }

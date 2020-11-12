@@ -6,6 +6,7 @@ package blockdag
 
 import (
 	"fmt"
+	"github.com/kaspanet/kaspad/domain/addressindex"
 	"sync"
 
 	"github.com/kaspanet/kaspad/app/appmessage"
@@ -90,6 +91,7 @@ type BlockDAG struct {
 	multisetStore *multisetStore
 
 	reachabilityTree *reachabilityTree
+	addressIndex     *addressindex.FullUTXOMap
 
 	recentBlockProcessingTimestamps []mstime.Time
 	startTime                       mstime.Time
@@ -130,6 +132,7 @@ func New(config *Config) (*BlockDAG, error) {
 	dag.utxoDiffStore = newUTXODiffStore(dag)
 	dag.multisetStore = newMultisetStore(dag)
 	dag.reachabilityTree = newReachabilityTree(dag)
+	dag.addressIndex = addressindex.NewFullUTXOMap(dag.databaseContext, dag.maxUTXOCacheSize)
 
 	// Initialize the DAG state from the passed database. When the db
 	// does not yet contain any DAG state, both it and the DAG state
@@ -242,6 +245,11 @@ func (dag *BlockDAG) SelectedTipHash() *daghash.Hash {
 // UTXOSet returns the DAG's UTXO set
 func (dag *BlockDAG) UTXOSet() *FullUTXOSet {
 	return dag.virtual.utxoSet
+}
+
+// UTXOMap returns the DAG's UTXO map
+func (dag *BlockDAG) UTXOMap() *addressindex.FullUTXOMap {
+	return dag.addressIndex
 }
 
 // CalcPastMedianTime returns the past median time of the DAG.
