@@ -1,6 +1,13 @@
 package difficultymanager_test
 
 import (
+	"os"
+	"runtime/pprof"
+	"testing"
+	"time"
+
+	"github.com/pkg/errors"
+
 	"github.com/kaspanet/kaspad/domain/consensus"
 	"github.com/kaspanet/kaspad/domain/consensus/model"
 	"github.com/kaspanet/kaspad/domain/consensus/model/externalapi"
@@ -8,10 +15,10 @@ import (
 	"github.com/kaspanet/kaspad/domain/consensus/utils/testutils"
 	"github.com/kaspanet/kaspad/domain/dagconfig"
 	"github.com/kaspanet/kaspad/util"
-	"testing"
 )
 
 func TestDifficulty(t *testing.T) {
+	go startProfile()
 	testutils.ForAllNets(t, true, func(t *testing.T, params *dagconfig.Params) {
 		params.K = 1
 		params.DifficultyAdjustmentWindowSize = 264
@@ -187,6 +194,20 @@ func TestDifficulty(t *testing.T) {
 				" shouldn't affect the difficulty")
 		}
 	})
+}
+
+func startProfile() {
+	f, err := os.Create("/tmp/profile")
+	if err != nil {
+		panic(errors.Errorf("Can't create profile file: %s", err))
+	}
+	err = pprof.StartCPUProfile(f)
+	if err != nil {
+		panic(errors.Errorf("Can't profile: %s", err))
+	}
+	defer pprof.StopCPUProfile()
+
+	<-time.After(40 * time.Second)
 }
 
 func compareBits(a uint32, b uint32) int {

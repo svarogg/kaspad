@@ -13,6 +13,7 @@ var bucket = dbkeys.MakeBucket([]byte("block-headers"))
 // blockHeaderStore represents a store of blocks
 type blockHeaderStore struct {
 	staging  map[externalapi.DomainHash]*externalapi.DomainBlockHeader
+	cache    map[externalapi.DomainHash]*externalapi.DomainBlockHeader
 	toDelete map[externalapi.DomainHash]struct{}
 }
 
@@ -20,6 +21,7 @@ type blockHeaderStore struct {
 func New() model.BlockHeaderStore {
 	return &blockHeaderStore{
 		staging:  make(map[externalapi.DomainHash]*externalapi.DomainBlockHeader),
+		cache:    make(map[externalapi.DomainHash]*externalapi.DomainBlockHeader),
 		toDelete: make(map[externalapi.DomainHash]struct{}),
 	}
 }
@@ -73,17 +75,31 @@ func (bms *blockHeaderStore) BlockHeader(dbContext model.DBReader, blockHash *ex
 		return header, nil
 	}
 
+	if header, ok := bms.cache[*blockHash]; ok {
+		return header, nil
+	}
+
 	headerBytes, err := dbContext.Get(bms.hashAsKey(blockHash))
 	if err != nil {
 		return nil, err
 	}
 
-	return bms.deserializeHeader(headerBytes)
+	header, err := bms.deserializeHeader(headerBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	bms.cache[*blockHash] = header
+
+	return header, nil
 }
 
 // HasBlock returns whether a block header with a given hash exists in the store.
 func (bms *blockHeaderStore) HasBlockHeader(dbContext model.DBReader, blockHash *externalapi.DomainHash) (bool, error) {
 	if _, ok := bms.staging[*blockHash]; ok {
+		return true, nil
+	}
+	if _, ok := bms.cache[*blockHash]; ok {
 		return true, nil
 	}
 

@@ -14,6 +14,7 @@ var reachabilityReindexRootKey = dbkeys.MakeBucket().Key([]byte("reachability-re
 // reachabilityDataStore represents a store of ReachabilityData
 type reachabilityDataStore struct {
 	reachabilityDataStaging        map[externalapi.DomainHash]*model.ReachabilityData
+	cache                          map[externalapi.DomainHash]*model.ReachabilityData
 	reachabilityReindexRootStaging *externalapi.DomainHash
 }
 
@@ -21,6 +22,7 @@ type reachabilityDataStore struct {
 func New() model.ReachabilityDataStore {
 	return &reachabilityDataStore{
 		reachabilityDataStaging:        make(map[externalapi.DomainHash]*model.ReachabilityData),
+		cache:                          make(map[externalapi.DomainHash]*model.ReachabilityData),
 		reachabilityReindexRootStaging: nil,
 	}
 }
@@ -34,6 +36,7 @@ func (rds *reachabilityDataStore) StageReachabilityData(blockHash *externalapi.D
 	}
 
 	rds.reachabilityDataStaging[*blockHash] = clone
+	delete(rds.cache, *blockHash)
 	return nil
 }
 
@@ -86,17 +89,29 @@ func (rds *reachabilityDataStore) ReachabilityData(dbContext model.DBReader,
 	if reachabilityData, ok := rds.reachabilityDataStaging[*blockHash]; ok {
 		return reachabilityData, nil
 	}
+	if reachabilityData, ok := rds.cache[*blockHash]; ok {
+		return reachabilityData, nil
+	}
 
 	reachabilityDataBytes, err := dbContext.Get(rds.reachabilityDataBlockHashAsKey(blockHash))
 	if err != nil {
 		return nil, err
 	}
 
-	return rds.deserializeReachabilityData(reachabilityDataBytes)
+	reachabilityData, err := rds.deserializeReachabilityData(reachabilityDataBytes)
+	if err != nil {
+		return nil, err
+	}
+	rds.cache[*blockHash] = reachabilityData
+
+	return reachabilityData, nil
 }
 
 func (rds *reachabilityDataStore) HasReachabilityData(dbContext model.DBReader, blockHash *externalapi.DomainHash) (bool, error) {
 	if _, ok := rds.reachabilityDataStaging[*blockHash]; ok {
+		return true, nil
+	}
+	if _, ok := rds.cache[*blockHash]; ok {
 		return true, nil
 	}
 

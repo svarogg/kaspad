@@ -13,12 +13,14 @@ var bucket = dbkeys.MakeBucket([]byte("block-ghostdag-data"))
 // ghostdagDataStore represents a store of BlockGHOSTDAGData
 type ghostdagDataStore struct {
 	staging map[externalapi.DomainHash]*model.BlockGHOSTDAGData
+	cache   map[externalapi.DomainHash]*model.BlockGHOSTDAGData
 }
 
 // New instantiates a new GHOSTDAGDataStore
 func New() model.GHOSTDAGDataStore {
 	return &ghostdagDataStore{
 		staging: make(map[externalapi.DomainHash]*model.BlockGHOSTDAGData),
+		cache:   make(map[externalapi.DomainHash]*model.BlockGHOSTDAGData),
 	}
 }
 
@@ -63,13 +65,23 @@ func (gds *ghostdagDataStore) Get(dbContext model.DBReader, blockHash *externala
 	if blockGHOSTDAGData, ok := gds.staging[*blockHash]; ok {
 		return blockGHOSTDAGData, nil
 	}
+	if blockGHOSTDAGData, ok := gds.cache[*blockHash]; ok {
+		return blockGHOSTDAGData, nil
+	}
 
 	blockGHOSTDAGDataBytes, err := dbContext.Get(gds.hashAsKey(blockHash))
 	if err != nil {
 		return nil, err
 	}
 
-	return gds.deserializeBlockGHOSTDAGData(blockGHOSTDAGDataBytes)
+	blockGHOSTDAGData, err := gds.deserializeBlockGHOSTDAGData(blockGHOSTDAGDataBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	gds.cache[*blockHash] = blockGHOSTDAGData
+
+	return blockGHOSTDAGData, nil
 }
 
 func (gds *ghostdagDataStore) hashAsKey(hash *externalapi.DomainHash) model.DBKey {
