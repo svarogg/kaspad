@@ -31,7 +31,7 @@ func TransactionHashForSigning(tx *externalapi.DomainTransaction, hashType uint3
 	// Encode the header and double sha256 everything prior to the number of
 	// transactions.
 	writer := hashes.NewHashWriter()
-	err := serializeTransaction(writer, tx, txEncodingExcludePayload)
+	err := SerializeTransaction(writer, tx, txEncodingExcludePayload)
 	if err != nil {
 		// It seems like this could only happen if the writer returned an error.
 		// and this writer should never return an error (no allocations or possible failures)
@@ -52,7 +52,7 @@ func TransactionHash(tx *externalapi.DomainTransaction) *externalapi.DomainHash 
 	// Encode the header and double sha256 everything prior to the number of
 	// transactions.
 	writer := hashes.NewHashWriter()
-	err := serializeTransaction(writer, tx, txEncodingExcludePayload)
+	err := SerializeTransaction(writer, tx, txEncodingExcludePayload)
 	if err != nil {
 		// It seems like this could only happen if the writer returned an error.
 		// and this writer should never return an error (no allocations or possible failures)
@@ -78,7 +78,7 @@ func TransactionID(tx *externalapi.DomainTransaction) *externalapi.DomainTransac
 		encodingFlags = txEncodingExcludeSignatureScript | txEncodingExcludePayload
 	}
 	writer := hashes.NewHashWriter()
-	err := serializeTransaction(writer, tx, encodingFlags)
+	err := SerializeTransaction(writer, tx, encodingFlags)
 	if err != nil {
 		// this writer never return errors (no allocations or possible failures) so errors can only come from validity checks,
 		// and we assume we never construct malformed transactions.
@@ -91,7 +91,8 @@ func TransactionID(tx *externalapi.DomainTransaction) *externalapi.DomainTransac
 	return tx.ID
 }
 
-func serializeTransaction(w io.Writer, tx *externalapi.DomainTransaction, encodingFlags txEncoding) error {
+// SerializeTransaction serializes the transaction.
+func SerializeTransaction(w io.Writer, tx *externalapi.DomainTransaction, encodingFlags txEncoding) error {
 	err := binaryserializer.PutUint32(w, littleEndian, uint32(tx.Version))
 	if err != nil {
 		return err

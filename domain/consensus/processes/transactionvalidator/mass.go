@@ -9,7 +9,7 @@ import (
 	"github.com/kaspanet/kaspad/domain/consensus/utils/txscript"
 )
 
-func (v *transactionValidator) transactionMassStandalonePart(tx *externalapi.DomainTransaction) uint64 {
+func transactionMassStandalonePart(tx *externalapi.DomainTransaction) uint64 {
 	size := estimatedsize.TransactionEstimatedSerializedSize(tx)
 
 	totalScriptPubKeySize := uint64(0)
@@ -20,12 +20,12 @@ func (v *transactionValidator) transactionMassStandalonePart(tx *externalapi.Dom
 	return size*constants.MassPerTxByte + totalScriptPubKeySize*constants.MassPerScriptPubKeyByte
 }
 
-func (v *transactionValidator) transactionMass(tx *externalapi.DomainTransaction) (uint64, error) {
+func TransactionMass(tx *externalapi.DomainTransaction) (uint64, error) {
 	if transactionhelper.IsCoinBase(tx) {
 		return 0, nil
 	}
 
-	standaloneMass := v.transactionMassStandalonePart(tx)
+	standaloneMass := transactionMassStandalonePart(tx)
 	sigOpsCount := uint64(0)
 	var missingOutpoints []*externalapi.DomainOutpoint
 	for _, input := range tx.Inputs {

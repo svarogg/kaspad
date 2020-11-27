@@ -43,7 +43,7 @@ func (v *transactionValidator) ValidateTransactionInContextAndPopulateMassAndFee
 		return err
 	}
 
-	tx.Mass, err = v.transactionMass(tx)
+	tx.Mass, err = TransactionMass(tx)
 	if err != nil {
 		return err
 	}
