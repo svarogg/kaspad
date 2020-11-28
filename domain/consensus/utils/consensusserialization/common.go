@@ -176,6 +176,20 @@ func readElement(r io.Reader, element interface{}) error {
 				" always be 0x01")
 		}
 		return nil
+
+	case *externalapi.DomainHash:
+		_, err := io.ReadFull(r, e[:])
+		if err != nil {
+			return err
+		}
+		return nil
+
+	case *externalapi.DomainSubnetworkID:
+		_, err := io.ReadFull(r, e[:])
+		if err != nil {
+			return err
+		}
+		return nil
 	}
 
 	return errors.Wrapf(errNoEncodingForType, "couldn't find a way to read type %T", element)

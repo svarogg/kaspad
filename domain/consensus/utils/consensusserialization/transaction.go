@@ -207,3 +207,145 @@ func writeTxOut(w io.Writer, to *externalapi.DomainTransactionOutput) error {
 
 	return writeVarBytes(w, to.ScriptPublicKey)
 }
+
+func DeserializeTransaction(r io.Reader) (*externalapi.DomainTransaction, error) {
+	txVersion, err := binaryserializer.Uint32(r, littleEndian)
+	if err != nil {
+		return nil, err
+	}
+
+	var inputsCount uint64
+	err = readElement(r, &inputsCount)
+	if err != nil {
+		return nil, err
+	}
+
+	inputs := make([]*externalapi.DomainTransactionInput, inputsCount)
+	for i := uint64(0); i < inputsCount; i++ {
+		inputs[i], err = readTransactionInput(r)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var outputsCount uint64
+	err = readElement(r, &outputsCount)
+	if err != nil {
+		return nil, err
+	}
+	outputs := make([]*externalapi.DomainTransactionOutput, inputsCount)
+	for i := uint64(0); i < inputsCount; i++ {
+		outputs[i], err = readTransactionOutput(r)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	lockTime, err := binaryserializer.Uint64(r, littleEndian)
+	if err != nil {
+		return nil, err
+	}
+
+	var subnetworkID externalapi.DomainSubnetworkID
+	_, err = io.ReadFull(r, subnetworkID[:])
+	if err != nil {
+		return nil, err
+	}
+
+	gas, err := binaryserializer.Uint64(r, littleEndian)
+	if err != nil {
+		return nil, err
+	}
+
+	var payloadHash externalapi.DomainHash
+	err = readElement(r, &payloadHash)
+	if err != nil {
+		return nil, err
+	}
+
+	payload, err := readVarBytes(r)
+	if err != nil {
+		return nil, err
+	}
+
+	return &externalapi.DomainTransaction{
+		Version:      int32(txVersion),
+		Inputs:       inputs,
+		Outputs:      outputs,
+		LockTime:     lockTime,
+		SubnetworkID: subnetworkID,
+		Gas:          gas,
+		PayloadHash:  payloadHash,
+		Payload:      payload,
+	}, nil
+}
+
+func readTransactionInput(r io.Reader) (*externalapi.DomainTransactionInput, error) {
+	previousOutpoint, err := readOutpoint(r)
+	if err != nil {
+		return nil, err
+	}
+
+	signatureScript, err := readVarBytes(r)
+	if err != nil {
+		return nil, err
+	}
+
+	sequence, err := binaryserializer.Uint64(r, littleEndian)
+	if err != nil {
+		return nil, err
+	}
+
+	return &externalapi.DomainTransactionInput{
+		PreviousOutpoint: *previousOutpoint,
+		SignatureScript:  signatureScript,
+		Sequence:         sequence,
+	}, nil
+}
+
+func readOutpoint(r io.Reader) (*externalapi.DomainOutpoint, error) {
+	var transactionID externalapi.DomainTransactionID
+	_, err := io.ReadFull(r, transactionID[:])
+	if err != nil {
+		return nil, err
+	}
+
+	index, err := binaryserializer.Uint32(r, littleEndian)
+	if err != nil {
+		return nil, err
+	}
+
+	return &externalapi.DomainOutpoint{
+		TransactionID: transactionID,
+		Index:         index,
+	}, err
+}
+
+func readVarBytes(r io.Reader) ([]byte, error) {
+	var dataLength uint64
+	err := readElement(r, &dataLength)
+	if err != nil {
+		return nil, err
+	}
+
+	data := make([]byte, dataLength)
+	_, err = io.ReadFull(r, data)
+	return data, err
+}
+
+func readTransactionOutput(r io.Reader) (*externalapi.DomainTransactionOutput, error) {
+	value, err := binaryserializer.Uint64(r, littleEndian)
+	if err != nil {
+		return nil, err
+	}
+
+	scriptPublicKey, err := readVarBytes(r)
+	if err != nil {
+		return nil, err
+	}
+
+	return &externalapi.DomainTransactionOutput{
+		Value:           value,
+		ScriptPublicKey: scriptPublicKey,
+	}, nil
+}
