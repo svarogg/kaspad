@@ -551,7 +551,6 @@ message GetChainFromBlockResponseMessage{
 
 message GetBlocksRequestMessage{
   string lowHash = 1;
-  bool includeBlockHexes = 2;
   bool includeBlockVerboseData = 3;
   bool includeTransactionVerboseData = 4;
 }

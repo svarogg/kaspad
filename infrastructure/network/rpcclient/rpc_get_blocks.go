@@ -6,7 +6,7 @@ import "github.com/kaspanet/kaspad/app/appmessage"
 func (c *RPCClient) GetBlocks(lowHash string, includeBlockHexes bool,
 	includeBlockVerboseData bool) (*appmessage.GetBlocksResponseMessage, error) {
 
-	err := c.rpcRouter.outgoingRoute().Enqueue(appmessage.NewGetBlocksRequestMessage(lowHash, includeBlockHexes, includeBlockVerboseData))
+	err := c.rpcRouter.outgoingRoute().Enqueue(appmessage.NewGetBlocksRequestMessage(lowHash, includeBlockVerboseData))
 	if err != nil {
 		return nil, err
 	}
