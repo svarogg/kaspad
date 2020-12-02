@@ -24,14 +24,17 @@ func (block *DomainBlock) Clone() *DomainBlock {
 }
 
 // DomainBlockHeader represents the header part of a Kaspa block
+//
+// Note: DomainBlockHeader fields order have been optimized for struct alignment.
+// Any change in it's fields requires a re-run of aligncheck to make sure alignment was not hurt.
 type DomainBlockHeader struct {
 	Version              int32
+	Bits                 uint32
 	ParentHashes         []*DomainHash
 	HashMerkleRoot       DomainHash
 	AcceptedIDMerkleRoot DomainHash
 	UTXOCommitment       DomainHash
 	TimeInMilliseconds   int64
-	Bits                 uint32
 	Nonce                uint64
 }
 

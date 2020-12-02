@@ -5,12 +5,15 @@ import (
 )
 
 // DomainTransaction represents a Kaspa transaction
+//
+// Note: DomainTransaction fields order have been optimized for struct alignment.
+// Any change in it's fields requires a re-run of aligncheck to make sure alignment was not hurt.
 type DomainTransaction struct {
 	Version      int32
+	SubnetworkID DomainSubnetworkID
 	Inputs       []*DomainTransactionInput
 	Outputs      []*DomainTransactionOutput
 	LockTime     uint64
-	SubnetworkID DomainSubnetworkID
 	Gas          uint64
 	PayloadHash  DomainHash
 	Payload      []byte
