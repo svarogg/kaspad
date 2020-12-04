@@ -1,6 +1,4 @@
-package model
-
-import "github.com/kaspanet/kaspad/domain/consensus/model/externalapi"
+package externalapi
 
 // AcceptanceData stores data about which transactions were accepted by a block.
 // It's ordered in the same way as the block merge set blues.
@@ -22,6 +20,7 @@ func (ad AcceptanceData) Clone() AcceptanceData {
 // BlockAcceptanceData stores all transactions in a block with an indication
 // if they were accepted or not by some other block
 type BlockAcceptanceData struct {
+	BlockHash                 *DomainHash
 	TransactionAcceptanceData []*TransactionAcceptanceData
 }
 
@@ -31,7 +30,10 @@ func (bad *BlockAcceptanceData) Clone() *BlockAcceptanceData {
 		return nil
 	}
 
-	clone := &BlockAcceptanceData{TransactionAcceptanceData: make([]*TransactionAcceptanceData, len(bad.TransactionAcceptanceData))}
+	clone := &BlockAcceptanceData{
+		BlockHash:                 bad.BlockHash,
+		TransactionAcceptanceData: make([]*TransactionAcceptanceData, len(bad.TransactionAcceptanceData)),
+	}
 	for i, acceptanceData := range bad.TransactionAcceptanceData {
 		clone.TransactionAcceptanceData[i] = acceptanceData.Clone()
 	}
@@ -42,7 +44,7 @@ func (bad *BlockAcceptanceData) Clone() *BlockAcceptanceData {
 // TransactionAcceptanceData stores a transaction together with an indication
 // if it was accepted or not by some block
 type TransactionAcceptanceData struct {
-	Transaction *externalapi.DomainTransaction
+	Transaction *DomainTransaction
 	Fee         uint64
 	IsAccepted  bool
 }

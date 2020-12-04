@@ -212,3 +212,16 @@ func (s *consensus) GetSyncInfo() (*externalapi.SyncInfo, error) {
 
 	return s.syncManager.GetSyncInfo()
 }
+
+func (s *consensus) GetSelectedParentChain(blockHash *externalapi.DomainHash) (removedChainHashes []*externalapi.DomainHash, addedChainHashes []*externalapi.DomainHash, err error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	return s.dagTraversalManager.SelectedParentChain(blockHash)
+}
+
+func (s *consensus) GetBlockAcceptanceData(blockHash *externalapi.DomainHash) (externalapi.AcceptanceData, error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	_, acceptanceData, _, err := s.consensusStateManager.CalculatePastUTXOAndAcceptanceData(blockHash)
+	return acceptanceData, err
+}

@@ -18,4 +18,6 @@ type Consensus interface {
 	CreateBlockLocator(lowHash, highHash *DomainHash) (BlockLocator, error)
 	FindNextBlockLocatorBoundaries(blockLocator BlockLocator) (lowHash, highHash *DomainHash, err error)
 	GetSyncInfo() (*SyncInfo, error)
+	GetSelectedParentChain(blockHash *DomainHash) (removedChainHashes []*DomainHash, addedChainHashes []*DomainHash, err error)
+	GetBlockAcceptanceData(blockHash *DomainHash) (AcceptanceData, error)
 }

@@ -9,6 +9,7 @@ type DAGTraversalManager interface {
 	LowestChainBlockAboveOrEqualToBlueScore(highHash *externalapi.DomainHash, blueScore uint64) (*externalapi.DomainHash, error)
 	SelectedParentIterator(highHash *externalapi.DomainHash) BlockIterator
 	SelectedChildIterator(highHash, lowHash *externalapi.DomainHash) (BlockIterator, error)
+	SelectedParentChain(blockHash *externalapi.DomainHash) (removedChainHashes []*externalapi.DomainHash, addedChainHashes []*externalapi.DomainHash, err error)
 	AnticoneFromContext(context, lowHash *externalapi.DomainHash) ([]*externalapi.DomainHash, error)
 	BlueWindow(highHash *externalapi.DomainHash, windowSize uint64) ([]*externalapi.DomainHash, error)
 	NewDownHeap() BlockHeap

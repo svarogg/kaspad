@@ -2,7 +2,6 @@ package dagtraversalmanager
 
 import (
 	"fmt"
-
 	"github.com/kaspanet/kaspad/domain/consensus/model"
 	"github.com/kaspanet/kaspad/domain/consensus/model/externalapi"
 )
@@ -117,4 +116,58 @@ func (dtm *dagTraversalManager) LowestChainBlockAboveOrEqualToBlueScore(highHash
 	}
 
 	return currentHash, nil
+}
+
+// SelectedParentChain returns the selected parent chain starting from blockHash (exclusive)
+// up to the virtual (exclusive). If blockHash is not within the select parent chain, go down its own selected parent chain,
+// while collecting each block hash in removedChainHashes, until reaching a block within the main selected parent chain.
+func (dtm *dagTraversalManager) SelectedParentChain(blockHash *externalapi.DomainHash) (removedChainHashes []*externalapi.DomainHash, addedChainHashes []*externalapi.DomainHash, err error) {
+	virtualGHOSTDAGData, err := dtm.ghostdagDataStore.Get(dtm.databaseContext, model.VirtualBlockHash)
+	if err != nil {
+		return nil, nil, err
+	}
+	isInMainSelectedParentChain := func(blockHash *externalapi.DomainHash) (bool, error) {
+		isInSelectedParentChain, err := dtm.dagTopologyManager.IsInSelectedParentChainOf(blockHash, virtualGHOSTDAGData.SelectedParent)
+		if err != nil {
+			return false, err
+		}
+		return isInSelectedParentChain, nil
+	}
+
+	// If blockHash is not in the main selected parent chain, go down its selected parent chain
+	// until we find a block that is in the main selected parent chain.
+	isBlockInMainSelectedParentChain, err := isInMainSelectedParentChain(blockHash)
+	if err != nil {
+		return nil, nil, err
+	}
+	blockGHOSTDAGData, err := dtm.ghostdagDataStore.Get(dtm.databaseContext, blockHash)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	iter := dtm.SelectedParentIterator(blockHash)
+	for !isBlockInMainSelectedParentChain && iter.Next() {
+		removedChainHashes = append(removedChainHashes, blockHash)
+		selectedParentBlockGHOSTDAGData, err := dtm.ghostdagDataStore.Get(dtm.databaseContext, blockGHOSTDAGData.SelectedParent)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		blockHash = selectedParentBlockGHOSTDAGData.SelectedParent
+		blockGHOSTDAGData = selectedParentBlockGHOSTDAGData
+		isBlockInMainSelectedParentChain, err = isInMainSelectedParentChain(blockHash)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	iter, err = dtm.SelectedChildIterator(virtualGHOSTDAGData.SelectedParent, blockHash)
+	if err != nil {
+		return nil, nil, err
+	}
+	for iter.Next() {
+		addedChainHashes = append(addedChainHashes, iter.Get())
+	}
+
+	return removedChainHashes, addedChainHashes, nil
 }
