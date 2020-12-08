@@ -18,4 +18,6 @@ type Consensus interface {
 	CreateBlockLocator(lowHash, highHash *DomainHash) (BlockLocator, error)
 	FindNextBlockLocatorBoundaries(blockLocator BlockLocator) (lowHash, highHash *DomainHash, err error)
 	GetSyncInfo() (*SyncInfo, error)
+	GetUTXOByOutpoint(outpoint *DomainOutpoint) (*UTXOEntry, error)
+	GetUTXOs() (outpoints []*DomainOutpoint, utxoEntries []*UTXOEntry, err error)
 }

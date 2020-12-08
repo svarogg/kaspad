@@ -138,7 +138,7 @@ func setupRPC(
 		walletManager := wallet.NewManager(rpcManager)
 		walletManager.RegisterWalletHandlers()
 		protocolManager.SetOnBlockAddedToDAGHandler(func(block *externalapi.DomainBlock) error {
-			changedUTXOs, err := utxoAddressIndex.AddBlock(block, 0, cfg.NetParams().Prefix)
+			changedUTXOs, err := utxoAddressIndex.AddBlock(domain.Consensus(), block, 0, cfg.NetParams().Prefix)
 			if err != nil {
 				return err
 			}

@@ -14,6 +14,13 @@ func HandleSubmitBlock(context *rpccontext.Context, _ *router.Router, request ap
 	msgBlock := submitBlockRequest.Block
 	domainBlock := appmessage.MsgBlockToDomainBlock(msgBlock)
 
+	for _, transaction := range domainBlock.Transactions {
+		for _, txIn := range transaction.Inputs {
+			entry, _ := context.Domain.Consensus().GetUTXOByOutpoint(&txIn.PreviousOutpoint)
+			txIn.UTXOEntry = entry
+		}
+	}
+
 	err := context.ProtocolManager.AddBlock(domainBlock)
 	if err != nil {
 		errorMessage := &appmessage.SubmitBlockResponseMessage{}

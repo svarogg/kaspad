@@ -207,3 +207,31 @@ func (s *consensus) GetSyncInfo() (*externalapi.SyncInfo, error) {
 
 	return s.syncManager.GetSyncInfo()
 }
+
+func (s *consensus) GetUTXOs() (outpoints []*externalapi.DomainOutpoint, utxoEntries []*externalapi.UTXOEntry, err error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	iter, err := s.consensusStateStore.VirtualUTXOSetIterator(s.databaseContext)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for iter.Next() {
+		outpoint, entry, err := iter.Get()
+		if err != nil {
+			return nil, nil, err
+		}
+		utxoEntries = append(utxoEntries, entry)
+		outpoints = append(outpoints, outpoint)
+	}
+
+	return outpoints, utxoEntries, nil
+}
+
+func (s *consensus) GetUTXOByOutpoint(outpoint *externalapi.DomainOutpoint) (*externalapi.UTXOEntry, error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	return s.consensusStateStore.UTXOByOutpoint(s.databaseContext, outpoint)
+}

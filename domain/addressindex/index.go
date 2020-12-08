@@ -9,6 +9,7 @@ import (
 	"github.com/kaspanet/kaspad/domain/consensus/utils/txscript"
 	"github.com/kaspanet/kaspad/infrastructure/db/database"
 	"github.com/kaspanet/kaspad/util"
+	"log"
 	"unsafe"
 )
 
@@ -118,13 +119,16 @@ func GetAddress(scriptPublicKey []byte, prefix util.Bech32Prefix) (string, error
 }
 
 // AddBlock adds the provided block's content to the Index
-func (in *Index) AddBlock(block *externalapi.DomainBlock, blueScore uint64, prefix util.Bech32Prefix) (UTXOMap, error) {
+func (in *Index) AddBlock(consensus externalapi.Consensus, block *externalapi.DomainBlock, blueScore uint64, prefix util.Bech32Prefix) (UTXOMap, error) {
 	transactions := block.Transactions
 	toAdd := make(UTXOMap)
 	toRemove := make(UTXOMap)
 
 	for _, transaction := range transactions {
 		for _, txIn := range transaction.Inputs {
+			if txIn.UTXOEntry == nil {
+				continue
+			}
 			address, err := GetAddress(txIn.UTXOEntry.ScriptPublicKey, prefix)
 			if err != nil {
 				return nil, err
@@ -142,6 +146,17 @@ func (in *Index) AddBlock(block *externalapi.DomainBlock, blueScore uint64, pref
 			outpoint := externalapi.NewDomainOutpoint(txID, uint32(i))
 			entry := externalapi.NewUTXOEntry(txOut.Value, txOut.ScriptPublicKey, isCoinbase, blueScore)
 			toAdd.Add(address, outpoint, entry)
+		}
+	}
+
+	// TODO just temporary workaround to handle selected chain changes
+	for address, utxoCollection := range in.utxoMapCache {
+		for outpoint, entry := range utxoCollection {
+			_, err := consensus.GetUTXOByOutpoint(&outpoint)
+			if err != nil {
+				toRemove.Add(address, &outpoint, entry)
+				log.Printf("IndexAddBlock utxo %v:%v is not in selected chain", outpoint.TransactionID.String(), outpoint.Index)
+			}
 		}
 	}
 

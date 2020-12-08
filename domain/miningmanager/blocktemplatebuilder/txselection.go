@@ -145,8 +145,10 @@ func (btb *blockTemplateBuilder) selectTransactions(candidateTxs []*candidateTx)
 		txsForBlockTemplate.totalMass += selectedTx.Mass
 		txsForBlockTemplate.totalFees += selectedTx.Fee
 
-		log.Tracef("Adding tx %s (feePerMegaGram %d)",
-			consensusserialization.TransactionID(tx), selectedTx.Fee*1e6/selectedTx.Mass)
+		if selectedTx.Mass > 0 {
+			log.Tracef("Adding tx %s (feePerMegaGram %d)",
+				consensusserialization.TransactionID(tx), selectedTx.Fee*1e6/selectedTx.Mass)
+		}
 
 		markCandidateTxForDeletion(selectedTx)
 	}
