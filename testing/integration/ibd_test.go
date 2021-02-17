@@ -1,6 +1,8 @@
 package integration
 
 import (
+	"fmt"
+	"github.com/kaspanet/kaspad/domain/consensus/model/externalapi"
 	"sync"
 	"testing"
 	"time"
@@ -150,4 +152,64 @@ func TestIBDWithPruning(t *testing.T) {
 			syncerBlockCountResponse.HeaderCount,
 			synceeBlockCountResponse.HeaderCount)
 	}
+}
+
+func TestIBDTwoChains(t *testing.T) {
+	shortKaspad, longKaspad, syncee, teardown := standardSetup(t)
+	defer teardown()
+
+	// Build many short chains on shortKaspad
+	shortKaspadBlocks := []*externalapi.DomainBlock{}
+	for i := 0; i < 100; i++ {
+		blockTemplate, err := shortKaspad.rpcClient.GetBlockTemplate(shortKaspad.miningAddress)
+		if err != nil {
+			t.Fatalf("Error getting block template: %+v", err)
+		}
+		block := appmessage.MsgBlockToDomainBlock(blockTemplate.MsgBlock)
+		solveBlock(block)
+		shortKaspadBlocks = append(shortKaspadBlocks, block)
+	}
+	for _, shortKaspadBlock := range shortKaspadBlocks {
+		_, err := shortKaspad.rpcClient.SubmitBlock(shortKaspadBlock)
+		if err != nil {
+			t.Fatalf("Error submitting block: %s", err)
+		}
+	}
+
+	// Build a long chain on longKaspad
+	for i := 0; i < 10_000; i++ {
+		mineNextBlock(t, longKaspad)
+	}
+
+	// Connect shortKaspad and longKaspad. This should trigger IBD between them
+	connect(t, shortKaspad, longKaspad)
+
+	waitForIBDToFinish := func(t *testing.T, harness1 *appHarness, harness2 *appHarness) {
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			tip1Hash, err := harness1.rpcClient.GetSelectedTipHash()
+			if err != nil {
+				t.Fatalf("Error getting tip for syncer: %s", err)
+			}
+			tip2Hash, err := harness2.rpcClient.GetSelectedTipHash()
+			if err != nil {
+				t.Fatalf("Error getting tip for syncee: %s", err)
+			}
+			if tip1Hash.SelectedTipHash == tip2Hash.SelectedTipHash {
+				break
+			}
+		}
+	}
+
+	// Wait for IBD to finish
+	waitForIBDToFinish(t, shortKaspad, longKaspad)
+
+	// Connect longKaspad and syncee. This should trigger IBD between them
+	connect(t, longKaspad, syncee)
+
+	// Wait for IBD to finish
+	start := time.Now()
+	waitForIBDToFinish(t, longKaspad, syncee)
+	fmt.Printf("IBD finished. Took: %s\n", time.Since(start))
 }
