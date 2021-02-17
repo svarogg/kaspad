@@ -205,6 +205,14 @@ func TestIBDTwoChains(t *testing.T) {
 	// Wait for IBD to finish
 	waitForIBDToFinish(t, shortKaspad, longKaspad)
 
+	// Merge all the chains into one
+	for {
+		block := mineNextBlock(t, longKaspad)
+		if len(block.Header.ParentHashes()) == 1 {
+			break
+		}
+	}
+
 	// Connect longKaspad and syncee. This should trigger IBD between them
 	connect(t, longKaspad, syncee)
 
