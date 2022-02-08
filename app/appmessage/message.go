@@ -67,6 +67,8 @@ const (
 	CmdRequestPruningPointProof
 	CmdPruningPointProof
 	CmdReady
+	CmdTrustedData
+	CmdBlockWithTrustedDataV4
 
 	// rpc
 	CmdGetCurrentNetworkRequestMessage
@@ -191,6 +193,8 @@ var ProtocolMessageCommandToString = map[MessageCommand]string{
 	CmdRequestPruningPointProof:            "RequestPruningPointProof",
 	CmdPruningPointProof:                   "PruningPointProof",
 	CmdReady:                               "Ready",
+	CmdTrustedData:                         "TrustedData",
+	CmdBlockWithTrustedDataV4:              "BlockWithTrustedDataV4",
 }
 
 // RPCMessageCommandToString maps all MessageCommands to their string representation

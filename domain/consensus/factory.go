@@ -450,21 +450,22 @@ func (f *factory) NewConsensus(config *Config, db infrastructuredatabase.Databas
 		finalityManager:       finalityManager,
 		pruningProofManager:   pruningProofManager,
 
-		acceptanceDataStore:       acceptanceDataStore,
-		blockStore:                blockStore,
-		blockHeaderStore:          blockHeaderStore,
-		pruningStore:              pruningStore,
-		ghostdagDataStores:        ghostdagDataStores,
-		blockStatusStore:          blockStatusStore,
-		blockRelationStores:       blockRelationStores,
-		consensusStateStore:       consensusStateStore,
-		headersSelectedTipStore:   headersSelectedTipStore,
-		multisetStore:             multisetStore,
-		reachabilityDataStores:    reachabilityDataStores,
-		utxoDiffStore:             utxoDiffStore,
-		finalityStore:             finalityStore,
-		headersSelectedChainStore: headersSelectedChainStore,
-		daaBlocksStore:            daaBlocksStore,
+		acceptanceDataStore:                 acceptanceDataStore,
+		blockStore:                          blockStore,
+		blockHeaderStore:                    blockHeaderStore,
+		pruningStore:                        pruningStore,
+		ghostdagDataStores:                  ghostdagDataStores,
+		blockStatusStore:                    blockStatusStore,
+		blockRelationStores:                 blockRelationStores,
+		consensusStateStore:                 consensusStateStore,
+		headersSelectedTipStore:             headersSelectedTipStore,
+		multisetStore:                       multisetStore,
+		reachabilityDataStores:              reachabilityDataStores,
+		utxoDiffStore:                       utxoDiffStore,
+		finalityStore:                       finalityStore,
+		headersSelectedChainStore:           headersSelectedChainStore,
+		daaBlocksStore:                      daaBlocksStore,
+		blocksWithTrustedDataDAAWindowStore: daaWindowStore,
 	}
 
 	err = c.Init(config.SkipAddingGenesis)
@@ -642,7 +643,8 @@ func (f *factory) dagProcesses(config *Config,
 			reachabilityDataStores[i],
 			ghostdagManagers[i],
 			daaWindowStore,
-			config.GenesisHash)
+			config.GenesisHash,
+			config.DifficultyAdjustmentWindowSize)
 	}
 
 	return reachabilityManagers, dagTopologyManagers, ghostdagManagers, dagTraversalManagers
