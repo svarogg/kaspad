@@ -55,4 +55,5 @@ type Consensus interface {
 	IsChainBlock(blockHash *DomainHash) (bool, error)
 	VirtualMergeDepthRoot() (*DomainHash, error)
 	IsNearlySynced() (bool, error)
+	SetOnVirtualChangedCallback(callback func(virtualChangeSet *VirtualChangeSet))
 }

@@ -1,9 +1,10 @@
 package consensus
 
 import (
-	"github.com/kaspanet/kaspad/util/mstime"
 	"math/big"
 	"sync"
+
+	"github.com/kaspanet/kaspad/util/mstime"
 
 	"github.com/kaspanet/kaspad/domain/consensus/database"
 	"github.com/kaspanet/kaspad/domain/consensus/model"
@@ -59,7 +60,7 @@ type consensus struct {
 	daaBlocksStore                      model.DAABlocksStore
 	blocksWithTrustedDataDAAWindowStore model.BlocksWithTrustedDataDAAWindowStore
 
-	virtualChangeChan chan *externalapi.VirtualChangeSet
+	onVirtualChangedCallback func(virtualChangeSet *externalapi.VirtualChangeSet)
 }
 
 func (s *consensus) ValidateAndInsertBlockWithTrustedData(block *externalapi.BlockWithTrustedData, validateUTXO bool) (*externalapi.VirtualChangeSet, error) {
@@ -206,7 +207,7 @@ func (s *consensus) ValidateAndInsertBlock(block *externalapi.DomainBlock, shoul
 }
 
 func (s *consensus) onVirtualChange(virtualChangeSet *externalapi.VirtualChangeSet, wasVirtualUpdated bool) error {
-	if !wasVirtualUpdated || s.virtualChangeChan == nil {
+	if !wasVirtualUpdated || s.onVirtualChangedCallback == nil {
 		return nil
 	}
 
@@ -230,7 +231,7 @@ func (s *consensus) onVirtualChange(virtualChangeSet *externalapi.VirtualChangeS
 	virtualChangeSet.VirtualSelectedParentBlueScore = virtualSelectedParentGHOSTDAGData.BlueScore()
 	virtualChangeSet.VirtualDAAScore = virtualDAAScore
 
-	s.virtualChangeChan <- virtualChangeSet
+	s.onVirtualChangedCallback(virtualChangeSet)
 	return nil
 }
 
@@ -997,4 +998,8 @@ func (s *consensus) isNearlySyncedNoLock() (bool, error) {
 	log.Debugf("The selected tip timestamp is old (%d), so IsNearlySynced returns false",
 		virtualSelectedParentHeader.TimeInMilliseconds())
 	return false, nil
+}
+
+func (s *consensus) SetOnVirtualChangedCallback(callback func(virtualChangeSet *externalapi.VirtualChangeSet)) {
+	s.onVirtualChangedCallback = callback
 }

@@ -1,10 +1,11 @@
 package domain
 
 import (
-	"github.com/kaspanet/kaspad/domain/consensusreference"
 	"sync"
 	"sync/atomic"
 	"unsafe"
+
+	"github.com/kaspanet/kaspad/domain/consensusreference"
 
 	"github.com/kaspanet/kaspad/domain/consensus"
 	"github.com/kaspanet/kaspad/domain/consensus/model/externalapi"
@@ -24,7 +25,7 @@ type Domain interface {
 	InitStagingConsensusWithoutGenesis() error
 	CommitStagingConsensus() error
 	DeleteStagingConsensus() error
-	VirtualChangeChannel() chan *externalapi.VirtualChangeSet
+	SetOnVirtualChangedCallback(callback func(virtualChangeSet *externalapi.VirtualChangeSet))
 }
 
 type domain struct {
@@ -34,11 +35,10 @@ type domain struct {
 	stagingConsensusLock sync.RWMutex
 	consensusConfig      *consensus.Config
 	db                   infrastructuredatabase.Database
-	virtualChangeChan    chan *externalapi.VirtualChangeSet
 }
 
-func (d *domain) VirtualChangeChannel() chan *externalapi.VirtualChangeSet {
-	return d.virtualChangeChan
+func (d *domain) SetOnVirtualChangedCallback(callback func(virtualChangeSet *externalapi.VirtualChangeSet)) {
+	d.Consensus().SetOnVirtualChangedCallback(callback)
 }
 
 func (d *domain) Consensus() externalapi.Consensus {
@@ -92,7 +92,7 @@ func (d *domain) initStagingConsensus(cfg *consensus.Config) error {
 
 	consensusFactory := consensus.NewFactory()
 
-	consensusInstance, shouldMigrate, err := consensusFactory.NewConsensus(cfg, d.db, inactivePrefix, d.virtualChangeChan)
+	consensusInstance, shouldMigrate, err := consensusFactory.NewConsensus(cfg, d.db, inactivePrefix)
 	if err != nil {
 		return err
 	}
@@ -196,18 +196,16 @@ func New(consensusConfig *consensus.Config, mempoolConfig *mempool.Config, db in
 		}
 	}
 
-	virtualChangeChan := make(chan *externalapi.VirtualChangeSet, 1000)
 	consensusFactory := consensus.NewFactory()
-	consensusInstance, shouldMigrate, err := consensusFactory.NewConsensus(consensusConfig, db, activePrefix, virtualChangeChan)
+	consensusInstance, shouldMigrate, err := consensusFactory.NewConsensus(consensusConfig, db, activePrefix)
 	if err != nil {
 		return nil, err
 	}
 
 	domainInstance := &domain{
-		consensus:         &consensusInstance,
-		consensusConfig:   consensusConfig,
-		db:                db,
-		virtualChangeChan: virtualChangeChan,
+		consensus:       &consensusInstance,
+		consensusConfig: consensusConfig,
+		db:              db,
 	}
 
 	if shouldMigrate {

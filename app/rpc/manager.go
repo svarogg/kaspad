@@ -28,7 +28,6 @@ func NewManager(
 	connectionManager *connmanager.ConnectionManager,
 	addressManager *addressmanager.AddressManager,
 	utxoIndex *utxoindex.UTXOIndex,
-	virtualChangeChan chan *externalapi.VirtualChangeSet,
 	shutDownChan chan<- struct{}) *Manager {
 
 	manager := Manager{
@@ -45,22 +44,16 @@ func NewManager(
 	}
 	netAdapter.SetRPCRouterInitializer(manager.routerInitializer)
 
-	manager.initVirtualChangeHandler(virtualChangeChan)
+	manager.initVirtualChangeHandler(domain)
 
 	return &manager
 }
 
-func (m *Manager) initVirtualChangeHandler(virtualChangeChan chan *externalapi.VirtualChangeSet) {
-	spawn("virtualChangeHandler", func() {
-		for {
-			virtualChangeSet, ok := <-virtualChangeChan
-			if !ok {
-				return
-			}
-			err := m.notifyVirtualChange(virtualChangeSet)
-			if err != nil {
-				panic(err)
-			}
+func (m *Manager) initVirtualChangeHandler(domain domain.Domain) {
+	domain.SetOnVirtualChangedCallback(func(virtualChangeSet *externalapi.VirtualChangeSet) {
+		err := m.notifyVirtualChange(virtualChangeSet)
+		if err != nil {
+			panic(err)
 		}
 	})
 }
