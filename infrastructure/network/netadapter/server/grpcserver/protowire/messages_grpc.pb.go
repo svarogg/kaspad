@@ -137,6 +137,7 @@ var P2P_ServiceDesc = grpc.ServiceDesc{
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type RPCClient interface {
 	MessageStream(ctx context.Context, opts ...grpc.CallOption) (RPC_MessageStreamClient, error)
+	GetBlock(ctx context.Context, in *GetBlockRequestMessage, opts ...grpc.CallOption) (*GetBlockResponseMessage, error)
 }
 
 type rPCClient struct {
@@ -178,11 +179,21 @@ func (x *rPCMessageStreamClient) Recv() (*KaspadMessage, error) {
 	return m, nil
 }
 
+func (c *rPCClient) GetBlock(ctx context.Context, in *GetBlockRequestMessage, opts ...grpc.CallOption) (*GetBlockResponseMessage, error) {
+	out := new(GetBlockResponseMessage)
+	err := c.cc.Invoke(ctx, "/protowire.RPC/GetBlock", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RPCServer is the server API for RPC service.
 // All implementations must embed UnimplementedRPCServer
 // for forward compatibility
 type RPCServer interface {
 	MessageStream(RPC_MessageStreamServer) error
+	GetBlock(context.Context, *GetBlockRequestMessage) (*GetBlockResponseMessage, error)
 	mustEmbedUnimplementedRPCServer()
 }
 
@@ -192,6 +203,9 @@ type UnimplementedRPCServer struct {
 
 func (UnimplementedRPCServer) MessageStream(RPC_MessageStreamServer) error {
 	return status.Errorf(codes.Unimplemented, "method MessageStream not implemented")
+}
+func (UnimplementedRPCServer) GetBlock(context.Context, *GetBlockRequestMessage) (*GetBlockResponseMessage, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBlock not implemented")
 }
 func (UnimplementedRPCServer) mustEmbedUnimplementedRPCServer() {}
 
@@ -232,13 +246,36 @@ func (x *rPCMessageStreamServer) Recv() (*KaspadMessage, error) {
 	return m, nil
 }
 
+func _RPC_GetBlock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetBlockRequestMessage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RPCServer).GetBlock(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/protowire.RPC/GetBlock",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RPCServer).GetBlock(ctx, req.(*GetBlockRequestMessage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // RPC_ServiceDesc is the grpc.ServiceDesc for RPC service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var RPC_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "protowire.RPC",
 	HandlerType: (*RPCServer)(nil),
-	Methods:     []grpc.MethodDesc{},
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetBlock",
+			Handler:    _RPC_GetBlock_Handler,
+		},
+	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "MessageStream",

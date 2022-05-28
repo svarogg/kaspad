@@ -146,4 +146,6 @@ service P2P {
 
 service RPC {
   rpc MessageStream (stream KaspadMessage) returns (stream KaspadMessage) {}
+
+  rpc GetBlock (GetBlockRequestMessage) returns (GetBlockResponseMessage) {}
 }

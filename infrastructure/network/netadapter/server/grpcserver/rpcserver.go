@@ -30,3 +30,7 @@ func (r *rpcServer) MessageStream(stream protowire.RPC_MessageStreamServer) erro
 
 	return r.handleInboundConnection(stream.Context(), stream)
 }
+
+func (r *rpcServer) GetBlock(request *protowire.GetBlockRequestMessage) *protowire.GetBlockResponseMessage {
+	// TODO: Wrap the thing with KaspadMessage and somehow forward to the correct handler
+}
